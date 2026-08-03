@@ -8,7 +8,8 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { api, ApiError } from '../lib/api';
+import { api } from '../lib/api';
+import { useAction, Alerts } from '../lib/action';
 import { PERMISSIONS, type Permission } from '../../shared/permissions';
 
 interface Role {
@@ -45,15 +46,14 @@ export default function Roles() {
   const [discordWarning, setDiscordWarning] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function load() {
     const { roles } = await api.get<{ roles: Role[] }>('/roles');
     setRoles(roles);
   }
+
+  const { run, busy, error, notice, warning } = useAction(load);
 
   useEffect(() => {
     Promise.all([
@@ -67,22 +67,6 @@ export default function Roles() {
         .catch(() => setDiscordWarning('Could not reach Discord to load roles.')),
     ]).finally(() => setLoading(false));
   }, []);
-
-  // A returned string becomes a non-error notice (e.g. "Discord role renamed").
-  async function run(fn: () => Promise<string | void | null>) {
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const message = await fn();
-      await load();
-      if (typeof message === 'string') setNotice(message);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong.');
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const addRole = () =>
     run(async () => {
@@ -106,8 +90,7 @@ export default function Roles() {
         </p>
       </header>
 
-      {error && <div className="alert">{error}</div>}
-      {notice && <div className="notice">{notice}</div>}
+      <Alerts error={error} warning={warning} notice={notice} />
 
       <div className="add-row">
         <input
@@ -151,7 +134,7 @@ export default function Roles() {
                 const res = await api.patch<{
                   discordSync?: { synced: boolean; warning?: string };
                 }>(`/roles/${selected.id}`, patch);
-                if (res.discordSync?.warning) return res.discordSync.warning;
+                if (res.discordSync?.warning) return { warning: res.discordSync.warning };
                 if (res.discordSync?.synced) return 'Saved — the Discord role’s name and color now match.';
                 return 'Saved.';
               })

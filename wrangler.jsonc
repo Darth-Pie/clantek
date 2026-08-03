@@ -47,9 +47,9 @@
     // half). Safe to commit.
     "DISCORD_PUBLIC_KEY": "4b3b9448e8b3cc5bf0c8fdb513e8f14b3d2ad18e20b18d864cb4babbc55b53dd",
 
-    // Your Discord server's ID. Right-click the server with Developer Mode on
-    // → Copy Server ID. Login is gated on membership in this guild.
-    "DISCORD_GUILD_ID": ""
+    // Your Discord server. Login is gated on membership in this guild:
+    // no invite, no account.
+    "DISCORD_GUILD_ID": "223208136780152832"
   },
 
   "observability": {

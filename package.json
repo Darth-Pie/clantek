@@ -1,0 +1,47 @@
+{
+  "name": "clantek",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Clan management system — Cloudflare Workers + D1 + React. A rewrite of the 2003 PHP original.",
+  "scripts": {
+    "dev": "concurrently -n vite,worker -c cyan,magenta \"vite\" \"wrangler dev\"",
+    "build": "tsc --noEmit && vite build",
+    "deploy": "npm run build && wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply clantek --local",
+    "db:migrate:remote": "wrangler d1 migrations apply clantek --remote",
+    "db:seed:local": "wrangler d1 execute clantek --local --file=./src/db/seed.sql",
+    "db:seed:remote": "wrangler d1 execute clantek --remote --file=./src/db/seed.sql",
+    "db:studio": "drizzle-kit studio",
+    "discord:register": "tsx scripts/register-commands.ts",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.34",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.1.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vite": "^7.0.0",
+    "wrangler": "^4.118.0"
+  },
+  "allowScripts": {
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.1": true,
+    "workerd@1.20260730.1": true
+  }
+}

@@ -1,0 +1,16 @@
+# Copy to .dev.vars for local development. .dev.vars is gitignored.
+# For production, set each with:  npx wrangler secret put NAME
+#
+# Only genuine secrets belong here. DISCORD_CLIENT_ID and DISCORD_PUBLIC_KEY
+# are public values and live in wrangler.jsonc instead.
+
+# Discord application → OAuth2 tab → Client Secret.
+DISCORD_CLIENT_SECRET=
+
+# Discord application → Bot tab → Token.
+# Needed to add/remove Discord roles from the admin portal.
+DISCORD_BOT_TOKEN=
+
+# 32+ random bytes, used to sign the OAuth state parameter.
+# Generate with:  openssl rand -base64 32
+SESSION_SECRET=

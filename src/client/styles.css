@@ -1,0 +1,292 @@
+/* Every value here reads from a custom property set by ThemeProvider, so the
+   admin theme editor restyles the whole app without touching this file. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top bar ---------------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+}
+
+.nav {
+  display: flex;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.nav a {
+  color: var(--color-muted);
+  text-decoration: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius);
+}
+
+.nav a:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.nav a.active {
+  color: var(--color-accent-text);
+  background: var(--color-accent);
+}
+
+.account {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.rank-chip,
+.status-chip {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-muted);
+}
+
+.god-chip {
+  color: var(--color-accent);
+}
+
+/* Content ---------------------------------------------------------- */
+
+.content {
+  flex: 1;
+  width: min(1000px, 100%);
+  margin-inline: auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.panel-head {
+  margin-bottom: 1rem;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.muted {
+  color: var(--color-muted);
+  margin: 0.25rem 0 0;
+}
+
+.small {
+  font-size: 0.85rem;
+}
+
+.loading,
+.empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.alert {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  border: 1px solid var(--color-accent);
+  color: var(--color-text);
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+/* Controls --------------------------------------------------------- */
+
+button {
+  background: var(--color-border);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--color-muted);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.danger:hover:not(:disabled) {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+input[type='text'],
+input:not([type]) {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  width: 100%;
+}
+
+input:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.add-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.add-row input {
+  max-width: 260px;
+}
+
+/* Tables and lists -------------------------------------------------- */
+
+.grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.grid th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.grid td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.reorder {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.reorder button {
+  padding: 0.15rem 0.4rem;
+}
+
+.roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.roster li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.roster img {
+  border-radius: 50%;
+}
+
+.roster .name {
+  font-weight: 600;
+}
+
+.roster .status-chip {
+  margin-left: auto;
+}
+
+/* Auth ------------------------------------------------------------- */
+
+.login {
+  max-width: 380px;
+  margin: 5rem auto;
+  text-align: center;
+}
+
+.login h1 {
+  font-family: var(--font-display);
+  margin-bottom: 0.25rem;
+}
+
+.discord-btn {
+  display: inline-block;
+  margin-top: 1.25rem;
+  background: #5865f2;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+
+.discord-btn.large {
+  padding: 0.7rem 1.5rem;
+}
+
+.discord-btn:hover {
+  filter: brightness(1.1);
+}

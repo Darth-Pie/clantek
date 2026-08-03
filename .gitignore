@@ -1,0 +1,22 @@
+desktop.ini
+node_modules/
+dist/
+.wrangler/
+.claude/settings.local.json
+
+# Local secrets — never commit. See .dev.vars.example.
+.dev.vars
+*.local
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# The 2003 PHP original, if you copy it here for reference. It contains live
+# MySQL credentials in dump.php and a hardcoded password in ctbd.php.
+legacy/
+clantek.com/
+public_html/
+secure/

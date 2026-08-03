@@ -1,0 +1,58 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clantek",
+  "main": "src/server/index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The React admin builds to dist/client and is served as static assets by the
+  // same Worker that serves the API. SPA handling sends unknown paths to
+  // index.html so client-side routing works on refresh.
+  "assets": {
+    "directory": "./dist/client",
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "clantek",
+      "database_id": "19d7ebe6-e379-411b-8597-17b630cb8394",
+      "migrations_dir": "drizzle"
+    }
+  ],
+
+  // Media storage for avatars, rank insignia, and medal art. Nothing uses it
+  // yet. R2 must be enabled once on the Cloudflare dashboard (R2 → Get
+  // started) before this binding will deploy; uncomment after that and run
+  //   npx wrangler r2 bucket create clantek-media
+  // "r2_buckets": [
+  //   {
+  //     "binding": "MEDIA",
+  //     "bucket_name": "clantek-media"
+  //   }
+  // ],
+
+  "vars": {
+    // Non-secret config only. Real secrets (client secret, bot token, session
+    // secret) go in .dev.vars locally and `wrangler secret put` in production.
+    "SITE_NAME": "ClanTek",
+
+    // Application ID — public; it appears in every bot invite URL.
+    "DISCORD_CLIENT_ID": "1533902498065023286",
+
+    // Ed25519 *verification* key. Public by design: it proves a request came
+    // from Discord, and cannot be used to forge one (Discord holds the private
+    // half). Safe to commit.
+    "DISCORD_PUBLIC_KEY": "4b3b9448e8b3cc5bf0c8fdb513e8f14b3d2ad18e20b18d864cb4babbc55b53dd",
+
+    // Your Discord server's ID. Right-click the server with Developer Mode on
+    // → Copy Server ID. Login is gated on membership in this guild.
+    "DISCORD_GUILD_ID": ""
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}

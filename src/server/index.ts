@@ -77,6 +77,20 @@ app.post('/api/discord/interactions', async (c) => {
  * Session
  * ------------------------------------------------------------------ */
 
+// API responses must never be cached by the browser or an intermediary.
+// A cached /api/auth/login redirect (or a stale 404 from an earlier deploy)
+// otherwise means the sign-in click is answered from cache and never reaches
+// the Worker at all — which looks exactly like a broken login.
+app.use('/api/*', async (c, next) => {
+  await next();
+  // Re-wrap so the header sticks regardless of who built the response: a
+  // mounted sub-router (e.g. /api/ranks) hands back a response with immutable
+  // headers, so a direct .set() there silently no-ops. A fresh Response copies
+  // the status, body, and existing headers into a mutable set.
+  c.res = new Response(c.res.body, c.res);
+  c.res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+});
+
 app.use('/api/*', withViewer);
 
 app.get('/api/auth/login', (c) => {

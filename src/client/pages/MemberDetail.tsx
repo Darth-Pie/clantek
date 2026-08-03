@@ -64,6 +64,7 @@ export default function MemberDetail() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [confirmDemote, setConfirmDemote] = useState(false);
 
   const load = useCallback(async () => {
     const { member } = await api.get<{ member: Member }>(`/members/${memberId}`);
@@ -165,7 +166,7 @@ export default function MemberDetail() {
         <div>
           <h2>{displayName}</h2>
           <div className="member-sub muted">
-            {member.rank && <span className="rank-chip">{member.rank.name}</span>}
+            <span className="rank-chip">{member.rank ? member.rank.name : 'Unranked'}</span>
             <span className={`status-chip status-${member.status}`}>{member.status}</span>
             <span>joined {new Date(member.joinedAt * 1000).toLocaleDateString()}</span>
           </div>
@@ -265,25 +266,50 @@ export default function MemberDetail() {
             {can('roster.promote') && (
               <div className="admin-block">
                 <span className="admin-label">Rank</span>
-                {!outranksTarget && <p className="muted small">This member outranks you.</p>}
-                <div className="admin-actions">
-                  <button
-                    disabled={busy || !outranksTarget || !canPromoteTo(nextUp)}
-                    onClick={() => nextUp && void setRank(nextUp.id, `Promoted to ${nextUp.name}`)}
-                    title={nextUp ? `Promote to ${nextUp.name}` : 'Already at the top rank'}
-                  >
-                    ▲ Promote
-                  </button>
-                  <button
-                    disabled={busy || !outranksTarget || !nextDown}
-                    onClick={() =>
-                      nextDown && void setRank(nextDown.id, `Demoted to ${nextDown.name}`)
-                    }
-                    title={nextDown ? `Demote to ${nextDown.name}` : 'Already at the lowest rank'}
-                  >
-                    ▼ Demote
-                  </button>
-                </div>
+                <div className="current-rank">{member.rank ? member.rank.name : 'Unranked'}</div>
+
+                {!outranksTarget ? (
+                  <p className="muted small">This member outranks you — you can’t change their rank.</p>
+                ) : confirmDemote ? (
+                  <div className="confirm-row">
+                    <span className="small">
+                      Demote <strong>{displayName}</strong> from {member.rank?.name ?? 'Unranked'} to{' '}
+                      <strong>{nextDown?.name}</strong>?
+                    </span>
+                    <div className="admin-actions">
+                      <button
+                        className="danger"
+                        disabled={busy}
+                        onClick={() => {
+                          setConfirmDemote(false);
+                          if (nextDown) void setRank(nextDown.id, `Demoted to ${nextDown.name}`);
+                        }}
+                      >
+                        Confirm demote
+                      </button>
+                      <button disabled={busy} onClick={() => setConfirmDemote(false)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="admin-actions">
+                    <button
+                      disabled={busy || !canPromoteTo(nextUp)}
+                      onClick={() => nextUp && void setRank(nextUp.id, `Promoted to ${nextUp.name}`)}
+                      title={nextUp ? `Promote to ${nextUp.name}` : 'Already at the top rank'}
+                    >
+                      ▲ Promote{nextUp ? ` → ${nextUp.name}` : ''}
+                    </button>
+                    <button
+                      disabled={busy || !nextDown}
+                      onClick={() => setConfirmDemote(true)}
+                      title={nextDown ? `Demote to ${nextDown.name}` : 'Already at the lowest rank'}
+                    >
+                      ▼ Demote{nextDown ? ` → ${nextDown.name}` : ''}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

@@ -17,12 +17,20 @@
   "workers_dev": false,
 
   // The React admin builds to dist/client and is served as static assets by the
-  // same Worker that serves the API. SPA handling sends unknown paths to
-  // index.html so client-side routing works on refresh.
+  // same Worker that serves the API.
+  //
+  // run_worker_first is essential here: without it, the assets layer answers
+  // *navigation* requests (Accept: text/html) before the Worker, and
+  // single-page-application not_found_handling then serves index.html for
+  // /api/auth/login — so a clicked sign-in link renders the SPA's 404 instead
+  // of ever reaching the Worker. Scoping it to /api/* means API routes always
+  // hit the Worker while every other path (/, /login, /admin/*, hashed assets)
+  // is served directly by the assets layer with SPA fallback.
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "single-page-application",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
   },
 
   "d1_databases": [

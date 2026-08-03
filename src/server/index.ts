@@ -87,6 +87,15 @@ app.get('/api/auth/login', (c) => {
 });
 
 app.get('/api/auth/callback', async (c) => {
+  // Discord signals its own failures (consent_required, access_denied, an
+  // unregistered redirect_uri, …) with an `error` query param and no code.
+  // Surface it verbatim instead of mislabelling everything as a state error.
+  const discordError = c.req.query('error');
+  if (discordError) {
+    console.error('Discord OAuth error:', discordError, c.req.query('error_description'));
+    return c.redirect(`/login?error=discord&detail=${encodeURIComponent(discordError)}`);
+  }
+
   const code = c.req.query('code');
   const state = c.req.query('state');
   const expected = getCookie(c, OAUTH_STATE_COOKIE);

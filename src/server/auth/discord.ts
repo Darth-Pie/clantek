@@ -27,13 +27,16 @@ export interface DiscordGuildMember {
 }
 
 export function authorizeUrl(clientId: string, redirectUri: string, state: string): string {
+  // No `prompt` param: Discord shows the consent screen on first authorization
+  // and skips it on later logins. `prompt=none` would demand a pre-existing
+  // grant and error out with consent_required for anyone who hasn't authorized
+  // the app before — i.e. every first-time login.
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: OAUTH_SCOPES.join(' '),
     state,
-    prompt: 'none',
   });
   return `${DISCORD_API}/oauth2/authorize?${params}`;
 }

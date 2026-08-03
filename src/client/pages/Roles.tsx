@@ -1,0 +1,320 @@
+/**
+ * Role administration.
+ *
+ * Roles carry permissions and, when mapped to a Discord role, drive Discord
+ * membership too. This is the browser side of the integration the original
+ * ClanTek never had — the 2003 version gated everything on a single rank
+ * threshold with no concept of a capability grant.
+ */
+
+import { useEffect, useMemo, useState } from 'react';
+import { api, ApiError } from '../lib/api';
+import { PERMISSIONS, type Permission } from '../../shared/permissions';
+
+interface Role {
+  id: number;
+  name: string;
+  description: string | null;
+  color: string | null;
+  discordRoleId: string | null;
+  isSystem: boolean;
+  memberCount: number;
+  permissions: Permission[];
+}
+
+interface DiscordRole {
+  id: string;
+  name: string;
+  color: string | null;
+  position: number;
+}
+
+// Group "roster.view", "roster.edit", … under a "roster" heading.
+const PERMISSION_GROUPS = Object.entries(PERMISSIONS).reduce<Record<string, [Permission, string][]>>(
+  (acc, [perm, label]) => {
+    const area = perm.split('.')[0]!;
+    (acc[area] ??= []).push([perm as Permission, label]);
+    return acc;
+  },
+  {},
+);
+
+export default function Roles() {
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [discordRoles, setDiscordRoles] = useState<DiscordRole[]>([]);
+  const [discordWarning, setDiscordWarning] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [newName, setNewName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  async function load() {
+    const { roles } = await api.get<{ roles: Role[] }>('/roles');
+    setRoles(roles);
+  }
+
+  useEffect(() => {
+    Promise.all([
+      load(),
+      api
+        .get<{ roles: DiscordRole[]; warning?: string }>('/roles/discord-roles')
+        .then(({ roles, warning }) => {
+          setDiscordRoles(roles);
+          setDiscordWarning(warning ?? null);
+        })
+        .catch(() => setDiscordWarning('Could not reach Discord to load roles.')),
+    ]).finally(() => setLoading(false));
+  }, []);
+
+  async function run(fn: () => Promise<unknown>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const addRole = () =>
+    run(async () => {
+      if (!newName.trim()) return;
+      const { role } = await api.post<{ role: Role }>('/roles', { name: newName.trim() });
+      setNewName('');
+      setSelectedId(role.id);
+    });
+
+  const selected = roles.find((r) => r.id === selectedId) ?? null;
+
+  if (loading) return <div className="loading">Loading roles…</div>;
+
+  return (
+    <section className="panel roles-page">
+      <header className="panel-head">
+        <h2>Roles</h2>
+        <p className="muted">
+          {roles.length} role{roles.length === 1 ? '' : 's'}. Roles grant permissions and can mirror
+          a Discord role.
+        </p>
+      </header>
+
+      {error && <div className="alert">{error}</div>}
+
+      <div className="add-row">
+        <input
+          value={newName}
+          placeholder="New role name"
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && void addRole()}
+          disabled={busy}
+        />
+        <button onClick={() => void addRole()} disabled={busy || !newName.trim()}>
+          Add role
+        </button>
+      </div>
+
+      <div className="roles-layout">
+        <ul className="role-list">
+          {roles.map((role) => (
+            <li key={role.id}>
+              <button
+                className={role.id === selectedId ? 'role-chip active' : 'role-chip'}
+                onClick={() => setSelectedId(role.id)}
+              >
+                <span className="dot" style={{ background: role.color ?? 'var(--color-muted)' }} />
+                <span className="role-name">{role.name}</span>
+                {role.isSystem && <span className="tag">system</span>}
+                <span className="count">{role.memberCount}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        {selected ? (
+          <RoleEditor
+            key={selected.id}
+            role={selected}
+            discordRoles={discordRoles}
+            discordWarning={discordWarning}
+            busy={busy}
+            onSave={(patch) => run(() => api.patch(`/roles/${selected.id}`, patch))}
+            onSavePermissions={(permissions) =>
+              run(() => api.put(`/roles/${selected.id}/permissions`, { permissions }))
+            }
+            onDelete={() =>
+              run(async () => {
+                await api.del(`/roles/${selected.id}`);
+                setSelectedId(null);
+              })
+            }
+          />
+        ) : (
+          <div className="role-editor empty-editor">Select a role to edit it.</div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function RoleEditor({
+  role,
+  discordRoles,
+  discordWarning,
+  busy,
+  onSave,
+  onSavePermissions,
+  onDelete,
+}: {
+  role: Role;
+  discordRoles: DiscordRole[];
+  discordWarning: string | null;
+  busy: boolean;
+  onSave: (patch: Partial<Role>) => void;
+  onSavePermissions: (permissions: Permission[]) => void;
+  onDelete: () => void;
+}) {
+  const [name, setName] = useState(role.name);
+  const [description, setDescription] = useState(role.description ?? '');
+  const [color, setColor] = useState(role.color ?? '#7f8c8d');
+  const [discordRoleId, setDiscordRoleId] = useState(role.discordRoleId ?? '');
+  const [perms, setPerms] = useState<Set<Permission>>(new Set(role.permissions));
+
+  const permsDirty = useMemo(() => {
+    const original = new Set(role.permissions);
+    return original.size !== perms.size || [...perms].some((p) => !original.has(p));
+  }, [perms, role.permissions]);
+
+  const detailsDirty =
+    name !== role.name ||
+    description !== (role.description ?? '') ||
+    color !== (role.color ?? '#7f8c8d') ||
+    discordRoleId !== (role.discordRoleId ?? '');
+
+  const toggle = (p: Permission) =>
+    setPerms((prev) => {
+      const next = new Set(prev);
+      next.has(p) ? next.delete(p) : next.add(p);
+      return next;
+    });
+
+  // A mapped Discord role that no longer exists in the guild would otherwise
+  // vanish silently from the dropdown; keep it visible so it can be cleared.
+  const mappedButMissing =
+    role.discordRoleId && !discordRoles.some((d) => d.id === role.discordRoleId);
+
+  return (
+    <div className="role-editor">
+      <div className="field-row">
+        <label>
+          Name
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={busy || role.isSystem}
+            title={role.isSystem ? 'System roles cannot be renamed' : undefined}
+          />
+        </label>
+        <label className="color-field">
+          Color
+          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} disabled={busy} />
+        </label>
+      </div>
+
+      <label>
+        Description
+        <input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="What this role is for"
+          disabled={busy}
+        />
+      </label>
+
+      <label>
+        Mirrored Discord role
+        <select
+          value={discordRoleId}
+          onChange={(e) => setDiscordRoleId(e.target.value)}
+          disabled={busy}
+        >
+          <option value="">— none —</option>
+          {mappedButMissing && (
+            <option value={role.discordRoleId!}>
+              (unknown role {role.discordRoleId})
+            </option>
+          )}
+          {discordRoles.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {discordWarning && <p className="muted small warn">{discordWarning}</p>}
+      {discordRoleId && !discordWarning && (
+        <p className="muted small">
+          Granting this role to a member will also add the Discord role, and removing it will take
+          the Discord role away.
+        </p>
+      )}
+
+      <button
+        className="primary"
+        disabled={busy || !detailsDirty}
+        onClick={() => onSave({ name, description, color, discordRoleId: discordRoleId || null })}
+      >
+        Save details
+      </button>
+
+      <fieldset className="perms">
+        <legend>Permissions</legend>
+        {Object.entries(PERMISSION_GROUPS).map(([area, entries]) => (
+          <div key={area} className="perm-group">
+            <h4>{area}</h4>
+            {entries.map(([perm, label]) => (
+              <label key={perm} className="perm">
+                <input
+                  type="checkbox"
+                  checked={perms.has(perm)}
+                  onChange={() => toggle(perm)}
+                  disabled={busy}
+                />
+                <span>
+                  {label}
+                  <code>{perm}</code>
+                </span>
+              </label>
+            ))}
+          </div>
+        ))}
+        <button
+          className="primary"
+          disabled={busy || !permsDirty}
+          onClick={() => onSavePermissions([...perms])}
+        >
+          Save permissions
+        </button>
+      </fieldset>
+
+      <div className="editor-footer">
+        <button
+          className="danger"
+          disabled={busy || role.isSystem}
+          onClick={onDelete}
+          title={role.isSystem ? 'System roles cannot be deleted' : 'Delete this role'}
+        >
+          Delete role
+        </button>
+        {role.memberCount > 0 && (
+          <span className="muted small">
+            {role.memberCount} member{role.memberCount === 1 ? '' : 's'} hold this role
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}

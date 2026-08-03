@@ -72,45 +72,78 @@ function wranglerVar(name: string): string | undefined {
   }
 }
 
+/** Turns Discord's terser error codes into something actionable. */
+function explain(status: number, body: string): string {
+  if (body.includes('50001')) {
+    return [
+      'The bot is not authorized in this server yet.',
+      '',
+      'Guild command registration needs the applications.commands scope in the',
+      'target guild. Invite the bot first, then re-run this:',
+      '',
+      `  https://discord.com/oauth2/authorize?client_id=${clientId}&permissions=268435456&scope=bot+applications.commands`,
+    ].join('\n');
+  }
+  if (status === 401) {
+    return 'Bot token rejected. Check DISCORD_BOT_TOKEN in .dev.vars — reset it in the\nDeveloper Portal (Bot tab) if you are unsure it is current.';
+  }
+  if (body.includes('50035')) {
+    return 'Discord rejected a command definition. Check names are lowercase and\ndescriptions are non-empty and under 100 characters.';
+  }
+  return '';
+}
+
 const secrets = { ...loadDevVars(), ...process.env };
 
 const clientId = process.env.DISCORD_CLIENT_ID || wranglerVar('DISCORD_CLIENT_ID');
 const guildId = process.env.DISCORD_GUILD_ID || wranglerVar('DISCORD_GUILD_ID');
 const botToken = secrets.DISCORD_BOT_TOKEN;
 
-if (!clientId || !guildId) {
-  console.error(
-    'Missing DISCORD_CLIENT_ID or DISCORD_GUILD_ID.\n' +
-      'Both live in the "vars" block of wrangler.jsonc. Run this from the project root.',
-  );
-  process.exit(1);
-}
+// Setting exitCode and returning lets Node drain stdio and exit cleanly.
+// process.exit() here trips a libuv assertion on Windows mid-flush.
+async function main(): Promise<number> {
+  if (!clientId || !guildId) {
+    console.error(
+      'Missing DISCORD_CLIENT_ID or DISCORD_GUILD_ID.\n' +
+        'Both live in the "vars" block of wrangler.jsonc. Run this from the project root.',
+    );
+    return 1;
+  }
 
-if (!botToken) {
-  console.error(
-    'Missing DISCORD_BOT_TOKEN.\n' +
-      'Copy .dev.vars.example to .dev.vars and paste your bot token into it.\n' +
-      '(.dev.vars is gitignored.)',
-  );
-  process.exit(1);
-}
+  if (!botToken) {
+    console.error(
+      'Missing DISCORD_BOT_TOKEN.\n' +
+        'Copy .dev.vars.example to .dev.vars and paste your bot token into it.\n' +
+        '(.dev.vars is gitignored.)',
+    );
+    return 1;
+  }
 
-const res = await fetch(
-  `https://discord.com/api/v10/applications/${clientId}/guilds/${guildId}/commands`,
-  {
-    method: 'PUT', // wholesale replace — removes commands deleted from COMMANDS
-    headers: {
-      Authorization: `Bot ${botToken}`,
-      'Content-Type': 'application/json',
+  const res = await fetch(
+    `https://discord.com/api/v10/applications/${clientId}/guilds/${guildId}/commands`,
+    {
+      method: 'PUT', // wholesale replace — removes commands deleted from COMMANDS
+      headers: {
+        Authorization: `Bot ${botToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(COMMANDS),
     },
-    body: JSON.stringify(COMMANDS),
-  },
-);
+  );
 
-if (!res.ok) {
-  console.error(`Registration failed (${res.status}):`, await res.text());
-  process.exit(1);
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Registration failed (${res.status}): ${body}`);
+    const hint = explain(res.status, body);
+    if (hint) console.error(`\n${hint}`);
+    return 1;
+  }
+
+  const registered = (await res.json()) as { name: string }[];
+  console.log(
+    `Registered ${registered.length} command(s): ${registered.map((c) => `/${c.name}`).join(', ')}`,
+  );
+  return 0;
 }
 
-const registered = (await res.json()) as { name: string }[];
-console.log(`Registered ${registered.length} command(s): ${registered.map((c) => `/${c.name}`).join(', ')}`);
+process.exitCode = await main();

@@ -5,7 +5,7 @@ import type { AppContext } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { can, outranks } from '../../shared/permissions';
 import { DiscordRest, DiscordError } from '../discord/rest';
-import { grantRole, revokeRole, syncMemberRankRoles } from '../discord/sync';
+import { grantRole, revokeRole, syncMemberRankRoles, reconcileMember } from '../discord/sync';
 
 const members = new Hono<AppContext>();
 
@@ -268,6 +268,25 @@ members.post('/:id/roles', requirePermission('roles.assign'), async (c) => {
   });
 
   return c.json({ ok: true, ...result });
+});
+
+/**
+ * Force this member's Discord roles back into line with the website now, rather
+ * than waiting for the scheduled sweep. Adds mapped roles they should have,
+ * removes mapped ones they shouldn't; unmanaged Discord roles are left alone.
+ */
+members.post('/:id/resync', requirePermission('discord.sync'), async (c) => {
+  const id = Number(c.req.param('id'));
+  const client = rest(c.env);
+  if (!client) {
+    return c.json({ ok: false, warning: 'Discord bot is not configured.' });
+  }
+  try {
+    const r = await reconcileMember(db(c.env), client, id);
+    return c.json({ ok: true, added: r.added.length, removed: r.removed.length });
+  } catch (err) {
+    return c.json({ ok: false, warning: `Discord re-sync failed: ${(err as Error).message}` });
+  }
 });
 
 members.delete('/:id/roles/:roleId', requirePermission('roles.assign'), async (c) => {

@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { eq } from 'drizzle-orm';
 import * as s from '../db/schema';
-import type { AppContext } from './env';
+import type { AppContext, Env } from './env';
 import { db, withViewer } from './middleware/auth';
 import {
   authorizeUrl,
@@ -33,7 +33,7 @@ import {
 } from './discord/interactions';
 import { handleCommand } from './discord/commands';
 import { DiscordRest } from './discord/rest';
-import { syncMemberRankRoles } from './discord/sync';
+import { syncMemberRankRoles, reconcileAllMembers } from './discord/sync';
 import ranks from './routes/ranks';
 import members from './routes/members';
 import settings from './routes/settings';
@@ -279,4 +279,24 @@ app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404));
 
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 
-export default app;
+/* ------------------------------------------------------------------ *
+ * Scheduled reconciliation
+ *
+ * The Worker can't observe Discord role changes live (no gateway
+ * connection), so a cron sweep re-asserts the website's role state onto
+ * Discord — correcting any drift back to what the site says. The interval
+ * is set in wrangler.jsonc (triggers.crons).
+ * ------------------------------------------------------------------ */
+
+export default {
+  fetch: app.fetch,
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return;
+    const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
+    ctx.waitUntil(
+      reconcileAllMembers(db(env), rest)
+        .then((r) => console.log('Scheduled reconcile:', JSON.stringify(r)))
+        .catch((err) => console.error('Scheduled reconcile failed', err)),
+    );
+  },
+} satisfies ExportedHandler<Env>;

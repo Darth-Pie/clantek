@@ -160,8 +160,46 @@ roles.patch('/:id', requirePermission('roles.manage'), async (c) => {
   if (body.color !== undefined) patch.color = body.color?.trim() || null;
   if (body.discordRoleId !== undefined) patch.discordRoleId = body.discordRoleId?.trim() || null;
 
-  const updated = await database.update(s.roles).set(patch).where(eq(s.roles.id, id)).returning();
-  return c.json({ role: updated[0] });
+  const updated = (await database.update(s.roles).set(patch).where(eq(s.roles.id, id)).returning())[0]!;
+
+  // Website is the source of truth for the name. Push it to Discord when the
+  // role is (or has just become) mapped and its name or mapping changed, so
+  // "rename here → renamed there" holds. A newly-set mapping also adopts the
+  // current website name, which is the "associate → rename" behaviour.
+  const nameChanged = patch.name != null && patch.name !== role.name;
+  const mappingChanged = body.discordRoleId !== undefined && updated.discordRoleId !== role.discordRoleId;
+  let discordSync: { synced: boolean; warning?: string } | undefined;
+
+  if (updated.discordRoleId && (nameChanged || mappingChanged)) {
+    const client = rest(c.env);
+    if (!client) {
+      discordSync = { synced: false, warning: 'Saved. Discord bot is not configured, so the Discord role was not renamed.' };
+    } else {
+      try {
+        await client.renameRole(
+          updated.discordRoleId,
+          updated.name,
+          `ClanTek: name synced by ${c.get('viewer')!.username}`,
+        );
+        discordSync = { synced: true };
+      } catch (err) {
+        discordSync =
+          err instanceof DiscordError && err.status === 403
+            ? { synced: false, warning: 'Saved here, but Discord refused to rename the role: the bot needs its role dragged above this one in Server Settings → Roles.' }
+            : { synced: false, warning: `Saved here, but the Discord rename failed: ${(err as Error).message}` };
+      }
+    }
+
+    await database.insert(s.auditLog).values({
+      actorId: c.get('viewer')!.id,
+      action: 'role.discord_rename',
+      targetType: 'role',
+      targetId: String(id),
+      meta: { discordRoleId: updated.discordRoleId, name: updated.name, synced: discordSync.synced },
+    });
+  }
+
+  return c.json({ role: updated, discordSync });
 });
 
 /** Replace a role's permission set wholesale. */

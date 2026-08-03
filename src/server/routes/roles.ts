@@ -148,11 +148,9 @@ roles.patch('/:id', requirePermission('roles.manage'), async (c) => {
   const role = await database.query.roles.findFirst({ where: eq(s.roles.id, id) });
   if (!role) return c.json({ error: 'No such role' }, 404);
 
-  // System roles are renamed nowhere but here would be the place; block it so
-  // code that references them by name (e.g. seed data, docs) stays valid.
-  if (role.isSystem && body.name != null && body.name.trim() !== role.name) {
-    return c.json({ error: `“${role.name}” is a system role and cannot be renamed.` }, 403);
-  }
+  // Renaming any role is safe: nothing in the code looks a role up by name
+  // (permissions and memberships key off the role id), so names are cosmetic.
+  // The isSystem flag only guards against deletion, below.
 
   const patch: Partial<typeof s.roles.$inferInsert> = { updatedAt: Math.floor(Date.now() / 1000) };
   if (body.name != null) patch.name = body.name.trim();

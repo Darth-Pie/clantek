@@ -12,6 +12,8 @@ import * as schema from '../../db/schema';
 import * as s from '../../db/schema';
 import { can, outranks, type Viewer, type Permission } from '../../shared/permissions';
 import type { Env } from '../env';
+import { DiscordRest } from './rest';
+import { syncMemberRankRoles } from './sync';
 import { ephemeral, invoker, optionValue, reply, type Interaction } from './interactions';
 
 type DB = ReturnType<typeof drizzle<typeof schema>>;
@@ -68,7 +70,7 @@ export async function handleCommand(env: Env, i: Interaction) {
     case 'roster':
       return roster(db);
     case 'promote':
-      return promote(db, viewer, i);
+      return promote(env, db, viewer, i);
     default:
       return ephemeral(`Unknown command: ${i.data?.name}`);
   }
@@ -121,7 +123,7 @@ async function roster(db: DB) {
   return reply(`**Roster — ${total} members**\n${lines.join('\n')}`);
 }
 
-async function promote(db: DB, viewer: Viewer, i: Interaction) {
+async function promote(env: Env, db: DB, viewer: Viewer, i: Interaction) {
   if (!can(viewer, 'roster.promote')) {
     return ephemeral('You do not have permission to promote members.');
   }
@@ -166,8 +168,24 @@ async function promote(db: DB, viewer: Viewer, i: Interaction) {
     source: 'discord',
   });
 
+  // Apply the new rank's roles and reflect them into Discord.
+  const client =
+    env.DISCORD_BOT_TOKEN && env.DISCORD_GUILD_ID
+      ? new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID)
+      : null;
+  const rankRoleSync = await syncMemberRankRoles(db, client, {
+    userId: target.id,
+    rankId: nextRank.id,
+    actorId: viewer.id,
+  });
+
+  const roleNote = rankRoleSync.added.length
+    ? `\nRoles added: ${rankRoleSync.added.join(', ')}`
+    : '';
+
   return reply(
     `**${target.globalName ?? target.username}** promoted to **${nextRank.name}**` +
-      (currentRank ? ` (from ${currentRank.name})` : ''),
+      (currentRank ? ` (from ${currentRank.name})` : '') +
+      roleNote,
   );
 }

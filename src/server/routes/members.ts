@@ -5,7 +5,7 @@ import type { AppContext } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { outranks } from '../../shared/permissions';
 import { DiscordRest } from '../discord/rest';
-import { grantRole, revokeRole } from '../discord/sync';
+import { grantRole, revokeRole, syncMemberRankRoles } from '../discord/sync';
 
 const members = new Hono<AppContext>();
 
@@ -105,7 +105,14 @@ members.put('/:id/rank', requirePermission('roster.promote'), async (c) => {
     ip: c.req.header('cf-connecting-ip'),
   });
 
-  return c.json({ ok: true, rank: newRank ?? null });
+  // Apply the new rank's roles (and drop the old rank's), cascading to Discord.
+  const rankRoleSync = await syncMemberRankRoles(database, rest(c.env), {
+    userId: id,
+    rankId: newRank?.id ?? null,
+    actorId: viewer.id,
+  });
+
+  return c.json({ ok: true, rank: newRank ?? null, rankRoleSync });
 });
 
 /**

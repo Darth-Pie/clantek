@@ -10,12 +10,20 @@ import { asc, eq, ne, sql } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requirePermission } from '../middleware/auth';
+import { DiscordRest } from '../discord/rest';
+import { syncRankHolders } from '../discord/sync';
 
 const ranks = new Hono<AppContext>();
 
-/** Public: the ladder is visible to anyone. */
+function rest(env: AppContext['Bindings']): DiscordRest | null {
+  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return null;
+  return new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
+}
+
+/** Public: the ladder is visible to anyone. Includes the roles each rank grants. */
 ranks.get('/', async (c) => {
-  const rows = await db(c.env)
+  const database = db(c.env);
+  const rows = await database
     .select({
       id: s.ranks.id,
       name: s.ranks.name,
@@ -30,7 +38,56 @@ ranks.get('/', async (c) => {
     .from(s.ranks)
     .orderBy(asc(s.ranks.sortOrder));
 
-  return c.json({ ranks: rows });
+  const rankRoles = await database.select().from(s.rankRoles);
+  const roleIdsByRank = new Map<number, number[]>();
+  for (const rr of rankRoles) {
+    const list = roleIdsByRank.get(rr.rankId) ?? [];
+    list.push(rr.roleId);
+    roleIdsByRank.set(rr.rankId, list);
+  }
+
+  return c.json({
+    ranks: rows.map((r) => ({ ...r, roleIds: roleIdsByRank.get(r.id) ?? [] })),
+  });
+});
+
+/**
+ * Set the roles a rank grants, then re-apply to everyone at that rank so the
+ * change reaches current members (and Discord) immediately.
+ */
+// Deciding which roles a rank hands out is a role-granting policy, so it needs
+// roles.manage rather than merely ranks.manage.
+ranks.put('/:id/roles', requirePermission('roles.manage'), async (c) => {
+  const id = Number(c.req.param('id'));
+  const { roleIds } = await c.req.json<{ roleIds: number[] }>();
+  if (!Array.isArray(roleIds)) {
+    return c.json({ error: 'Expected a roleIds array' }, 400);
+  }
+
+  const database = db(c.env);
+  const rank = await database.query.ranks.findFirst({ where: eq(s.ranks.id, id) });
+  if (!rank) return c.json({ error: 'No such rank' }, 404);
+
+  const unique = [...new Set(roleIds)];
+  await database.batch([
+    database.delete(s.rankRoles).where(eq(s.rankRoles.rankId, id)),
+    ...(unique.length
+      ? [database.insert(s.rankRoles).values(unique.map((roleId) => ({ rankId: id, roleId })))]
+      : []),
+  ] as never);
+
+  await database.insert(s.auditLog).values({
+    actorId: c.get('viewer')!.id,
+    action: 'rank.set_roles',
+    targetType: 'rank',
+    targetId: String(id),
+    meta: { roleIds: unique },
+  });
+
+  // Reconcile current holders so the mapping change takes effect now.
+  const applied = await syncRankHolders(database, rest(c.env), id);
+
+  return c.json({ ok: true, roleIds: unique, applied });
 });
 
 ranks.post('/', requirePermission('ranks.manage'), async (c) => {

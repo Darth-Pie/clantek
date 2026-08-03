@@ -152,7 +152,7 @@ export default function Roles() {
                   discordSync?: { synced: boolean; warning?: string };
                 }>(`/roles/${selected.id}`, patch);
                 if (res.discordSync?.warning) return res.discordSync.warning;
-                if (res.discordSync?.synced) return 'Saved — the Discord role was renamed to match.';
+                if (res.discordSync?.synced) return 'Saved — the Discord role’s name and color now match.';
                 return 'Saved.';
               })
             }
@@ -266,8 +266,8 @@ function RoleEditor({
       {discordWarning && <p className="muted small warn">{discordWarning}</p>}
       {discordRoleId && !discordWarning && (
         <p className="muted small">
-          On save, the Discord role is renamed to “{name}”. Granting this role to a member also adds
-          the Discord role; removing it takes the Discord role away.
+          On save, the Discord role is renamed to “{name}” and recolored to match. Granting this
+          role to a member also adds the Discord role; removing it takes the Discord role away.
         </p>
       )}
 

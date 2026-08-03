@@ -17,6 +17,9 @@ export const users = sqliteTable(
     discordId: text('discord_id').notNull().unique(),
     username: text('username').notNull(),
     globalName: text('global_name'),
+    // Clan/game name a member sets for themselves. When present it is shown in
+    // place of the Discord name everywhere; see shared/names.ts for the order.
+    displayName: text('display_name'),
     avatar: text('avatar'), // Discord avatar hash, not a URL
     email: text('email'),
 

@@ -622,7 +622,22 @@ button.active {
   margin: 0;
 }
 
-.bio-editor textarea {
+.bio-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.bio-editor .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.bio-editor textarea,
+.bio-editor .field input {
   width: 100%;
   background: var(--color-bg);
   border: 1px solid var(--color-border);

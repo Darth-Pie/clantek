@@ -14,6 +14,7 @@ import { can, outranks, type Viewer, type Permission } from '../../shared/permis
 import type { Env } from '../env';
 import { DiscordRest } from './rest';
 import { syncMemberRankRoles } from './sync';
+import { memberName } from '../../shared/names';
 import { ephemeral, invoker, optionValue, reply, type Interaction } from './interactions';
 
 type DB = ReturnType<typeof drizzle<typeof schema>>;
@@ -46,6 +47,7 @@ async function viewerFromDiscordId(db: DB, discordId: string): Promise<Viewer | 
     discordId: user.discordId,
     username: user.username,
     globalName: user.globalName,
+    displayName: user.displayName,
     avatar: user.avatar,
     isGod: user.isGod,
     rank: rank ? { id: rank.id, name: rank.name, sortOrder: rank.sortOrder } : null,
@@ -100,7 +102,7 @@ async function whois(db: DB, i: Interaction) {
 
   return reply(
     [
-      `**${user.globalName ?? user.username}**`,
+      `**${memberName(user)}**`,
       `Rank: ${rank?.name ?? '—'}`,
       `Roles: ${roles.length ? roles.map((r) => r.name).join(', ') : '—'}`,
       `Medals: ${medalCount[0]?.n ?? 0}`,
@@ -184,7 +186,7 @@ async function promote(env: Env, db: DB, viewer: Viewer, i: Interaction) {
     : '';
 
   return reply(
-    `**${target.globalName ?? target.username}** promoted to **${nextRank.name}**` +
+    `**${memberName(target)}** promoted to **${nextRank.name}**` +
       (currentRank ? ` (from ${currentRank.name})` : '') +
       roleNote,
   );

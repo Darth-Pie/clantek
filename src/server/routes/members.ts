@@ -4,7 +4,7 @@ import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { can, outranks } from '../../shared/permissions';
-import { DiscordRest } from '../discord/rest';
+import { DiscordRest, DiscordError } from '../discord/rest';
 import { grantRole, revokeRole, syncMemberRankRoles } from '../discord/sync';
 
 const members = new Hono<AppContext>();
@@ -21,6 +21,7 @@ members.get('/', requireAuth, async (c) => {
       discordId: s.users.discordId,
       username: s.users.username,
       globalName: s.users.globalName,
+      displayName: s.users.displayName,
       avatar: s.users.avatar,
       status: s.users.status,
       joinedAt: s.users.joinedAt,
@@ -72,8 +73,12 @@ members.get('/:id', requireAuth, async (c) => {
 });
 
 /**
- * Edit a member's bio. A member may always edit their own; editing anyone
- * else's needs roster.edit. This is the one self-service field on the profile.
+ * Edit a member's profile — display name and bio. A member may always edit
+ * their own; editing anyone else's needs roster.edit.
+ *
+ * Changing the display name also sets the member's Discord nickname (their
+ * per-server name). Website stays the source of truth; the push is best-effort
+ * and reported back, never blocking the save.
  */
 members.patch('/:id/profile', requireAuth, async (c) => {
   const id = Number(c.req.param('id'));
@@ -83,17 +88,67 @@ members.patch('/:id/profile', requireAuth, async (c) => {
     return c.json({ error: 'You can only edit your own profile.' }, 403);
   }
 
-  const { bio } = await c.req.json<{ bio: string }>();
-  const clean = (bio ?? '').slice(0, 2000);
+  const body = await c.req.json<{ bio?: string; displayName?: string }>();
   const nowSec = Math.floor(Date.now() / 1000);
   const database = db(c.env);
 
-  await database
-    .insert(s.profiles)
-    .values({ userId: id, bio: clean, updatedAt: nowSec })
-    .onConflictDoUpdate({ target: s.profiles.userId, set: { bio: clean, updatedAt: nowSec } });
+  const target = await database.query.users.findFirst({ where: eq(s.users.id, id) });
+  if (!target) return c.json({ error: 'No such member' }, 404);
 
-  return c.json({ ok: true, bio: clean });
+  let bio: string | undefined;
+  if (body.bio !== undefined) {
+    bio = (body.bio ?? '').slice(0, 2000);
+    await database
+      .insert(s.profiles)
+      .values({ userId: id, bio, updatedAt: nowSec })
+      .onConflictDoUpdate({ target: s.profiles.userId, set: { bio, updatedAt: nowSec } });
+  }
+
+  let displayName = target.displayName;
+  let discordSync: { synced: boolean; warning?: string } | undefined;
+
+  if (body.displayName !== undefined) {
+    displayName = body.displayName.trim().slice(0, 32) || null;
+    const changed = displayName !== target.displayName;
+    await database
+      .update(s.users)
+      .set({ displayName, updatedAt: nowSec })
+      .where(eq(s.users.id, id));
+
+    if (changed) {
+      // Push the new display name as the member's Discord nickname. An empty
+      // value clears the nickname, reverting them to their Discord name.
+      const client = rest(c.env);
+      if (client) {
+        try {
+          await client.setNickname(
+            target.discordId,
+            displayName ?? '',
+            `ClanTek: display name set by ${viewer.username}`,
+          );
+          discordSync = { synced: true };
+        } catch (err) {
+          discordSync = {
+            synced: false,
+            warning:
+              err instanceof DiscordError && err.status === 403
+                ? 'Saved here, but Discord refused the nickname change: the bot needs Manage Nicknames and a role above this member. (Discord also blocks changing the server owner’s nickname.)'
+                : `Saved here, but the Discord nickname change failed: ${(err as Error).message}`,
+          };
+        }
+      }
+
+      await database.insert(s.auditLog).values({
+        actorId: viewer.id,
+        action: 'member.display_name',
+        targetType: 'user',
+        targetId: String(id),
+        meta: { displayName, discordSynced: discordSync?.synced ?? false },
+      });
+    }
+  }
+
+  return c.json({ ok: true, bio, displayName, discordSync });
 });
 
 /**

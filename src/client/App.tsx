@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useSession } from './lib/session';
 import type { Permission } from '../shared/permissions';
+import { memberName } from '../shared/names';
 import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
 import Ranks from './pages/Ranks';
@@ -41,7 +42,7 @@ export default function App() {
             <>
               <span className="who">
                 {viewer.rank && <span className="rank-chip">{viewer.rank.name}</span>}
-                {viewer.globalName ?? viewer.username}
+                {memberName(viewer)}
                 {viewer.isGod && <span className="god-chip" title="God status">★</span>}
               </span>
               <button onClick={() => void logout()}>Sign out</button>

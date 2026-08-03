@@ -17,6 +17,7 @@
     "db:seed:remote": "wrangler d1 execute clantek --remote --file=./src/db/seed.sql",
     "db:studio": "drizzle-kit studio",
     "discord:register": "tsx scripts/register-commands.ts",
+    "doctor": "tsx scripts/doctor.ts",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {

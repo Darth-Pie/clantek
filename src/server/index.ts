@@ -32,6 +32,8 @@ import {
   type Interaction,
 } from './discord/interactions';
 import { handleCommand } from './discord/commands';
+import { DiscordRest } from './discord/rest';
+import { syncMemberRankRoles } from './discord/sync';
 import ranks from './routes/ranks';
 import members from './routes/members';
 import settings from './routes/settings';
@@ -202,6 +204,22 @@ app.get('/api/auth/callback', async (c) => {
       meta: { discordId: discordUser.id, username: discordUser.username },
       source: 'system',
     });
+
+    // Apply the default rank's roles to the new member. Done in the background
+    // so the Discord round-trips don't hold up the login redirect.
+    if (defaultRank) {
+      const client =
+        c.env.DISCORD_BOT_TOKEN && c.env.DISCORD_GUILD_ID
+          ? new DiscordRest(c.env.DISCORD_BOT_TOKEN, c.env.DISCORD_GUILD_ID)
+          : null;
+      c.executionCtx.waitUntil(
+        syncMemberRankRoles(database, client, {
+          userId,
+          rankId: defaultRank.id,
+          actorId: null,
+        }),
+      );
+    }
   }
 
   const { token: sessionToken, expiresAt } = await createSession(database, userId, {

@@ -132,10 +132,35 @@ export const userRoles = sqliteTable(
     roleId: integer('role_id')
       .notNull()
       .references(() => roles.id, { onDelete: 'cascade' }),
+    // How the member came to hold this role. 'manual' grants are permanent
+    // until revoked by hand; 'rank' grants are reconciled when the member's
+    // rank changes. A manual grant always wins, so promoting/demoting never
+    // strips a role an admin gave on purpose.
+    source: text('source', { enum: ['manual', 'rank'] })
+      .notNull()
+      .default('manual'),
     grantedBy: integer('granted_by').references(() => users.id, { onDelete: 'set null' }),
     grantedAt: integer('granted_at').notNull().default(now),
   },
   (t) => [primaryKey({ columns: [t.userId, t.roleId] }), index('user_roles_role_idx').on(t.roleId)],
+);
+
+/**
+ * Which roles a rank confers. Assigning a member to a rank grants these roles
+ * (source='rank'), and a rank change reconciles them. Many-to-many: a rank can
+ * grant several roles, and a role can be granted by several ranks.
+ */
+export const rankRoles = sqliteTable(
+  'rank_roles',
+  {
+    rankId: integer('rank_id')
+      .notNull()
+      .references(() => ranks.id, { onDelete: 'cascade' }),
+    roleId: integer('role_id')
+      .notNull()
+      .references(() => roles.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.rankId, t.roleId] }), index('rank_roles_role_idx').on(t.roleId)],
 );
 
 /* ------------------------------------------------------------------ *

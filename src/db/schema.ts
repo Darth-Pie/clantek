@@ -104,7 +104,7 @@ export const roles = sqliteTable('roles', {
 
   sortOrder: integer('sort_order').notNull().default(0),
 
-  // System roles cannot be deleted or renamed through the admin UI.
+  // System roles cannot be deleted through the admin UI (they can be renamed).
   isSystem: integer('is_system', { mode: 'boolean' }).notNull().default(false),
 
   createdAt: integer('created_at').notNull().default(now),

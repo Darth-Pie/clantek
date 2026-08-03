@@ -225,12 +225,7 @@ function RoleEditor({
       <div className="field-row">
         <label>
           Name
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={busy || role.isSystem}
-            title={role.isSystem ? 'System roles cannot be renamed' : undefined}
-          />
+          <input value={name} onChange={(e) => setName(e.target.value)} disabled={busy} />
         </label>
         <label className="color-field">
           Color

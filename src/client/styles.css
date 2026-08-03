@@ -248,12 +248,22 @@ a:focus-visible {
 }
 
 .roster li {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.roster-link {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem;
-  border: 1px solid var(--color-border);
+  text-decoration: none;
+  color: inherit;
   border-radius: var(--radius);
+}
+
+.roster-link:hover {
+  background: color-mix(in srgb, var(--color-border) 50%, transparent);
 }
 
 .roster img {
@@ -533,4 +543,197 @@ button.active {
   border-color: var(--color-accent);
   color: var(--color-accent-text);
   background: var(--color-accent);
+}
+
+/* Member detail ---------------------------------------------------- */
+
+.back {
+  margin-bottom: 1rem;
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  padding: 0;
+}
+
+.back:hover {
+  color: var(--color-text);
+}
+
+.member-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.member-head img {
+  border-radius: 50%;
+}
+
+.member-head h2 {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-display);
+}
+
+.member-sub {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.status-chip.status-retired,
+.status-chip.status-banned {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.member-grid {
+  display: grid;
+  grid-template-columns: 1fr minmax(200px, 260px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .member-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.member-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.block h3,
+.member-admin h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+.bio {
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.bio-editor textarea {
+  width: 100%;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  padding: 0.5rem 0.6rem;
+  resize: vertical;
+}
+
+.bio-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.member-roles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.member-roles li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.member-roles .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.member-roles .tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+}
+
+.mini {
+  padding: 0 0.4rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.grant-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.grant-row select,
+.member-admin select {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  padding: 0.35rem 0.5rem;
+}
+
+.member-medals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.member-medals li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.member-admin {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.admin-label {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.admin-actions {
+  display: flex;
+  gap: 0.5rem;
 }

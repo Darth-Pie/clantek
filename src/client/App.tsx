@@ -3,6 +3,7 @@ import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useSession } from './lib/session';
 import type { Permission } from '../shared/permissions';
 import Login from './pages/Login';
+import MemberDetail from './pages/MemberDetail';
 import Ranks from './pages/Ranks';
 import Roles from './pages/Roles';
 import Roster from './pages/Roster';
@@ -61,6 +62,14 @@ export default function App() {
             element={
               <Protected>
                 <Roster />
+              </Protected>
+            }
+          />
+          <Route
+            path="/members/:id"
+            element={
+              <Protected>
+                <MemberDetail />
               </Protected>
             }
           />

@@ -45,6 +45,7 @@ const COMMANDS = [
   },
 ];
 
+/** Secrets only. Public config lives in wrangler.jsonc. */
 function loadDevVars(): Record<string, string> {
   try {
     const out: Record<string, string> = {};
@@ -58,16 +59,38 @@ function loadDevVars(): Record<string, string> {
   }
 }
 
-const vars = { ...loadDevVars(), ...process.env };
+/**
+ * Reads a var straight out of wrangler.jsonc. Matching the key directly avoids
+ * having to strip JSONC comments, which JSON.parse would choke on.
+ */
+function wranglerVar(name: string): string | undefined {
+  try {
+    const source = readFileSync('wrangler.jsonc', 'utf8');
+    return source.match(new RegExp(`"${name}"\\s*:\\s*"([^"]*)"`))?.[1] || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
-const clientId = vars.DISCORD_CLIENT_ID;
-const guildId = vars.DISCORD_GUILD_ID;
-const botToken = vars.DISCORD_BOT_TOKEN;
+const secrets = { ...loadDevVars(), ...process.env };
 
-if (!clientId || !guildId || !botToken) {
+const clientId = process.env.DISCORD_CLIENT_ID || wranglerVar('DISCORD_CLIENT_ID');
+const guildId = process.env.DISCORD_GUILD_ID || wranglerVar('DISCORD_GUILD_ID');
+const botToken = secrets.DISCORD_BOT_TOKEN;
+
+if (!clientId || !guildId) {
   console.error(
-    'Missing config. Set DISCORD_CLIENT_ID and DISCORD_GUILD_ID in wrangler.jsonc,\n' +
-      'and DISCORD_BOT_TOKEN in .dev.vars (or the environment).',
+    'Missing DISCORD_CLIENT_ID or DISCORD_GUILD_ID.\n' +
+      'Both live in the "vars" block of wrangler.jsonc. Run this from the project root.',
+  );
+  process.exit(1);
+}
+
+if (!botToken) {
+  console.error(
+    'Missing DISCORD_BOT_TOKEN.\n' +
+      'Copy .dev.vars.example to .dev.vars and paste your bot token into it.\n' +
+      '(.dev.vars is gitignored.)',
   );
   process.exit(1);
 }

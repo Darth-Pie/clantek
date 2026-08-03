@@ -290,3 +290,188 @@ a:focus-visible {
 .discord-btn:hover {
   filter: brightness(1.1);
 }
+
+/* Roles admin ------------------------------------------------------ */
+
+.roles-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .roles-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.role-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.role-chip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.role-chip.active {
+  border-color: var(--color-accent);
+}
+
+.role-chip .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.role-chip .role-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-chip .tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+}
+
+.role-chip .count {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  min-width: 1.4em;
+  text-align: right;
+}
+
+.role-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.empty-editor {
+  color: var(--color-muted);
+  text-align: center;
+  padding: 2.5rem 1rem;
+}
+
+.role-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.role-editor label input:not([type='color']):not([type='checkbox']),
+.role-editor label select {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  color: var(--color-text);
+  width: 100%;
+}
+
+.field-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.field-row > label:first-child {
+  flex: 1;
+}
+
+.color-field input[type='color'] {
+  width: 3rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: none;
+}
+
+button.primary {
+  align-self: flex-start;
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+button.primary:disabled {
+  background: var(--color-border);
+  color: var(--color-muted);
+}
+
+.warn {
+  color: var(--color-accent);
+}
+
+.perms {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.perms legend {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  padding: 0 0.4rem;
+}
+
+.perm-group h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  color: var(--color-muted);
+}
+
+.perm {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+  color: var(--color-text) !important;
+  font-size: 0.9rem !important;
+  padding: 0.15rem 0;
+}
+
+.perm code {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.editor-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.75rem;
+}

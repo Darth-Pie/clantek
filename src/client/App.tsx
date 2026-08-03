@@ -4,6 +4,7 @@ import { useSession } from './lib/session';
 import type { Permission } from '../shared/permissions';
 import Login from './pages/Login';
 import Ranks from './pages/Ranks';
+import Roles from './pages/Roles';
 import Roster from './pages/Roster';
 
 function Protected({ permission, children }: { permission?: Permission; children: ReactNode }) {
@@ -30,6 +31,7 @@ export default function App() {
           <nav className="nav">
             <NavLink to="/">Roster</NavLink>
             {can('ranks.manage') && <NavLink to="/admin/ranks">Ranks</NavLink>}
+            {can('roles.manage') && <NavLink to="/admin/roles">Roles</NavLink>}
           </nav>
         )}
 
@@ -67,6 +69,14 @@ export default function App() {
             element={
               <Protected permission="ranks.manage">
                 <Ranks />
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/roles"
+            element={
+              <Protected permission="roles.manage">
+                <Roles />
               </Protected>
             }
           />

@@ -26,6 +26,8 @@ import {
   InteractionType,
   verifySignature,
   ephemeral,
+  defer,
+  editOriginalResponse,
   InteractionResponseType,
   type Interaction,
 } from './discord/interactions';
@@ -33,6 +35,7 @@ import { handleCommand } from './discord/commands';
 import ranks from './routes/ranks';
 import members from './routes/members';
 import settings from './routes/settings';
+import rolesRoutes from './routes/roles';
 
 const app = new Hono<AppContext>();
 
@@ -62,12 +65,25 @@ app.post('/api/discord/interactions', async (c) => {
   }
 
   if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-    try {
-      return c.json(await handleCommand(c.env, interaction));
-    } catch (err) {
-      console.error('Slash command failed', err);
-      return c.json(ephemeral(`Something broke: ${(err as Error).message}`));
-    }
+    // Acknowledge inside Discord's 3-second window, then run the command in the
+    // background and edit the placeholder with the result. A cold start plus a
+    // handful of D1 round-trips can otherwise miss the deadline, which Discord
+    // reports to the user as "didn't respond in time".
+    c.executionCtx.waitUntil(
+      (async () => {
+        let content: string;
+        try {
+          const result = await handleCommand(c.env, interaction);
+          content = result.data.content;
+        } catch (err) {
+          console.error('Slash command failed', err);
+          content = `Something broke: ${(err as Error).message}`;
+        }
+        await editOriginalResponse(interaction.application_id, interaction.token, content);
+      })(),
+    );
+
+    return c.json(defer(true));
   }
 
   return c.json(ephemeral('Unsupported interaction type.'));
@@ -221,6 +237,7 @@ app.get('/api/me', (c) => {
 app.route('/api/ranks', ranks);
 app.route('/api/members', members);
 app.route('/api/settings', settings);
+app.route('/api/roles', rolesRoutes);
 
 app.get('/api/health', (c) => c.json({ ok: true, service: 'clantek' }));
 

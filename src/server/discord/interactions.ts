@@ -124,12 +124,36 @@ export function reply(content: string) {
 }
 
 /**
- * Discord hangs up if you take longer than 3 seconds. Defer, then finish the
- * work in ctx.waitUntil() and post the real answer with DiscordRest.followUp().
+ * Discord hangs up if you take longer than 3 seconds. Defer immediately, then
+ * finish the work in ctx.waitUntil() and fill in the message with
+ * editOriginalResponse().
  */
 export function defer(isEphemeral = true) {
   return {
     type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
     data: isEphemeral ? { flags: MessageFlags.EPHEMERAL } : {},
   };
+}
+
+/**
+ * Replaces the "thinking…" placeholder from a deferred response with the real
+ * content. Authenticated by the interaction token itself — no bot token needed.
+ * The ephemeral flag is fixed at defer time and cannot be changed here.
+ */
+export async function editOriginalResponse(
+  applicationId: string,
+  interactionToken: string,
+  content: string,
+): Promise<void> {
+  const res = await fetch(
+    `https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}/messages/@original`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    },
+  );
+  if (!res.ok) {
+    console.error(`Failed to edit interaction response (${res.status}):`, await res.text());
+  }
 }

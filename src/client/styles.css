@@ -157,6 +157,22 @@ input {
   margin-bottom: 1rem;
 }
 
+/* Saved locally, but a downstream push (usually Discord) was refused. */
+.warn-alert {
+  --amber: #e6a23c;
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+  border: 1px solid var(--amber);
+  color: var(--color-text);
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.warn-alert::before {
+  content: '⚠ ';
+  color: var(--amber);
+}
+
 /* Controls --------------------------------------------------------- */
 
 button {

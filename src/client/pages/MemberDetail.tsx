@@ -8,7 +8,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api, ApiError } from '../lib/api';
+import { api } from '../lib/api';
+import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
 import { memberName } from '../../shared/names';
 
@@ -62,9 +63,6 @@ export default function MemberDetail() {
   const [member, setMember] = useState<Member | null>(null);
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [assignable, setAssignable] = useState<Role[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [confirmDemote, setConfirmDemote] = useState(false);
 
@@ -72,6 +70,8 @@ export default function MemberDetail() {
     const { member } = await api.get<{ member: Member }>(`/members/${memberId}`);
     setMember(member);
   }, [memberId]);
+
+  const { run, busy, error, notice, warning, setError } = useAction(load);
 
   useEffect(() => {
     setLoading(true);
@@ -82,24 +82,9 @@ export default function MemberDetail() {
         ? api.get<{ roles: Role[] }>('/roles/assignable').then(({ roles }) => setAssignable(roles))
         : Promise.resolve(),
     ])
-      .catch((e) => setError(e instanceof ApiError ? e.message : 'Failed to load member.'))
+      .catch(() => setError('Failed to load member.'))
       .finally(() => setLoading(false));
-  }, [load, can]);
-
-  async function run(fn: () => Promise<string | void | null>) {
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const msg = await fn();
-      await load();
-      if (typeof msg === 'string') setNotice(msg);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong.');
-    } finally {
-      setBusy(false);
-    }
-  }
+  }, [load, can, setError]);
 
   if (loading) return <div className="loading">Loading member…</div>;
   if (!member) return <div className="empty">Member not found.</div>;
@@ -131,9 +116,11 @@ export default function MemberDetail() {
       const changes = [
         s?.added.length ? `roles added: ${s.added.join(', ')}` : '',
         s?.removed.length ? `removed: ${s.removed.join(', ')}` : '',
-      ].filter(Boolean).join('; ');
-      const warn = s?.warnings.length ? ` ${s.warnings[0]}` : '';
-      return `${label}.${changes ? ` (${changes})` : ''}${warn}`;
+      ]
+        .filter(Boolean)
+        .join('; ');
+      const summary = `${label}.${changes ? ` (${changes})` : ''}`;
+      return s?.warnings.length ? { warning: `${summary} ${s.warnings[0]}` } : summary;
     });
 
   const setStatus = (status: string) =>
@@ -145,13 +132,13 @@ export default function MemberDetail() {
   const grantRole = (roleId: number) =>
     run(async () => {
       const res = await api.post<{ warning?: string }>(`/members/${member.id}/roles`, { roleId });
-      return res.warning ?? 'Role granted.';
+      return res.warning ? { warning: res.warning } : 'Role granted.';
     });
 
   const revokeRole = (roleId: number) =>
     run(async () => {
       const res = await api.del<{ warning?: string }>(`/members/${member.id}/roles/${roleId}`);
-      return res.warning ?? 'Role removed.';
+      return res.warning ? { warning: res.warning } : 'Role removed.';
     });
 
   const heldRoleIds = new Set(member.roles.map((r) => r.id));
@@ -163,8 +150,7 @@ export default function MemberDetail() {
         ← Roster
       </button>
 
-      {error && <div className="alert">{error}</div>}
-      {notice && <div className="notice">{notice}</div>}
+      <Alerts error={error} warning={warning} notice={notice} />
 
       <header className="member-head">
         <img src={avatarUrl(member.discordId, member.avatar)} alt="" width={72} height={72} />
@@ -194,7 +180,7 @@ export default function MemberDetail() {
                     const res = await api.patch<{
                       discordSync?: { synced: boolean; warning?: string };
                     }>(`/members/${member.id}/profile`, { displayName, bio });
-                    if (res.discordSync?.warning) return res.discordSync.warning;
+                    if (res.discordSync?.warning) return { warning: res.discordSync.warning };
                     if (res.discordSync?.synced)
                       return 'Saved — the Discord nickname was updated to match.';
                     return 'Profile saved.';

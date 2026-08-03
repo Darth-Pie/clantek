@@ -9,7 +9,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import { api, ApiError } from '../lib/api';
+import { api } from '../lib/api';
+import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
 
 interface Rank {
@@ -38,14 +39,13 @@ export default function Ranks() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedRankId, setSelectedRankId] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   async function load() {
     const { ranks } = await api.get<{ ranks: Rank[] }>('/ranks');
     setRanks([...ranks].sort((a, b) => b.sortOrder - a.sortOrder));
   }
+
+  const { run, busy, error, notice, warning } = useAction(load);
 
   useEffect(() => {
     void load();
@@ -56,21 +56,6 @@ export default function Ranks() {
         .catch(() => setRoles([]));
     }
   }, [canManageRoles]);
-
-  async function run(fn: () => Promise<string | void | null>) {
-    setBusy(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const message = await fn();
-      await load();
-      if (typeof message === 'string') setNotice(message);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong.');
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const addRank = () =>
     run(async () => {
@@ -102,7 +87,7 @@ export default function Ranks() {
         members > 0
           ? `Saved. Applied to ${members} member${members === 1 ? '' : 's'} at this rank.`
           : 'Saved.';
-      return warnings.length ? `${base} ${warnings[0]}` : base;
+      return warnings.length ? { warning: `${base} ${warnings[0]}` } : base;
     });
 
   const selectedRank = ranks.find((r) => r.id === selectedRankId) ?? null;
@@ -116,8 +101,7 @@ export default function Ranks() {
         </p>
       </header>
 
-      {error && <div className="alert">{error}</div>}
-      {notice && <div className="notice">{notice}</div>}
+      <Alerts error={error} warning={warning} notice={notice} />
 
       <div className="add-row">
         <input

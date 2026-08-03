@@ -71,6 +71,13 @@
     "DISCORD_GUILD_ID": "607936444132098081"
   },
 
+  // Every 5 minutes: re-assert the website's Discord role state onto the guild,
+  // correcting anything changed directly in Discord back to the site's settings.
+  // The handler is the `scheduled` export in src/server/index.ts.
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+
   "observability": {
     "enabled": true
   }

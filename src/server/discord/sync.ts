@@ -6,7 +6,7 @@
  * Discord's UI (which Workers cannot observe live — see interactions.ts).
  */
 
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as s from '../../db/schema';
 import { DiscordRest, DiscordError } from './rest';
@@ -243,6 +243,42 @@ export async function syncMemberRankRoles(
   });
 
   return result;
+}
+
+/**
+ * Enforce the website's role state onto Discord for every member: the sweep
+ * behind "when Discord roles drift, they're corrected to the website's
+ * settings". Runs on a cron and on demand.
+ *
+ * Each member costs one Discord read plus one call per role that needs fixing,
+ * so a very large roster could approach the Workers per-invocation subrequest
+ * limit; batch with a stored cursor if the roster ever grows past a few dozen.
+ * Banned members are skipped — their roles are intentionally left alone.
+ */
+export async function reconcileAllMembers(
+  db: DB,
+  rest: DiscordRest,
+): Promise<{ processed: number; changed: number; failed: number }> {
+  const members = await db
+    .select({ id: s.users.id })
+    .from(s.users)
+    .where(ne(s.users.status, 'banned'));
+
+  let processed = 0;
+  let changed = 0;
+  let failed = 0;
+  for (const m of members) {
+    try {
+      const r = await reconcileMember(db, rest, m.id);
+      processed++;
+      if (r.added.length || r.removed.length) changed++;
+    } catch {
+      // One member's failure (rate limit, hierarchy, left the server) must not
+      // stop the sweep; the next run retries them.
+      failed++;
+    }
+  }
+  return { processed, changed, failed };
 }
 
 /** Re-apply a rank's role set to everyone currently holding that rank. */

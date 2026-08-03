@@ -129,6 +129,18 @@ export default function MemberDetail() {
       return `Status set to ${status}.`;
     });
 
+  const resyncDiscord = () =>
+    run(async () => {
+      const res = await api.post<{ ok: boolean; added?: number; removed?: number; warning?: string }>(
+        `/members/${member.id}/resync`,
+      );
+      if (res.warning) return { warning: res.warning };
+      const n = (res.added ?? 0) + (res.removed ?? 0);
+      return n === 0
+        ? 'Discord already matches the website.'
+        : `Discord synced — ${res.added} added, ${res.removed} removed.`;
+    });
+
   const grantRole = (roleId: number) =>
     run(async () => {
       const res = await api.post<{ warning?: string }>(`/members/${member.id}/roles`, { roleId });
@@ -257,7 +269,10 @@ export default function MemberDetail() {
           </section>
         </div>
 
-        {(can('roster.promote') || can('roster.edit') || can('roster.remove')) && (
+        {(can('roster.promote') ||
+          can('roster.edit') ||
+          can('roster.remove') ||
+          can('discord.sync')) && (
           <aside className="member-admin">
             <h3>Admin</h3>
 
@@ -335,6 +350,19 @@ export default function MemberDetail() {
                     Remove from roster
                   </button>
                 )}
+              </div>
+            )}
+
+            {can('discord.sync') && (
+              <div className="admin-block">
+                <span className="admin-label">Discord</span>
+                <button disabled={busy} onClick={() => void resyncDiscord()}>
+                  Re-sync roles to Discord
+                </button>
+                <span className="muted small">
+                  Forces this member’s Discord roles to match the website now. Runs automatically
+                  every few minutes.
+                </span>
               </div>
             )}
           </aside>

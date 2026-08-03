@@ -46,6 +46,7 @@ export default function Roles() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -67,12 +68,15 @@ export default function Roles() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  async function run(fn: () => Promise<unknown>) {
+  // A returned string becomes a non-error notice (e.g. "Discord role renamed").
+  async function run(fn: () => Promise<string | void | null>) {
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
-      await fn();
+      const message = await fn();
       await load();
+      if (typeof message === 'string') setNotice(message);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong.');
     } finally {
@@ -103,6 +107,7 @@ export default function Roles() {
       </header>
 
       {error && <div className="alert">{error}</div>}
+      {notice && <div className="notice">{notice}</div>}
 
       <div className="add-row">
         <input
@@ -141,7 +146,16 @@ export default function Roles() {
             discordRoles={discordRoles}
             discordWarning={discordWarning}
             busy={busy}
-            onSave={(patch) => run(() => api.patch(`/roles/${selected.id}`, patch))}
+            onSave={(patch) =>
+              run(async () => {
+                const res = await api.patch<{
+                  discordSync?: { synced: boolean; warning?: string };
+                }>(`/roles/${selected.id}`, patch);
+                if (res.discordSync?.warning) return res.discordSync.warning;
+                if (res.discordSync?.synced) return 'Saved — the Discord role was renamed to match.';
+                return 'Saved.';
+              })
+            }
             onSavePermissions={(permissions) =>
               run(() => api.put(`/roles/${selected.id}/permissions`, { permissions }))
             }
@@ -257,8 +271,8 @@ function RoleEditor({
       {discordWarning && <p className="muted small warn">{discordWarning}</p>}
       {discordRoleId && !discordWarning && (
         <p className="muted small">
-          Granting this role to a member will also add the Discord role, and removing it will take
-          the Discord role away.
+          On save, the Discord role is renamed to “{name}”. Granting this role to a member also adds
+          the Discord role; removing it takes the Discord role away.
         </p>
       )}
 

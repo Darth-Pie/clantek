@@ -80,6 +80,22 @@ export class DiscordRest {
     }
   }
 
+  /**
+   * Renames a guild role. Discord caps role names at 100 characters. Same
+   * hierarchy rule as membership changes: the bot's role must sit above the
+   * target, or this returns 50013.
+   */
+  async renameRole(roleId: string, name: string, reason?: string): Promise<void> {
+    const res = await this.call(
+      `/guilds/${this.guildId}/roles/${roleId}`,
+      { method: 'PATCH', body: JSON.stringify({ name: name.slice(0, 100) }) },
+      reason,
+    );
+    if (!res.ok) {
+      throw new DiscordError('renameRole', res.status, await res.text());
+    }
+  }
+
   /** Used by slash commands to reply after an initial deferred response. */
   async followUp(applicationId: string, interactionToken: string, content: unknown): Promise<void> {
     await fetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}`, {

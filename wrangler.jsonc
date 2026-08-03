@@ -49,7 +49,7 @@
 
     // Your Discord server. Login is gated on membership in this guild:
     // no invite, no account.
-    "DISCORD_GUILD_ID": "223208136780152832"
+    "DISCORD_GUILD_ID": "607936444132098081"
   },
 
   "observability": {

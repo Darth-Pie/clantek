@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { memberName } from '../../shared/names';
 
 interface Member {
   id: number;
   discordId: string;
   username: string;
   globalName: string | null;
+  displayName: string | null;
   avatar: string | null;
   status: string;
   joinedAt: number;
@@ -48,7 +50,7 @@ export default function Roster() {
             <Link to={`/members/${m.id}`} className="roster-link">
               <img src={avatarUrl(m.discordId, m.avatar)} alt="" width={40} height={40} />
               <div>
-                <div className="name">{m.globalName ?? m.username}</div>
+                <div className="name">{memberName(m)}</div>
                 <div className="muted small">
                   {m.rankName ?? 'Unranked'} · joined{' '}
                   {new Date(m.joinedAt * 1000).toLocaleDateString()}

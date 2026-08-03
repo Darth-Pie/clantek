@@ -15,6 +15,13 @@
       "when": 1785794157729,
       "tag": "0001_slim_lady_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785796171473,
+      "tag": "0002_melted_lilith",
+      "breakpoints": true
     }
   ]
 }

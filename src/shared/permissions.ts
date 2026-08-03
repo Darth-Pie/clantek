@@ -49,6 +49,7 @@ export interface Viewer {
   discordId: string;
   username: string;
   globalName: string | null;
+  displayName: string | null;
   avatar: string | null;
   isGod: boolean;
   rank: { id: number; name: string; sortOrder: number } | null;

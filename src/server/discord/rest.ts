@@ -105,6 +105,23 @@ export class DiscordRest {
     }
   }
 
+  /**
+   * Sets a guild member's nickname — their per-server display name. Pass an
+   * empty string to clear it (reverting to their Discord name). Needs the bot's
+   * MANAGE_NICKNAMES permission and its role above the member's. Discord will
+   * not let anyone change the guild owner's nickname, permissions aside.
+   */
+  async setNickname(discordUserId: string, nick: string, reason?: string): Promise<void> {
+    const res = await this.call(
+      `/guilds/${this.guildId}/members/${discordUserId}`,
+      { method: 'PATCH', body: JSON.stringify({ nick: nick.slice(0, 32) || null }) },
+      reason,
+    );
+    if (!res.ok) {
+      throw new DiscordError('setNickname', res.status, await res.text());
+    }
+  }
+
   /** Used by slash commands to reply after an initial deferred response. */
   async followUp(applicationId: string, interactionToken: string, content: unknown): Promise<void> {
     await fetch(`${DISCORD_API}/webhooks/${applicationId}/${interactionToken}`, {

@@ -92,6 +92,7 @@ export async function resolveViewer(db: DB, token: string | undefined): Promise<
     discordId: user.discordId,
     username: user.username,
     globalName: user.globalName,
+    displayName: user.displayName,
     avatar: user.avatar,
     isGod: user.isGod,
     rank: rank ? { id: rank.id, name: rank.name, sortOrder: rank.sortOrder } : null,

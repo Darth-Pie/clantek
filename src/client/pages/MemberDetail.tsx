@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { useSession } from '../lib/session';
+import { memberName } from '../../shared/names';
 
 interface Role {
   id: number;
@@ -29,6 +30,7 @@ interface Member {
   discordId: string;
   username: string;
   globalName: string | null;
+  displayName: string | null;
   avatar: string | null;
   status: string;
   joinedAt: number;
@@ -103,8 +105,11 @@ export default function MemberDetail() {
   if (!member) return <div className="empty">Member not found.</div>;
 
   const isSelf = viewer?.id === member.id;
-  const canEditBio = isSelf || can('roster.edit');
-  const displayName = member.globalName ?? member.username;
+  const canEditProfile = isSelf || can('roster.edit');
+  const displayName = memberName(member);
+  // The underlying Discord identity, shown when a display name overrides it.
+  const discordHandle = member.globalName ?? member.username;
+  const showsDiscordHandle = displayName !== discordHandle;
 
   // Adjacent ranks for one-step promote/demote, and whether the viewer outranks
   // the target (God ignores the ladder).
@@ -165,6 +170,7 @@ export default function MemberDetail() {
         <img src={avatarUrl(member.discordId, member.avatar)} alt="" width={72} height={72} />
         <div>
           <h2>{displayName}</h2>
+          {showsDiscordHandle && <div className="muted small">Discord: {discordHandle}</div>}
           <div className="member-sub muted">
             <span className="rank-chip">{member.rank ? member.rank.name : 'Unranked'}</span>
             <span className={`status-chip status-${member.status}`}>{member.status}</span>
@@ -176,16 +182,22 @@ export default function MemberDetail() {
       <div className="member-grid">
         <div className="member-main">
           <section className="block">
-            <h3>Bio</h3>
-            {canEditBio ? (
-              <BioEditor
+            <h3>Profile</h3>
+            {canEditProfile ? (
+              <ProfileEditor
+                displayName={member.displayName ?? ''}
                 bio={member.bio ?? ''}
                 busy={busy}
                 isSelf={isSelf}
-                onSave={(bio) =>
+                onSave={({ displayName, bio }) =>
                   run(async () => {
-                    await api.patch(`/members/${member.id}/profile`, { bio });
-                    return 'Bio saved.';
+                    const res = await api.patch<{
+                      discordSync?: { synced: boolean; warning?: string };
+                    }>(`/members/${member.id}/profile`, { displayName, bio });
+                    if (res.discordSync?.warning) return res.discordSync.warning;
+                    if (res.discordSync?.synced)
+                      return 'Saved — the Discord nickname was updated to match.';
+                    return 'Profile saved.';
                   })
                 }
               />
@@ -346,35 +358,68 @@ export default function MemberDetail() {
   );
 }
 
-function BioEditor({
+function ProfileEditor({
+  displayName,
   bio,
   busy,
   isSelf,
   onSave,
 }: {
+  displayName: string;
   bio: string;
   busy: boolean;
   isSelf: boolean;
-  onSave: (bio: string) => void;
+  onSave: (v: { displayName: string; bio: string }) => void;
 }) {
+  const [name, setName] = useState(displayName);
   const [text, setText] = useState(bio);
-  const dirty = text !== bio;
+  const dirty = name !== displayName || text !== bio;
+
   return (
     <div className="bio-editor">
-      <textarea
-        value={text}
-        maxLength={2000}
-        rows={4}
-        placeholder={isSelf ? 'Tell the clan about yourself…' : 'Edit this member’s bio…'}
-        onChange={(e) => setText(e.target.value)}
-        disabled={busy}
-      />
+      <label className="field">
+        Display name
+        <input
+          value={name}
+          maxLength={32}
+          placeholder={isSelf ? 'Your in-game name (optional)' : 'Set a display name'}
+          onChange={(e) => setName(e.target.value)}
+          disabled={busy}
+        />
+      </label>
+      <p className="muted small">
+        Shown across the site instead of the Discord name, and applied as the member’s Discord
+        nickname. Leave blank to use the Discord name.
+      </p>
+
+      <label className="field">
+        Bio
+        <textarea
+          value={text}
+          maxLength={2000}
+          rows={4}
+          placeholder={isSelf ? 'Tell the clan about yourself…' : 'Edit this member’s bio…'}
+          onChange={(e) => setText(e.target.value)}
+          disabled={busy}
+        />
+      </label>
+
       <div className="bio-actions">
-        <button className="primary" disabled={busy || !dirty} onClick={() => onSave(text)}>
-          Save bio
+        <button
+          className="primary"
+          disabled={busy || !dirty}
+          onClick={() => onSave({ displayName: name, bio: text })}
+        >
+          Save profile
         </button>
         {dirty && (
-          <button disabled={busy} onClick={() => setText(bio)}>
+          <button
+            disabled={busy}
+            onClick={() => {
+              setName(displayName);
+              setText(bio);
+            }}
+          >
             Cancel
           </button>
         )}

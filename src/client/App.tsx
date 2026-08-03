@@ -5,6 +5,7 @@ import type { Permission } from '../shared/permissions';
 import { memberName } from '../shared/names';
 import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
+import Medals from './pages/Medals';
 import Ranks from './pages/Ranks';
 import Roles from './pages/Roles';
 import Roster from './pages/Roster';
@@ -34,6 +35,7 @@ export default function App() {
             <NavLink to="/">Roster</NavLink>
             {can('ranks.manage') && <NavLink to="/admin/ranks">Ranks</NavLink>}
             {can('roles.manage') && <NavLink to="/admin/roles">Roles</NavLink>}
+            {can('medals.manage') && <NavLink to="/admin/medals">Medals</NavLink>}
           </nav>
         )}
 
@@ -87,6 +89,14 @@ export default function App() {
             element={
               <Protected permission="roles.manage">
                 <Roles />
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/medals"
+            element={
+              <Protected permission="medals.manage">
+                <Medals />
               </Protected>
             }
           />

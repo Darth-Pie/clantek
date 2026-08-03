@@ -34,10 +34,13 @@ import {
 import { handleCommand } from './discord/commands';
 import { DiscordRest } from './discord/rest';
 import { syncMemberRankRoles, reconcileAllMembers } from './discord/sync';
+import { awardTenureMedals } from './medals/tenure';
 import ranks from './routes/ranks';
 import members from './routes/members';
 import settings from './routes/settings';
 import rolesRoutes from './routes/roles';
+import medalsRoutes from './routes/medals';
+import mediaRoutes, { serveMediaObject } from './routes/media';
 
 const app = new Hono<AppContext>();
 
@@ -153,6 +156,13 @@ app.get('/api/auth/callback', async (c) => {
     return c.redirect('/login?error=not_in_guild');
   }
 
+  // Discord's guild-join date is the authoritative basis for tenure medals.
+  const guildJoinedAt = guildMember.joined_at
+    ? Math.floor(Date.parse(guildMember.joined_at) / 1000)
+    : null;
+  const validGuildJoinedAt =
+    guildJoinedAt != null && !Number.isNaN(guildJoinedAt) ? guildJoinedAt : null;
+
   const database = db(c.env);
   const existing = await database.query.users.findFirst({
     where: eq(s.users.discordId, discordUser.id),
@@ -172,6 +182,9 @@ app.get('/api/auth/callback', async (c) => {
         globalName: discordUser.global_name,
         avatar: discordUser.avatar,
         email: discordUser.email ?? existing.email,
+        // Only set once — the guild-join date doesn't change, and a re-join
+        // shouldn't reset accrued tenure.
+        guildJoinedAt: existing.guildJoinedAt ?? validGuildJoinedAt,
         lastSeenAt: Math.floor(Date.now() / 1000),
         updatedAt: Math.floor(Date.now() / 1000),
       })
@@ -190,6 +203,7 @@ app.get('/api/auth/callback', async (c) => {
         avatar: discordUser.avatar,
         email: discordUser.email ?? null,
         rankId: defaultRank?.id ?? null,
+        guildJoinedAt: validGuildJoinedAt,
         lastSeenAt: Math.floor(Date.now() / 1000),
       })
       .returning({ id: s.users.id });
@@ -229,6 +243,15 @@ app.get('/api/auth/callback', async (c) => {
 
   c.executionCtx.waitUntil(purgeExpiredSessions(database));
 
+  // Hand out any tenure medals this member has earned, so they show up the
+  // moment they log in rather than on the next cron sweep. DB-only, so it's
+  // safe to fire and forget.
+  c.executionCtx.waitUntil(
+    awardTenureMedals(database, { userId }).catch((err) =>
+      console.error('Tenure award on login failed', err),
+    ),
+  );
+
   c.header('Set-Cookie', clearedStateCookie);
   c.header('Set-Cookie', sessionCookie(sessionToken, expiresAt - Math.floor(Date.now() / 1000)), {
     append: true,
@@ -256,6 +279,8 @@ app.route('/api/ranks', ranks);
 app.route('/api/members', members);
 app.route('/api/settings', settings);
 app.route('/api/roles', rolesRoutes);
+app.route('/api/medals', medalsRoutes);
+app.route('/api/media', mediaRoutes);
 
 app.get('/api/health', (c) => c.json({ ok: true, service: 'clantek' }));
 
@@ -277,6 +302,16 @@ app.onError((err, c) => {
 // Keep unmatched API routes answering JSON rather than serving index.html.
 app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404));
 
+// Uploaded images (medal art, …) live in R2 and are served here — deliberately
+// outside /api so the no-store middleware doesn't apply and they cache hard.
+// wrangler.jsonc puts /media/* in run_worker_first so these reach the Worker.
+app.get('/media/*', async (c) => {
+  const key = c.req.path.slice('/media/'.length);
+  if (!key) return c.json({ error: 'Not found' }, 404);
+  const res = await serveMediaObject(c.env, key);
+  return res ?? c.json({ error: 'Not found' }, 404);
+});
+
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 
 /* ------------------------------------------------------------------ *
@@ -291,10 +326,21 @@ app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 export default {
   fetch: app.fetch,
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    const database = db(env);
+
+    // Tenure medals are DB-only and don't need Discord, so they run regardless
+    // of whether the bot is configured. The reconcile sweep (which also
+    // backfills guild-join dates) needs the bot.
+    ctx.waitUntil(
+      awardTenureMedals(database)
+        .then((r) => console.log('Scheduled tenure award:', r.awarded.length, 'granted'))
+        .catch((err) => console.error('Scheduled tenure award failed', err)),
+    );
+
     if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return;
     const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
     ctx.waitUntil(
-      reconcileAllMembers(db(env), rest)
+      reconcileAllMembers(database, rest)
         .then((r) => console.log('Scheduled reconcile:', JSON.stringify(r)))
         .catch((err) => console.error('Scheduled reconcile failed', err)),
     );

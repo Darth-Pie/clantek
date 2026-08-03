@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
@@ -57,15 +57,19 @@ members.get('/:id', requireAuth, async (c) => {
       .where(eq(s.userRoles.userId, id)),
     database
       .select({
+        awardId: s.memberMedals.id,
         id: s.medals.id,
         name: s.medals.name,
         imageUrl: s.medals.imageUrl,
         citation: s.memberMedals.citation,
+        // NULL awardedBy = handed out by the tenure sweep, not a person.
+        awardedBy: s.memberMedals.awardedBy,
         awardedAt: s.memberMedals.awardedAt,
       })
       .from(s.memberMedals)
       .innerJoin(s.medals, eq(s.memberMedals.medalId, s.medals.id))
-      .where(eq(s.memberMedals.userId, id)),
+      .where(eq(s.memberMedals.userId, id))
+      .orderBy(desc(s.memberMedals.awardedAt)),
     database.query.profiles.findFirst({ where: eq(s.profiles.userId, id) }),
   ]);
 
@@ -287,6 +291,82 @@ members.post('/:id/resync', requirePermission('discord.sync'), async (c) => {
   } catch (err) {
     return c.json({ ok: false, warning: `Discord re-sync failed: ${(err as Error).message}` });
   }
+});
+
+/**
+ * Award a medal to a member, with an optional citation for why. A member can
+ * hold any given medal only once, so re-awarding the same one is a 409 rather
+ * than a silent duplicate.
+ */
+members.post('/:id/medals', requirePermission('medals.award'), async (c) => {
+  const userId = Number(c.req.param('id'));
+  const { medalId, citation } = await c.req.json<{ medalId: number; citation?: string }>();
+  const viewer = c.get('viewer')!;
+  const database = db(c.env);
+
+  const [target, medal] = await Promise.all([
+    database.query.users.findFirst({ where: eq(s.users.id, userId) }),
+    database.query.medals.findFirst({ where: eq(s.medals.id, medalId) }),
+  ]);
+  if (!target) return c.json({ error: 'No such member' }, 404);
+  if (!medal) return c.json({ error: 'No such medal' }, 404);
+
+  const already = await database
+    .select({ id: s.memberMedals.id })
+    .from(s.memberMedals)
+    .where(and(eq(s.memberMedals.userId, userId), eq(s.memberMedals.medalId, medalId)));
+  if (already.length) {
+    return c.json({ error: `${target.username} already has the “${medal.name}” medal.` }, 409);
+  }
+
+  const award = (
+    await database
+      .insert(s.memberMedals)
+      .values({
+        userId,
+        medalId,
+        citation: citation?.trim() || null,
+        awardedBy: viewer.id,
+      })
+      .returning()
+  )[0]!;
+
+  await database.insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'medal.award',
+    targetType: 'user',
+    targetId: String(userId),
+    meta: { medalId, medalName: medal.name, citation: citation?.trim() || null },
+    ip: c.req.header('cf-connecting-ip'),
+  });
+
+  return c.json({ ok: true, awardId: award.id }, 201);
+});
+
+/** Revoke a specific award (by member_medals id, not medal id). */
+members.delete('/:id/medals/:awardId', requirePermission('medals.award'), async (c) => {
+  const userId = Number(c.req.param('id'));
+  const awardId = Number(c.req.param('awardId'));
+  const viewer = c.get('viewer')!;
+  const database = db(c.env);
+
+  const award = await database.query.memberMedals.findFirst({
+    where: and(eq(s.memberMedals.id, awardId), eq(s.memberMedals.userId, userId)),
+  });
+  if (!award) return c.json({ error: 'No such award on this member' }, 404);
+
+  await database.delete(s.memberMedals).where(eq(s.memberMedals.id, awardId));
+
+  await database.insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'medal.revoke',
+    targetType: 'user',
+    targetId: String(userId),
+    meta: { medalId: award.medalId, awardId },
+    ip: c.req.header('cf-connecting-ip'),
+  });
+
+  return c.json({ ok: true });
 });
 
 members.delete('/:id/roles/:roleId', requirePermission('roles.assign'), async (c) => {

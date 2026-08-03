@@ -28,6 +28,12 @@ export const users = sqliteTable(
     // Bypasses every permission check. Seeded for the founder; see seed.sql.
     isGod: integer('is_god', { mode: 'boolean' }).notNull().default(false),
 
+    // When Discord says this member joined the guild — the authoritative basis
+    // for tenure medals. Captured at login and backfilled by the reconcile
+    // sweep; falls back to joinedAt (site-join) when Discord hasn't been read
+    // for them yet.
+    guildJoinedAt: integer('guild_joined_at'),
+
     status: text('status', { enum: ['active', 'inactive', 'loa', 'retired', 'banned'] })
       .notNull()
       .default('active'),
@@ -245,6 +251,10 @@ export const medals = sqliteTable(
     imageUrl: text('image_url'),
     // NULL = clan-wide medal. Set = specific to one game (was the game_medals table).
     gameId: integer('game_id').references(() => games.id, { onDelete: 'cascade' }),
+    // Tenure medals: when set, this medal is granted automatically once a member
+    // reaches this many months in the guild (6, 12, 24, …). NULL = awarded by
+    // hand only. The auto-grant sweep lives in server/medals/tenure.ts.
+    autoGrantMonths: integer('auto_grant_months'),
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: integer('created_at').notNull().default(now),
   },

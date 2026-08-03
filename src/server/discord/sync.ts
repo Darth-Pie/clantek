@@ -129,8 +129,15 @@ export async function reconcileMember(
     .where(eq(s.userRoles.userId, user.id));
 
   const shouldHave = new Set(held.map((r) => r.discordRoleId).filter((id): id is string => !!id));
-  const currentlyHas = await rest.getMemberRoles(user.discordId);
-  if (currentlyHas === null) return { added: [], removed: [] }; // left the server
+  const member = await rest.getMember(user.discordId);
+  if (member === null) return { added: [], removed: [] }; // left the server
+  const currentlyHas = member.roles;
+
+  // Backfill the authoritative guild-join date (for tenure medals) the first
+  // time we read a member who hasn't logged in since it was added.
+  if (user.guildJoinedAt == null && member.joinedAt != null) {
+    await db.update(s.users).set({ guildJoinedAt: member.joinedAt }).where(eq(s.users.id, user.id));
+  }
 
   const added: string[] = [];
   const removed: string[] = [];

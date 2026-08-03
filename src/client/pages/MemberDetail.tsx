@@ -20,11 +20,21 @@ interface Role {
   source?: 'manual' | 'rank';
 }
 interface Medal {
+  awardId: number;
   id: number;
   name: string;
   imageUrl: string | null;
   citation: string | null;
+  // NULL = awarded automatically by the tenure sweep, not by a person.
+  awardedBy: number | null;
   awardedAt: number;
+}
+/** A medal definition, for the award picker. */
+interface MedalDef {
+  id: number;
+  name: string;
+  imageUrl: string | null;
+  autoGrantMonths: number | null;
 }
 interface Member {
   id: number;
@@ -63,6 +73,7 @@ export default function MemberDetail() {
   const [member, setMember] = useState<Member | null>(null);
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [assignable, setAssignable] = useState<Role[]>([]);
+  const [medalCatalog, setMedalCatalog] = useState<MedalDef[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDemote, setConfirmDemote] = useState(false);
 
@@ -80,6 +91,9 @@ export default function MemberDetail() {
       api.get<{ ranks: Rank[] }>('/ranks').then(({ ranks }) => setRanks(ranks)),
       can('roles.assign')
         ? api.get<{ roles: Role[] }>('/roles/assignable').then(({ roles }) => setAssignable(roles))
+        : Promise.resolve(),
+      can('medals.award')
+        ? api.get<{ medals: MedalDef[] }>('/medals').then(({ medals }) => setMedalCatalog(medals))
         : Promise.resolve(),
     ])
       .catch(() => setError('Failed to load member.'))
@@ -153,8 +167,26 @@ export default function MemberDetail() {
       return res.warning ? { warning: res.warning } : 'Role removed.';
     });
 
+  const awardMedal = (medalId: number, citation: string) =>
+    run(async () => {
+      await api.post(`/members/${member.id}/medals`, {
+        medalId,
+        citation: citation.trim() || undefined,
+      });
+      return 'Medal awarded.';
+    });
+
+  const revokeMedal = (awardId: number) =>
+    run(async () => {
+      await api.del(`/members/${member.id}/medals/${awardId}`);
+      return 'Medal revoked.';
+    });
+
   const heldRoleIds = new Set(member.roles.map((r) => r.id));
   const grantable = assignable.filter((r) => !heldRoleIds.has(r.id));
+
+  const heldMedalIds = new Set(member.medals.map((m) => m.id));
+  const awardable = medalCatalog.filter((m) => !heldMedalIds.has(m.id));
 
   return (
     <section className="panel member-detail">
@@ -259,13 +291,39 @@ export default function MemberDetail() {
             ) : (
               <ul className="member-medals">
                 {member.medals.map((m) => (
-                  <li key={m.id} title={m.citation ?? ''}>
-                    {m.imageUrl && <img src={m.imageUrl} alt="" width={28} height={28} />}
-                    {m.name}
+                  <li key={m.awardId} title={m.citation ?? ''}>
+                    {m.imageUrl ? (
+                      <img src={m.imageUrl} alt="" width={28} height={28} />
+                    ) : (
+                      <span className="medal-thumb-empty small">★</span>
+                    )}
+                    <span className="medal-label">
+                      {m.name}
+                      {m.citation && <span className="medal-citation">{m.citation}</span>}
+                    </span>
+                    {m.awardedBy === null && <span className="tag">auto</span>}
+                    {can('medals.award') && (
+                      <button
+                        className="mini danger"
+                        disabled={busy}
+                        title="Revoke this medal"
+                        onClick={() => void revokeMedal(m.awardId)}
+                      >
+                        ✕
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
+            {can('medals.award') &&
+              (awardable.length > 0 ? (
+                <AwardMedalRow medals={awardable} busy={busy} onAward={awardMedal} />
+              ) : (
+                medalCatalog.length > 0 && (
+                  <p className="muted small">This member holds every medal in the catalog.</p>
+                )
+              ))}
           </section>
         </div>
 
@@ -369,6 +427,61 @@ export default function MemberDetail() {
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * Pick a medal and (optionally) write a citation, then award it. Kept as its
+ * own component so the select + citation input have local state that resets
+ * after each award.
+ */
+function AwardMedalRow({
+  medals,
+  busy,
+  onAward,
+}: {
+  medals: MedalDef[];
+  busy: boolean;
+  onAward: (medalId: number, citation: string) => void;
+}) {
+  const [medalId, setMedalId] = useState<number | ''>('');
+  const [citation, setCitation] = useState('');
+
+  return (
+    <div className="award-row">
+      <select
+        value={medalId}
+        disabled={busy}
+        onChange={(e) => setMedalId(e.target.value ? Number(e.target.value) : '')}
+      >
+        <option value="">Award a medal…</option>
+        {medals.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.name}
+            {m.autoGrantMonths != null ? ' (tenure)' : ''}
+          </option>
+        ))}
+      </select>
+      <input
+        value={citation}
+        placeholder="Citation (optional)"
+        maxLength={300}
+        disabled={busy || medalId === ''}
+        onChange={(e) => setCitation(e.target.value)}
+      />
+      <button
+        disabled={busy || medalId === ''}
+        onClick={() => {
+          if (medalId !== '') {
+            onAward(medalId, citation);
+            setMedalId('');
+            setCitation('');
+          }
+        }}
+      >
+        Award
+      </button>
+    </div>
   );
 }
 

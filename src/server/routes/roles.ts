@@ -21,6 +21,13 @@ function rest(env: AppContext['Bindings']): DiscordRest | null {
   return new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
 }
 
+/** "#c0392b" → 12597931. Null/blank/invalid → 0, which Discord shows as no colour. */
+function hexToInt(hex: string | null): number {
+  if (!hex) return 0;
+  const n = parseInt(hex.replace(/^#/, ''), 16);
+  return Number.isNaN(n) ? 0 : n;
+}
+
 /** Every role with its permission list and how many members hold it. */
 roles.get('/', requirePermission('roles.manage'), async (c) => {
   const database = db(c.env);
@@ -160,40 +167,56 @@ roles.patch('/:id', requirePermission('roles.manage'), async (c) => {
 
   const updated = (await database.update(s.roles).set(patch).where(eq(s.roles.id, id)).returning())[0]!;
 
-  // Website is the source of truth for the name. Push it to Discord when the
-  // role is (or has just become) mapped and its name or mapping changed, so
-  // "rename here → renamed there" holds. A newly-set mapping also adopts the
-  // current website name, which is the "associate → rename" behaviour.
+  // Website is the source of truth for name and colour. Push both to Discord
+  // when the role is (or has just become) mapped and any of name/colour/mapping
+  // changed, so "set it here → set there" holds. A newly-set mapping also
+  // adopts the current website name and colour (the "associate → sync"
+  // behaviour). Name and colour go in one PATCH, so a change to either keeps
+  // the whole Discord role in step.
   const nameChanged = patch.name != null && patch.name !== role.name;
-  const mappingChanged = body.discordRoleId !== undefined && updated.discordRoleId !== role.discordRoleId;
+  const colorChanged = body.color !== undefined && updated.color !== role.color;
+  const mappingChanged =
+    body.discordRoleId !== undefined && updated.discordRoleId !== role.discordRoleId;
   let discordSync: { synced: boolean; warning?: string } | undefined;
 
-  if (updated.discordRoleId && (nameChanged || mappingChanged)) {
+  if (updated.discordRoleId && (nameChanged || colorChanged || mappingChanged)) {
     const client = rest(c.env);
     if (!client) {
-      discordSync = { synced: false, warning: 'Saved. Discord bot is not configured, so the Discord role was not renamed.' };
+      discordSync = {
+        synced: false,
+        warning: 'Saved. Discord bot is not configured, so the Discord role was not updated.',
+      };
     } else {
       try {
-        await client.renameRole(
+        await client.updateRole(
           updated.discordRoleId,
-          updated.name,
-          `ClanTek: name synced by ${c.get('viewer')!.username}`,
+          { name: updated.name, color: hexToInt(updated.color) },
+          `ClanTek: synced by ${c.get('viewer')!.username}`,
         );
         discordSync = { synced: true };
       } catch (err) {
         discordSync =
           err instanceof DiscordError && err.status === 403
-            ? { synced: false, warning: 'Saved here, but Discord refused to rename the role: the bot needs its role dragged above this one in Server Settings → Roles.' }
-            : { synced: false, warning: `Saved here, but the Discord rename failed: ${(err as Error).message}` };
+            ? {
+                synced: false,
+                warning:
+                  'Saved here, but Discord refused: the bot needs its role dragged above this one in Server Settings → Roles.',
+              }
+            : { synced: false, warning: `Saved here, but the Discord update failed: ${(err as Error).message}` };
       }
     }
 
     await database.insert(s.auditLog).values({
       actorId: c.get('viewer')!.id,
-      action: 'role.discord_rename',
+      action: 'role.discord_sync',
       targetType: 'role',
       targetId: String(id),
-      meta: { discordRoleId: updated.discordRoleId, name: updated.name, synced: discordSync.synced },
+      meta: {
+        discordRoleId: updated.discordRoleId,
+        name: updated.name,
+        color: updated.color,
+        synced: discordSync.synced,
+      },
     });
   }
 

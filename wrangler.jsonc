@@ -5,6 +5,17 @@
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
 
+  // The site's primary hostname. Declaring it here keeps the custom domain
+  // reproducible — a fresh deploy (or the CI pipeline) re-asserts it rather
+  // than depending on a one-off dashboard binding. Requires the 919gaming.com
+  // zone to be on this Cloudflare account (it is).
+  "routes": [{ "pattern": "clantek.919gaming.com", "custom_domain": true }],
+
+  // One canonical URL. With the custom domain above, the *.workers.dev
+  // subdomain is intentionally off, so there is a single host for OAuth
+  // redirects and cookies. Flip to true to restore the fallback URL.
+  "workers_dev": false,
+
   // The React admin builds to dist/client and is served as static assets by the
   // same Worker that serves the API. SPA handling sends unknown paths to
   // index.html so client-side routing works on refresh.

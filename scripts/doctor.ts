@@ -120,8 +120,37 @@ async function main(): Promise<number> {
     bad('could not read roles — the bot may lack View Server permissions');
     return 1;
   }
-  const all = JSON.parse(roles.body) as { id: string; name: string; position: number }[];
+  const all = JSON.parse(roles.body) as {
+    id: string;
+    name: string;
+    position: number;
+    permissions: string;
+  }[];
   const held = (JSON.parse(member.body) as { roles: string[] }).roles;
+
+  // Effective guild permissions = OR of every held role's bitfield.
+  const ADMIN = 1n << 3n;
+  const MANAGE_ROLES = 1n << 28n;
+  const MANAGE_NICKNAMES = 1n << 27n;
+  let bits = 0n;
+  for (const r of all) if (held.includes(r.id) || r.name === '@everyone') bits |= BigInt(r.permissions);
+  const isAdmin = (bits & ADMIN) === ADMIN;
+  const hasPerm = (bit: bigint) => isAdmin || (bits & bit) === bit;
+
+  console.log('\nPermissions');
+  if (isAdmin) ok('bot has Administrator (covers everything)');
+  const permChecks: [string, bigint, string][] = [
+    ['Manage Roles', MANAGE_ROLES, 'role sync (grant/revoke, rename, recolour)'],
+    ['Manage Nicknames', MANAGE_NICKNAMES, 'display-name → Discord nickname sync'],
+  ];
+  for (const [name, bit, why] of permChecks) {
+    if (hasPerm(bit)) ok(`${name}`);
+    else {
+      bad(`missing ${name} — needed for ${why}`);
+      note(`Server Settings → Roles → the bot's role → enable ${name}.`);
+      failed++;
+    }
+  }
 
   const botTop = Math.max(...all.filter((r) => held.includes(r.id)).map((r) => r.position), 0);
   const above = all.filter((r) => r.position > botTop && r.name !== '@everyone');

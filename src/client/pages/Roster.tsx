@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 
 interface Member {
@@ -44,14 +45,17 @@ export default function Roster() {
       <ul className="roster">
         {members.map((m) => (
           <li key={m.id}>
-            <img src={avatarUrl(m.discordId, m.avatar)} alt="" width={40} height={40} />
-            <div>
-              <div className="name">{m.globalName ?? m.username}</div>
-              <div className="muted small">
-                {m.rankName ?? 'Unranked'} · joined {new Date(m.joinedAt * 1000).toLocaleDateString()}
+            <Link to={`/members/${m.id}`} className="roster-link">
+              <img src={avatarUrl(m.discordId, m.avatar)} alt="" width={40} height={40} />
+              <div>
+                <div className="name">{m.globalName ?? m.username}</div>
+                <div className="muted small">
+                  {m.rankName ?? 'Unranked'} · joined{' '}
+                  {new Date(m.joinedAt * 1000).toLocaleDateString()}
+                </div>
               </div>
-            </div>
-            {m.status !== 'active' && <span className="status-chip">{m.status}</span>}
+              {m.status !== 'active' && <span className="status-chip">{m.status}</span>}
+            </Link>
           </li>
         ))}
       </ul>

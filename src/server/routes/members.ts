@@ -3,7 +3,7 @@ import { asc, desc, eq } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
-import { outranks } from '../../shared/permissions';
+import { can, outranks } from '../../shared/permissions';
 import { DiscordRest } from '../discord/rest';
 import { grantRole, revokeRole, syncMemberRankRoles } from '../discord/sync';
 
@@ -42,10 +42,15 @@ members.get('/:id', requireAuth, async (c) => {
   const user = await database.query.users.findFirst({ where: eq(s.users.id, id) });
   if (!user) return c.json({ error: 'No such member' }, 404);
 
-  const [rank, roles, medals] = await Promise.all([
+  const [rank, roles, medals, profile] = await Promise.all([
     user.rankId ? database.query.ranks.findFirst({ where: eq(s.ranks.id, user.rankId) }) : null,
     database
-      .select({ id: s.roles.id, name: s.roles.name, color: s.roles.color })
+      .select({
+        id: s.roles.id,
+        name: s.roles.name,
+        color: s.roles.color,
+        source: s.userRoles.source,
+      })
       .from(s.userRoles)
       .innerJoin(s.roles, eq(s.userRoles.roleId, s.roles.id))
       .where(eq(s.userRoles.userId, id)),
@@ -60,9 +65,85 @@ members.get('/:id', requireAuth, async (c) => {
       .from(s.memberMedals)
       .innerJoin(s.medals, eq(s.memberMedals.medalId, s.medals.id))
       .where(eq(s.memberMedals.userId, id)),
+    database.query.profiles.findFirst({ where: eq(s.profiles.userId, id) }),
   ]);
 
-  return c.json({ member: { ...user, rank, roles, medals } });
+  return c.json({ member: { ...user, rank, roles, medals, bio: profile?.bio ?? null } });
+});
+
+/**
+ * Edit a member's bio. A member may always edit their own; editing anyone
+ * else's needs roster.edit. This is the one self-service field on the profile.
+ */
+members.patch('/:id/profile', requireAuth, async (c) => {
+  const id = Number(c.req.param('id'));
+  const viewer = c.get('viewer')!;
+  const isSelf = viewer.id === id;
+  if (!isSelf && !can(viewer, 'roster.edit')) {
+    return c.json({ error: 'You can only edit your own profile.' }, 403);
+  }
+
+  const { bio } = await c.req.json<{ bio: string }>();
+  const clean = (bio ?? '').slice(0, 2000);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const database = db(c.env);
+
+  await database
+    .insert(s.profiles)
+    .values({ userId: id, bio: clean, updatedAt: nowSec })
+    .onConflictDoUpdate({ target: s.profiles.userId, set: { bio: clean, updatedAt: nowSec } });
+
+  return c.json({ ok: true, bio: clean });
+});
+
+/**
+ * Change a member's status (active/inactive/loa/retired/banned). "Remove" from
+ * the roster is a status change to retired, which keeps history. Banning needs
+ * the stronger roster.remove; softer states need roster.edit. You cannot change
+ * the status of someone who outranks you.
+ */
+members.patch('/:id/status', requireAuth, async (c) => {
+  const id = Number(c.req.param('id'));
+  const viewer = c.get('viewer')!;
+  const { status } = await c.req.json<{ status: string }>();
+
+  const allowed = ['active', 'inactive', 'loa', 'retired', 'banned'] as const;
+  if (!allowed.includes(status as (typeof allowed)[number])) {
+    return c.json({ error: 'Invalid status' }, 400);
+  }
+
+  const needsRemove = status === 'banned' || status === 'retired';
+  if (!can(viewer, needsRemove ? 'roster.remove' : 'roster.edit')) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
+
+  const database = db(c.env);
+  const target = await database.query.users.findFirst({ where: eq(s.users.id, id) });
+  if (!target) return c.json({ error: 'No such member' }, 404);
+
+  const targetRank = target.rankId
+    ? await database.query.ranks.findFirst({ where: eq(s.ranks.id, target.rankId) })
+    : null;
+  if (!outranks(viewer, targetRank?.sortOrder ?? null)) {
+    return c.json({ error: 'You cannot change the status of someone at or above your rank.' }, 403);
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  await database
+    .update(s.users)
+    .set({ status: status as (typeof allowed)[number], updatedAt: nowSec })
+    .where(eq(s.users.id, id));
+
+  await database.insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'member.status',
+    targetType: 'user',
+    targetId: String(id),
+    meta: { from: target.status, to: status },
+    ip: c.req.header('cf-connecting-ip'),
+  });
+
+  return c.json({ ok: true, status });
 });
 
 /** Set a member's rank outright (the ladder-step version lives in Discord's /promote). */

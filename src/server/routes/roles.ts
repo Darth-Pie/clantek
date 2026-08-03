@@ -10,8 +10,8 @@ import { Hono } from 'hono';
 import { asc, eq, sql } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
-import { db, requirePermission } from '../middleware/auth';
-import { isPermission, type Permission } from '../../shared/permissions';
+import { db, requireAuth, requirePermission } from '../middleware/auth';
+import { can, isPermission, type Permission } from '../../shared/permissions';
 import { DiscordRest, DiscordError } from '../discord/rest';
 
 const roles = new Hono<AppContext>();
@@ -57,6 +57,23 @@ roles.get('/', requirePermission('roles.manage'), async (c) => {
   return c.json({
     roles: rows.map((r) => ({ ...r, permissions: byRole.get(r.id) ?? [] })),
   });
+});
+
+/**
+ * A minimal role list for people who can assign roles but not necessarily
+ * manage them (an Officer has roles.assign but not roles.manage). Used by the
+ * member page's grant control.
+ */
+roles.get('/assignable', requireAuth, async (c) => {
+  const viewer = c.get('viewer');
+  if (!can(viewer, 'roles.assign') && !can(viewer, 'roles.manage')) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
+  const list = await db(c.env)
+    .select({ id: s.roles.id, name: s.roles.name, color: s.roles.color })
+    .from(s.roles)
+    .orderBy(asc(s.roles.sortOrder), asc(s.roles.name));
+  return c.json({ roles: list });
 });
 
 /**

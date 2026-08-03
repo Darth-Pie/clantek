@@ -20,6 +20,12 @@ export interface DiscordRole {
   managed: boolean;
 }
 
+export interface GuildMember {
+  roles: string[];
+  /** When they joined the guild, unix seconds — or null if Discord omitted it. */
+  joinedAt: number | null;
+}
+
 export class DiscordRest {
   constructor(
     private readonly botToken: string,
@@ -50,12 +56,22 @@ export class DiscordRest {
     return res.json();
   }
 
-  async getMemberRoles(discordUserId: string): Promise<string[] | null> {
+  /**
+   * The full guild member: their roles and guild-join date. Returns null when
+   * they're no longer in the server (404).
+   */
+  async getMember(discordUserId: string): Promise<GuildMember | null> {
     const res = await this.call(`/guilds/${this.guildId}/members/${discordUserId}`);
     if (res.status === 404) return null;
     if (!res.ok) throw new DiscordError('getMember', res.status, await res.text());
-    const body = (await res.json()) as { roles: string[] };
-    return body.roles;
+    const body = (await res.json()) as { roles: string[]; joined_at?: string };
+    const parsed = body.joined_at ? Math.floor(Date.parse(body.joined_at) / 1000) : NaN;
+    return { roles: body.roles, joinedAt: Number.isNaN(parsed) ? null : parsed };
+  }
+
+  async getMemberRoles(discordUserId: string): Promise<string[] | null> {
+    const member = await this.getMember(discordUserId);
+    return member ? member.roles : null;
   }
 
   async addRole(discordUserId: string, roleId: string, reason?: string): Promise<void> {

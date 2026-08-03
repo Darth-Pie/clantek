@@ -26,11 +26,15 @@
   // of ever reaching the Worker. Scoping it to /api/* means API routes always
   // hit the Worker while every other path (/, /login, /admin/*, hashed assets)
   // is served directly by the assets layer with SPA fallback.
+  // /media/* is served by the Worker from R2 (medal art, etc.). It must be in
+  // run_worker_first or the assets layer would answer those paths with the SPA
+  // fallback (index.html) before the Worker ever sees them — the same trap the
+  // /api/* scoping avoids for the API.
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/media/*"]
   },
 
   "d1_databases": [
@@ -42,16 +46,16 @@
     }
   ],
 
-  // Media storage for avatars, rank insignia, and medal art. Nothing uses it
-  // yet. R2 must be enabled once on the Cloudflare dashboard (R2 → Get
-  // started) before this binding will deploy; uncomment after that and run
-  //   npx wrangler r2 bucket create clantek-media
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MEDIA",
-  //     "bucket_name": "clantek-media"
-  //   }
-  // ],
+  // Media storage for medal art (and, later, avatars and rank insignia).
+  // Requires R2 enabled once on the Cloudflare dashboard (R2 → Enable) and the
+  // bucket created:  npx wrangler r2 bucket create clantek-media
+  // Uploads land here via POST /api/media; they're served back at /media/*.
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "clantek-media"
+    }
+  ],
 
   "vars": {
     // Non-secret config only. Real secrets (client secret, bot token, session

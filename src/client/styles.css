@@ -785,3 +785,205 @@ button.active {
   border-radius: var(--radius);
   padding: 0.6rem;
 }
+
+/* ------------------------------------------------------------------ *
+ * Medals admin + member-page medal controls
+ * ------------------------------------------------------------------ */
+
+.medal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.medal-chip {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.medal-chip.active {
+  border-color: var(--color-accent);
+}
+
+.medal-chip .medal-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.medal-chip .tag,
+.member-medals .tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+}
+
+.medal-chip .count {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  min-width: 1.4em;
+  text-align: right;
+}
+
+/* The little insignia thumbnail, on chips and in the editor. */
+.medal-thumb {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.medal-thumb.large {
+  width: 64px;
+  height: 64px;
+}
+
+.medal-thumb img {
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.medal-thumb-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-muted);
+}
+
+.medal-thumb-empty.small {
+  width: 28px;
+  height: 28px;
+}
+
+.medal-editor-head {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.medal-image-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+/* A file input styled as a button by hiding the input and dressing the label. */
+.upload-btn {
+  display: inline-block;
+  cursor: pointer;
+  padding: 0.4rem 0.75rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.upload-btn:hover {
+  border-color: var(--color-accent);
+}
+
+.tenure {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tenure legend {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  padding: 0 0.35rem;
+}
+
+.tenure-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tenure-row input {
+  width: 6rem;
+}
+
+.tenure-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.preset {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.preset.active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* The member-page award picker: medal select + citation + button. */
+.award-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.award-row select {
+  flex: none;
+}
+
+.award-row input {
+  flex: 1;
+  min-width: 8rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  padding: 0.35rem 0.5rem;
+}
+
+/* Give held medals room for a citation line under the name. */
+.member-medals li {
+  align-items: flex-start;
+}
+
+.medal-label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.medal-citation {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+}

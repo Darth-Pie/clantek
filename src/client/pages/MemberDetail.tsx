@@ -47,7 +47,7 @@ interface Member {
   profileImageUrl: string | null;
   status: string;
   joinedAt: number;
-  rank: { id: number; name: string; sortOrder: number } | null;
+  rank: { id: number; name: string; sortOrder: number; imageUrl: string | null } | null;
   roles: Role[];
   medals: Medal[];
   bio: string | null;
@@ -71,7 +71,6 @@ export default function MemberDetail() {
   const [assignable, setAssignable] = useState<Role[]>([]);
   const [medalCatalog, setMedalCatalog] = useState<MedalDef[]>([]);
   const [loading, setLoading] = useState(true);
-  const [confirmDemote, setConfirmDemote] = useState(false);
 
   const load = useCallback(async () => {
     const { member } = await api.get<{ member: Member }>(`/members/${memberId}`);
@@ -192,6 +191,16 @@ export default function MemberDetail() {
   const heldMedalIds = new Set(member.medals.map((m) => m.id));
   const awardable = medalCatalog.filter((m) => !heldMedalIds.has(m.id));
 
+  // Manual roles are the only ones managed here; rank-derived roles are set on
+  // the rank in the admin panel, so they aren't listed or revocable on a member.
+  const manualRoles = member.roles.filter((r) => r.source !== 'rank');
+  const showAdminBar =
+    can('roster.promote') ||
+    can('roster.edit') ||
+    can('roster.remove') ||
+    can('roles.assign') ||
+    can('discord.sync');
+
   return (
     <section className="panel member-detail">
       <button className="back" onClick={() => navigate('/')}>
@@ -219,8 +228,122 @@ export default function MemberDetail() {
         </div>
       </header>
 
-      <div className="member-grid">
-        <div className="member-main">
+      {showAdminBar && (
+        <div className="member-admin-bar">
+          {can('roster.promote') && (
+            <div className="mab-group">
+              <span className="rank-thumb">
+                {member.rank?.imageUrl ? (
+                  <img src={member.rank.imageUrl} alt="" width={28} height={28} />
+                ) : (
+                  <span className="rank-thumb-empty">—</span>
+                )}
+              </span>
+              <span className="mab-rank-name">{member.rank ? member.rank.name : 'Unranked'}</span>
+              {outranksTarget ? (
+                <span className="mab-buttons">
+                  <button
+                    disabled={busy || !canPromoteTo(nextUp)}
+                    title={nextUp ? `Promote to ${nextUp.name}` : 'Already at the top rank'}
+                    onClick={() => nextUp && void setRank(nextUp.id, `Promoted to ${nextUp.name}`)}
+                  >
+                    ▲ Promote
+                  </button>
+                  <button
+                    disabled={busy || !nextDown}
+                    title={nextDown ? `Demote to ${nextDown.name}` : 'Already at the lowest rank'}
+                    onClick={() => nextDown && void setRank(nextDown.id, `Demoted to ${nextDown.name}`)}
+                  >
+                    ▼ Demote
+                  </button>
+                </span>
+              ) : (
+                <span className="muted small">Outranks you</span>
+              )}
+            </div>
+          )}
+
+          {(can('roster.edit') || can('roster.remove')) && (
+            <div className="mab-group">
+              <span className="mab-label">Status</span>
+              <select
+                value={member.status}
+                disabled={busy || !outranksTarget}
+                onChange={(e) => void setStatus(e.target.value)}
+              >
+                {STATUSES.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+              {can('roster.remove') && member.status !== 'retired' && (
+                <button
+                  className="danger mini"
+                  disabled={busy || !outranksTarget}
+                  onClick={() => void setStatus('retired')}
+                  title="Retire this member (keeps their history)"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          )}
+
+          {can('roles.assign') && (
+            <div className="mab-group mab-roles">
+              <span className="mab-label">Roles</span>
+              {manualRoles.map((role) => (
+                <span key={role.id} className="role-pill">
+                  <span className="dot" style={{ background: role.color ?? 'var(--color-muted)' }} />
+                  {role.name}
+                  <button
+                    className="mini danger"
+                    disabled={busy}
+                    title="Remove this role"
+                    onClick={() => void revokeRole(role.id)}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+              {grantable.length > 0 && (
+                <select
+                  disabled={busy}
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      void grantRole(Number(e.target.value));
+                      e.target.value = '';
+                    }
+                  }}
+                >
+                  <option value="">Grant a role…</option>
+                  {grantable.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {can('discord.sync') && (
+            <div className="mab-group">
+              <button
+                disabled={busy}
+                onClick={() => void resyncDiscord()}
+                title="Force this member’s Discord roles to match the website now"
+              >
+                Re-sync Discord
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="member-main">
           <section className="block">
             <h3>Profile</h3>
             {canEditProfile ? (
@@ -245,52 +368,6 @@ export default function MemberDetail() {
               <p className="bio">{member.bio}</p>
             ) : (
               <p className="muted">No bio yet.</p>
-            )}
-          </section>
-
-          <section className="block">
-            <h3>Roles</h3>
-            {member.roles.length === 0 && <p className="muted">No roles.</p>}
-            <ul className="member-roles">
-              {member.roles.map((role) => (
-                <li key={role.id}>
-                  <span className="dot" style={{ background: role.color ?? 'var(--color-muted)' }} />
-                  {role.name}
-                  <span className="tag">{role.source === 'rank' ? 'from rank' : 'manual'}</span>
-                  {can('roles.assign') && role.source !== 'rank' && (
-                    <button
-                      className="mini danger"
-                      disabled={busy}
-                      title="Remove this role"
-                      onClick={() => void revokeRole(role.id)}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {can('roles.assign') && grantable.length > 0 && (
-              <div className="grant-row">
-                <select
-                  disabled={busy}
-                  defaultValue=""
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      void grantRole(Number(e.target.value));
-                      e.target.value = '';
-                    }
-                  }}
-                >
-                  <option value="">Grant a role…</option>
-                  {grantable.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="muted small">Rank-derived roles are managed on the rank, not here.</span>
-              </div>
             )}
           </section>
 
@@ -335,106 +412,6 @@ export default function MemberDetail() {
                 )
               ))}
           </section>
-        </div>
-
-        {(can('roster.promote') ||
-          can('roster.edit') ||
-          can('roster.remove') ||
-          can('discord.sync')) && (
-          <aside className="member-admin">
-            <h3>Admin</h3>
-
-            {can('roster.promote') && (
-              <div className="admin-block">
-                <span className="admin-label">Rank</span>
-                <div className="current-rank">{member.rank ? member.rank.name : 'Unranked'}</div>
-
-                {!outranksTarget ? (
-                  <p className="muted small">This member outranks you — you can’t change their rank.</p>
-                ) : confirmDemote ? (
-                  <div className="confirm-row">
-                    <span className="small">
-                      Demote <strong>{displayName}</strong> from {member.rank?.name ?? 'Unranked'} to{' '}
-                      <strong>{nextDown?.name}</strong>?
-                    </span>
-                    <div className="admin-actions">
-                      <button
-                        className="danger"
-                        disabled={busy}
-                        onClick={() => {
-                          setConfirmDemote(false);
-                          if (nextDown) void setRank(nextDown.id, `Demoted to ${nextDown.name}`);
-                        }}
-                      >
-                        Confirm demote
-                      </button>
-                      <button disabled={busy} onClick={() => setConfirmDemote(false)}>
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="admin-actions">
-                    <button
-                      disabled={busy || !canPromoteTo(nextUp)}
-                      onClick={() => nextUp && void setRank(nextUp.id, `Promoted to ${nextUp.name}`)}
-                      title={nextUp ? `Promote to ${nextUp.name}` : 'Already at the top rank'}
-                    >
-                      ▲ Promote{nextUp ? ` → ${nextUp.name}` : ''}
-                    </button>
-                    <button
-                      disabled={busy || !nextDown}
-                      onClick={() => setConfirmDemote(true)}
-                      title={nextDown ? `Demote to ${nextDown.name}` : 'Already at the lowest rank'}
-                    >
-                      ▼ Demote{nextDown ? ` → ${nextDown.name}` : ''}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {(can('roster.edit') || can('roster.remove')) && (
-              <div className="admin-block">
-                <span className="admin-label">Status</span>
-                <select
-                  value={member.status}
-                  disabled={busy || !outranksTarget}
-                  onChange={(e) => void setStatus(e.target.value)}
-                >
-                  {STATUSES.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-                {can('roster.remove') && member.status !== 'retired' && (
-                  <button
-                    className="danger"
-                    disabled={busy || !outranksTarget}
-                    onClick={() => void setStatus('retired')}
-                    title="Retire this member (keeps their history)"
-                  >
-                    Remove from roster
-                  </button>
-                )}
-              </div>
-            )}
-
-            {can('discord.sync') && (
-              <div className="admin-block">
-                <span className="admin-label">Discord</span>
-                <button disabled={busy} onClick={() => void resyncDiscord()}>
-                  Re-sync roles to Discord
-                </button>
-                <span className="muted small">
-                  Forces this member’s Discord roles to match the website now. Runs automatically
-                  every few minutes.
-                </span>
-              </div>
-            )}
-          </aside>
-        )}
       </div>
     </section>
   );

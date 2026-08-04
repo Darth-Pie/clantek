@@ -42,14 +42,15 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
   (1, 'news.create'), (1, 'news.publish'), (1, 'news.delete'),
   (1, 'medals.award'), (1, 'medals.manage'),
   (1, 'games.manage'), (1, 'matches.record'), (1, 'matches.manage'),
+  (1, 'warrecords.manage'), (1, 'warrecords.award'),
   (1, 'theme.manage'), (1, 'settings.manage'),
   (1, 'audit.view'), (1, 'discord.sync'),
   -- Officer
   (2, 'roster.view'), (2, 'roster.edit'), (2, 'roster.promote'),
   (2, 'roles.assign'),
   (2, 'news.create'), (2, 'news.publish'),
-  (2, 'medals.award'),
-  (2, 'matches.record'), (2, 'matches.manage'),
+  (2, 'medals.award'), (2, 'warrecords.award'),
+  (2, 'games.manage'), (2, 'matches.record'), (2, 'matches.manage'),
   (2, 'audit.view'),
   -- Editor
   (3, 'roster.view'), (3, 'news.create'), (3, 'news.publish'),

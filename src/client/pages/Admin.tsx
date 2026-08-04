@@ -18,6 +18,8 @@ import NewsAdmin from './NewsAdmin';
 import Ranks from './Ranks';
 import Roles from './Roles';
 import Medals from './Medals';
+import Games from './Games';
+import WarRecords from './WarRecords';
 import Theme from './Theme';
 
 export interface AdminSection {
@@ -37,6 +39,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'ranks', label: 'Ranks', permission: 'ranks.manage', render: () => <Ranks /> },
   { key: 'roles', label: 'Roles', permission: 'roles.manage', render: () => <Roles /> },
   { key: 'medals', label: 'Medals', permission: 'medals.manage', render: () => <Medals /> },
+  { key: 'games', label: 'Games', permission: 'games.manage', render: () => <Games /> },
+  { key: 'warrecords', label: 'War Records', permission: 'warrecords.manage', render: () => <WarRecords /> },
   { key: 'theme', label: 'Theme', permission: 'theme.manage', render: () => <Theme /> },
 ];
 

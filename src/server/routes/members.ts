@@ -45,7 +45,7 @@ members.get('/:id', requireAuth, async (c) => {
   const user = await database.query.users.findFirst({ where: eq(s.users.id, id) });
   if (!user) return c.json({ error: 'No such member' }, 404);
 
-  const [rank, roles, medals, profile] = await Promise.all([
+  const [rank, roles, medals, warRecords, profile] = await Promise.all([
     user.rankId ? database.query.ranks.findFirst({ where: eq(s.ranks.id, user.rankId) }) : null,
     database
       .select({
@@ -72,10 +72,26 @@ members.get('/:id', requireAuth, async (c) => {
       .innerJoin(s.medals, eq(s.memberMedals.medalId, s.medals.id))
       .where(eq(s.memberMedals.userId, id))
       .orderBy(desc(s.memberMedals.awardedAt)),
+    database
+      .select({
+        awardId: s.memberWarRecords.id,
+        id: s.warRecords.id,
+        name: s.warRecords.name,
+        imageUrl: s.warRecords.imageUrl,
+        gameName: s.games.name,
+        citation: s.memberWarRecords.citation,
+        awardedBy: s.memberWarRecords.awardedBy,
+        awardedAt: s.memberWarRecords.awardedAt,
+      })
+      .from(s.memberWarRecords)
+      .innerJoin(s.warRecords, eq(s.memberWarRecords.warRecordId, s.warRecords.id))
+      .leftJoin(s.games, eq(s.warRecords.gameId, s.games.id))
+      .where(eq(s.memberWarRecords.userId, id))
+      .orderBy(desc(s.memberWarRecords.awardedAt)),
     database.query.profiles.findFirst({ where: eq(s.profiles.userId, id) }),
   ]);
 
-  return c.json({ member: { ...user, rank, roles, medals, bio: profile?.bio ?? null } });
+  return c.json({ member: { ...user, rank, roles, medals, warRecords, bio: profile?.bio ?? null } });
 });
 
 /**
@@ -390,6 +406,76 @@ members.delete('/:id/medals/:awardId', requirePermission('medals.award'), async 
     targetType: 'user',
     targetId: String(userId),
     meta: { medalId: award.medalId, awardId },
+    ip: c.req.header('cf-connecting-ip'),
+  });
+
+  return c.json({ ok: true });
+});
+
+/**
+ * Award a war record to a member, with an optional citation. Like medals, a
+ * member holds any given war record only once (re-awarding is a 409).
+ */
+members.post('/:id/warrecords', requirePermission('warrecords.award'), async (c) => {
+  const userId = Number(c.req.param('id'));
+  const { warRecordId, citation } = await c.req.json<{ warRecordId: number; citation?: string }>();
+  const viewer = c.get('viewer')!;
+  const database = db(c.env);
+
+  const [target, record] = await Promise.all([
+    database.query.users.findFirst({ where: eq(s.users.id, userId) }),
+    database.query.warRecords.findFirst({ where: eq(s.warRecords.id, warRecordId) }),
+  ]);
+  if (!target) return c.json({ error: 'No such member' }, 404);
+  if (!record) return c.json({ error: 'No such war record' }, 404);
+
+  const already = await database
+    .select({ id: s.memberWarRecords.id })
+    .from(s.memberWarRecords)
+    .where(and(eq(s.memberWarRecords.userId, userId), eq(s.memberWarRecords.warRecordId, warRecordId)));
+  if (already.length) {
+    return c.json({ error: `${target.username} already holds the “${record.name}” war record.` }, 409);
+  }
+
+  const award = (
+    await database
+      .insert(s.memberWarRecords)
+      .values({ userId, warRecordId, citation: citation?.trim() || null, awardedBy: viewer.id })
+      .returning()
+  )[0]!;
+
+  await database.insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'warrecord.award',
+    targetType: 'user',
+    targetId: String(userId),
+    meta: { warRecordId, name: record.name, citation: citation?.trim() || null },
+    ip: c.req.header('cf-connecting-ip'),
+  });
+
+  return c.json({ ok: true, awardId: award.id }, 201);
+});
+
+/** Revoke a specific war-record award (by member_war_records id). */
+members.delete('/:id/warrecords/:awardId', requirePermission('warrecords.award'), async (c) => {
+  const userId = Number(c.req.param('id'));
+  const awardId = Number(c.req.param('awardId'));
+  const viewer = c.get('viewer')!;
+  const database = db(c.env);
+
+  const award = await database.query.memberWarRecords.findFirst({
+    where: and(eq(s.memberWarRecords.id, awardId), eq(s.memberWarRecords.userId, userId)),
+  });
+  if (!award) return c.json({ error: 'No such award on this member' }, 404);
+
+  await database.delete(s.memberWarRecords).where(eq(s.memberWarRecords.id, awardId));
+
+  await database.insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'warrecord.revoke',
+    targetType: 'user',
+    targetId: String(userId),
+    meta: { warRecordId: award.warRecordId, awardId },
     ip: c.req.header('cf-connecting-ip'),
   });
 

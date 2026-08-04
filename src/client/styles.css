@@ -1098,7 +1098,7 @@ button.active {
 
 .account-trigger .caret {
   color: var(--color-muted);
-  font-size: 0.7rem;
+  flex: none;
 }
 
 .account-dropdown {
@@ -1798,8 +1798,18 @@ label.check {
   font-size: 0.82rem;
 }
 .usage-connect summary {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
   cursor: pointer;
   color: var(--color-accent);
+  list-style: none;
+}
+.usage-connect summary::-webkit-details-marker {
+  display: none;
+}
+.disclosure-caret {
+  flex: none;
 }
 .usage-connect ol {
   margin: 0.5rem 0 0 1.1rem;

@@ -9,6 +9,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { MorphIcon } from 'morphicons/react';
+import { ChevronDown, ChevronUp } from 'lucide';
 import { useSession } from '../lib/session';
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
@@ -56,9 +58,7 @@ export default function AccountMenu() {
             ★
           </span>
         )}
-        <span className="caret" aria-hidden>
-          ▾
-        </span>
+        <MorphIcon className="caret" icon={open ? ChevronUp : ChevronDown} size={16} aria-hidden />
       </button>
 
       {open && (

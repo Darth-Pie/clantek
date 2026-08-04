@@ -13,6 +13,7 @@ import { useParams, Navigate, NavLink } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useSession } from '../lib/session';
 import type { Permission } from '../../shared/permissions';
+import NewsAdmin from './NewsAdmin';
 import Ranks from './Ranks';
 import Roles from './Roles';
 import Medals from './Medals';
@@ -31,6 +32,7 @@ export interface AdminSection {
  * Theme, Settings, Games, War records) slot in as one line each.
  */
 export const ADMIN_SECTIONS: AdminSection[] = [
+  { key: 'news', label: 'News', permission: 'news.create', render: () => <NewsAdmin /> },
   { key: 'ranks', label: 'Ranks', permission: 'ranks.manage', render: () => <Ranks /> },
   { key: 'roles', label: 'Roles', permission: 'roles.manage', render: () => <Roles /> },
   { key: 'medals', label: 'Medals', permission: 'medals.manage', render: () => <Medals /> },

@@ -1,12 +1,17 @@
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useSession } from './lib/session';
 import type { Permission } from '../shared/permissions';
 import AccountMenu from './components/AccountMenu';
 import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
-import Admin from './pages/Admin';
 import Roster from './pages/Roster';
+import News from './pages/News';
+import NewsPost from './pages/NewsPost';
+
+// The admin panel pulls in the WYSIWYG editor (TipTap/ProseMirror), which is
+// large and admin-only — load it on demand so the feed and roster stay light.
+const Admin = lazy(() => import('./pages/Admin'));
 
 function Protected({ permission, children }: { permission?: Permission; children: ReactNode }) {
   const { viewer, loading, can } = useSession();
@@ -30,7 +35,10 @@ export default function App() {
 
         {viewer && (
           <nav className="nav">
-            <NavLink to="/">Roster</NavLink>
+            <NavLink to="/" end>
+              News
+            </NavLink>
+            <NavLink to="/roster">Roster</NavLink>
           </nav>
         )}
 
@@ -46,10 +54,27 @@ export default function App() {
       </header>
 
       <main className="content">
-        <Routes>
+        <Suspense fallback={<div className="loading">Loading…</div>}>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route
             path="/"
+            element={
+              <Protected>
+                <News />
+              </Protected>
+            }
+          />
+          <Route
+            path="/news/:slug"
+            element={
+              <Protected>
+                <NewsPost />
+              </Protected>
+            }
+          />
+          <Route
+            path="/roster"
             element={
               <Protected>
                 <Roster />
@@ -81,8 +106,9 @@ export default function App() {
               </Protected>
             }
           />
-          <Route path="*" element={<div className="empty">Not found.</div>} />
-        </Routes>
+            <Route path="*" element={<div className="empty">Not found.</div>} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );

@@ -1453,3 +1453,282 @@ button.active {
   padding-top: 1rem;
   border-top: 1px solid var(--color-border);
 }
+
+/* ------------------------------------------------------------------ *
+ * News
+ * ------------------------------------------------------------------ */
+
+.news-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.btn-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+.tag.pin {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+
+/* Feed */
+.news-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.news-item-link {
+  display: block;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+  background: var(--color-surface);
+}
+.news-item-link:hover {
+  border-color: var(--color-accent);
+}
+
+.news-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.news-item-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.news-excerpt {
+  margin: 0.4rem 0 0.5rem;
+  color: var(--color-text);
+}
+
+.news-meta {
+  margin: 0;
+}
+
+/* Single post */
+.news-post-head {
+  margin: 0.75rem 0 1.25rem;
+}
+.news-post-head h1 {
+  margin: 0.35rem 0 0.4rem;
+  font-family: var(--font-display);
+}
+
+/* Rendered post body — style the sanitized HTML from the editor. */
+.news-body {
+  line-height: 1.65;
+}
+.news-body h1,
+.news-body h2,
+.news-body h3 {
+  font-family: var(--font-display);
+  margin: 1.4rem 0 0.6rem;
+  line-height: 1.25;
+}
+.news-body h1 { font-size: 1.5rem; }
+.news-body h2 { font-size: 1.25rem; }
+.news-body h3 { font-size: 1.1rem; }
+.news-body p { margin: 0 0 0.9rem; }
+.news-body ul,
+.news-body ol { margin: 0 0 0.9rem 1.4rem; }
+.news-body li { margin: 0.2rem 0; }
+.news-body a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+.news-body blockquote {
+  margin: 0 0 0.9rem;
+  padding: 0.3rem 0 0.3rem 1rem;
+  border-left: 3px solid var(--color-border);
+  color: var(--color-muted);
+}
+.news-body code {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--color-muted) 18%, transparent);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+.news-body pre {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+.news-body pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Status chips for news */
+.status-chip.status-draft {
+  background: color-mix(in srgb, var(--color-muted) 20%, transparent);
+  color: var(--color-muted);
+}
+.status-chip.status-published {
+  background: color-mix(in srgb, #2f9e5f 22%, transparent);
+  color: #7ee2a8;
+}
+.status-chip.status-archived {
+  background: color-mix(in srgb, var(--color-muted) 14%, transparent);
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+/* Admin list + editor */
+.news-admin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 220px;
+}
+.news-admin-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+}
+.news-admin-item:hover {
+  border-color: var(--color-border);
+}
+.news-admin-item.active {
+  border-color: var(--color-accent);
+}
+.news-admin-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.news-editor .news-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.rte-label {
+  display: block;
+  margin: 0.5rem 0 0.25rem;
+}
+.news-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+label.check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Rich-text editor (TipTap)
+ * ------------------------------------------------------------------ */
+
+.rte {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.rte-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.35rem;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+.rte-tool {
+  min-width: 30px;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.85rem;
+  background: transparent;
+  border: 1px solid transparent;
+}
+.rte-tool:hover {
+  border-color: var(--color-border);
+}
+.rte-tool.active {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+.rte-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 0.1rem 0.25rem;
+  background: var(--color-border);
+}
+.rte-content .ProseMirror {
+  min-height: 220px;
+  padding: 0.75rem 1rem;
+  outline: none;
+  line-height: 1.6;
+}
+.rte-content .ProseMirror:focus {
+  outline: none;
+}
+.rte-content .ProseMirror > *:first-child {
+  margin-top: 0;
+}
+.rte-content .ProseMirror p {
+  margin: 0 0 0.7rem;
+}
+.rte-content .ProseMirror h1,
+.rte-content .ProseMirror h2,
+.rte-content .ProseMirror h3 {
+  font-family: var(--font-display);
+  margin: 1rem 0 0.5rem;
+}
+.rte-content .ProseMirror ul,
+.rte-content .ProseMirror ol {
+  margin: 0 0 0.7rem 1.4rem;
+}
+.rte-content .ProseMirror blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 1rem;
+  color: var(--color-muted);
+  margin: 0 0 0.7rem;
+}
+.rte-content .ProseMirror pre {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  overflow-x: auto;
+}
+.rte-content .ProseMirror a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}

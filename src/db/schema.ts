@@ -206,7 +206,8 @@ export const news = sqliteTable(
     title: text('title').notNull(),
     slug: text('slug').notNull().unique(),
     excerpt: text('excerpt'),
-    // Markdown. Rendered and sanitized at read time — never stored as raw HTML.
+    // HTML from the WYSIWYG editor (TipTap). Sanitized on save and again with
+    // DOMPurify on render, so stored markup is never trusted at display time.
     body: text('body').notNull(),
     authorId: integer('author_id').references(() => users.id, { onDelete: 'set null' }),
     status: text('status', { enum: ['draft', 'published', 'archived'] })

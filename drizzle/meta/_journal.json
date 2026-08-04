@@ -50,6 +50,13 @@
       "when": 1785854222965,
       "tag": "0006_youthful_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1785856376012,
+      "tag": "0007_dizzy_champions",
+      "breakpoints": true
     }
   ]
 }

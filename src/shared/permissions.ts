@@ -31,6 +31,9 @@ export const PERMISSIONS = {
   'warrecords.manage': 'Create, edit, and delete war records',
   'warrecords.award': 'Award and revoke war records',
 
+  'events.view': 'See the events page',
+  'events.manage': 'Create, edit, and cancel events',
+
   'theme.manage': 'Edit site theme and appearance',
   'settings.manage': 'Edit site settings',
 

@@ -45,6 +45,7 @@ import newsRoutes from './routes/news';
 import usageRoutes from './routes/usage';
 import gamesRoutes from './routes/games';
 import warRecordsRoutes from './routes/warrecords';
+import eventsRoutes from './routes/events';
 
 const app = new Hono<AppContext>();
 
@@ -290,6 +291,7 @@ app.route('/api/news', newsRoutes);
 app.route('/api/usage', usageRoutes);
 app.route('/api/games', gamesRoutes);
 app.route('/api/warrecords', warRecordsRoutes);
+app.route('/api/events', eventsRoutes);
 
 app.get('/api/health', (c) => c.json({ ok: true, service: 'clantek' }));
 

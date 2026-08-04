@@ -370,6 +370,38 @@ export const matchParticipants = sqliteTable(
 );
 
 /* ------------------------------------------------------------------ *
+ * Events — clan happenings (war nights, tournaments, movie nights).
+ * Authorised members create them; the bot mirrors each to a native Discord
+ * scheduled event AND an announcement message, tracked by the id columns so
+ * edits and cancellations stay in sync. Times are unix seconds (UTC).
+ * ------------------------------------------------------------------ */
+
+export const events = sqliteTable(
+  'events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    title: text('title').notNull(),
+    description: text('description'),
+    startsAt: integer('starts_at').notNull(),
+    // Discord's external scheduled events require an end time and a location.
+    endsAt: integer('ends_at').notNull(),
+    location: text('location').notNull(),
+    gameId: integer('game_id').references(() => games.id, { onDelete: 'set null' }),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    // The native Discord scheduled event and the channel announcement message,
+    // so an edit/cancel here can update or remove them.
+    discordEventId: text('discord_event_id'),
+    discordMessageId: text('discord_message_id'),
+    status: text('status', { enum: ['scheduled', 'cancelled'] })
+      .notNull()
+      .default('scheduled'),
+    createdAt: integer('created_at').notNull().default(now),
+    updatedAt: integer('updated_at').notNull().default(now),
+  },
+  (t) => [index('events_starts_idx').on(t.startsAt)],
+);
+
+/* ------------------------------------------------------------------ *
  * Audit — replaces the original log + security tables.
  * ------------------------------------------------------------------ */
 

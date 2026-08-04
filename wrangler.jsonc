@@ -80,7 +80,7 @@
     //   npx wrangler secret put CLOUDFLARE_API_TOKEN
     // (create the token as "Account Analytics: Read"). Left blank → the
     // dashboard still shows storage, just not the daily rates.
-    "CLOUDFLARE_ACCOUNT_ID": ""
+    "CLOUDFLARE_ACCOUNT_ID": "f9954b71f74407c9f7678cde6a4c21b0"
   },
 
   // Every 5 minutes: re-assert the website's Discord role state onto the guild,

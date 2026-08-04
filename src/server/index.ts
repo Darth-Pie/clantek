@@ -33,7 +33,7 @@ import {
 } from './discord/interactions';
 import { handleCommand } from './discord/commands';
 import { DiscordRest } from './discord/rest';
-import { syncMemberRankRoles, reconcileAllMembers } from './discord/sync';
+import { syncMemberRankRoles, reconcileBatch } from './discord/sync';
 import { awardTenureMedals } from './medals/tenure';
 import ranks from './routes/ranks';
 import members from './routes/members';
@@ -321,34 +321,39 @@ app.get('/media/*', async (c) => {
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 
 /* ------------------------------------------------------------------ *
- * Scheduled reconciliation
+ * Scheduled work — two cadences, set in wrangler.jsonc (triggers.crons):
  *
- * The Worker can't observe Discord role changes live (no gateway
- * connection), so a cron sweep re-asserts the website's role state onto
- * Discord — correcting any drift back to what the site says. The interval
- * is set in wrangler.jsonc (triggers.crons).
+ *  - every 5 min  → a bounded batch of the Discord reconcile sweep, so its
+ *                   cost stays flat as the roster grows (see reconcileBatch).
+ *  - hourly       → the tenure-medal sweep. Tenure only changes on a daily
+ *                   boundary, so a per-hour scan is plenty; new members still
+ *                   get their tenure medals instantly at login.
  * ------------------------------------------------------------------ */
+
+const TENURE_CRON = '7 * * * *';
 
 export default {
   fetch: app.fetch,
-  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
     const database = db(env);
 
-    // Tenure medals are DB-only and don't need Discord, so they run regardless
-    // of whether the bot is configured. The reconcile sweep (which also
-    // backfills guild-join dates) needs the bot.
-    ctx.waitUntil(
-      awardTenureMedals(database)
-        .then((r) => console.log('Scheduled tenure award:', r.awarded.length, 'granted'))
-        .catch((err) => console.error('Scheduled tenure award failed', err)),
-    );
+    if (controller.cron === TENURE_CRON) {
+      // DB-only — runs regardless of whether the bot is configured.
+      ctx.waitUntil(
+        awardTenureMedals(database)
+          .then((r) => console.log('Hourly tenure award:', r.awarded.length, 'granted'))
+          .catch((err) => console.error('Tenure award failed', err)),
+      );
+      return;
+    }
 
+    // The 5-minute reconcile tick needs the bot.
     if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return;
     const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
     ctx.waitUntil(
-      reconcileAllMembers(database, rest)
-        .then((r) => console.log('Scheduled reconcile:', JSON.stringify(r)))
-        .catch((err) => console.error('Scheduled reconcile failed', err)),
+      reconcileBatch(database, rest)
+        .then((r) => console.log('Reconcile batch:', JSON.stringify(r)))
+        .catch((err) => console.error('Reconcile batch failed', err)),
     );
   },
 } satisfies ExportedHandler<Env>;

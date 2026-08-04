@@ -46,6 +46,10 @@ export const users = sqliteTable(
 
     joinedAt: integer('joined_at').notNull().default(now),
     lastSeenAt: integer('last_seen_at'),
+    // When the Discord reconcile sweep last checked this member. The cron
+    // processes members least-recently-reconciled first, rotating through the
+    // roster a bounded batch at a time (see discord/sync.ts reconcileBatch).
+    lastReconciledAt: integer('last_reconciled_at'),
     promotedAt: integer('promoted_at'),
     createdAt: integer('created_at').notNull().default(now),
     updatedAt: integer('updated_at').notNull().default(now),

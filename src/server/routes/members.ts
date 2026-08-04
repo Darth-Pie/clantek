@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
@@ -16,7 +16,13 @@ function rest(env: AppContext['Bindings']): DiscordRest | null {
 }
 
 members.get('/', requireAuth, async (c) => {
-  const rows = await db(c.env)
+  // Paginated so a page load reads one page, not the whole roster — the read
+  // cost stays flat as the clan grows. The client appends pages ("load more").
+  const limit = Math.min(Math.max(Number(c.req.query('limit')) || 50, 1), 100);
+  const offset = Math.max(Number(c.req.query('offset')) || 0, 0);
+  const database = db(c.env);
+
+  const rows = await database
     .select({
       id: s.users.id,
       discordId: s.users.discordId,
@@ -33,9 +39,14 @@ members.get('/', requireAuth, async (c) => {
     })
     .from(s.users)
     .leftJoin(s.ranks, eq(s.users.rankId, s.ranks.id))
-    .orderBy(desc(s.ranks.sortOrder), asc(s.users.username));
+    .orderBy(desc(s.ranks.sortOrder), asc(s.users.username))
+    .limit(limit)
+    .offset(offset);
 
-  return c.json({ members: rows });
+  const totalRow = await database.select({ n: sql<number>`count(*)` }).from(s.users);
+  const total = Number(totalRow[0]?.n ?? 0);
+
+  return c.json({ members: rows, total, limit, offset });
 });
 
 members.get('/:id', requireAuth, async (c) => {

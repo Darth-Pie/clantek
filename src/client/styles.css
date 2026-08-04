@@ -286,6 +286,12 @@ a:focus-visible {
   border-radius: 50%;
 }
 
+.roster-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
 .roster .name {
   font-weight: 600;
 }

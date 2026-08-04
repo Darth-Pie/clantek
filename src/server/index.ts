@@ -27,11 +27,13 @@ import {
   verifySignature,
   ephemeral,
   defer,
+  deferUpdate,
   editOriginalResponse,
   InteractionResponseType,
   type Interaction,
 } from './discord/interactions';
 import { handleCommand } from './discord/commands';
+import { handleEventComponent, isEventComponent } from './discord/eventInteractions';
 import { DiscordRest } from './discord/rest';
 import { syncMemberRankRoles, reconcileBatch } from './discord/sync';
 import { awardTenureMedals } from './medals/tenure';
@@ -96,6 +98,20 @@ app.post('/api/discord/interactions', async (c) => {
     );
 
     return c.json(defer(true));
+  }
+
+  if (interaction.type === InteractionType.MESSAGE_COMPONENT) {
+    // Event sign-up buttons. Acknowledge with a deferred update (no visible
+    // spinner), then apply the change and refresh the message in the background.
+    if (isEventComponent(interaction)) {
+      c.executionCtx.waitUntil(
+        handleEventComponent(c.env, interaction).catch((err) =>
+          console.error('Event component handler failed', err),
+        ),
+      );
+      return c.json(deferUpdate());
+    }
+    return c.json(ephemeral('This control is no longer active.'));
   }
 
   return c.json(ephemeral('Unsupported interaction type.'));

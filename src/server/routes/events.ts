@@ -1,25 +1,36 @@
 /**
  * Events — clan happenings that mirror to Discord (a native scheduled event +
- * an announcement message). Viewing needs events.view; creating/editing/
- * cancelling needs events.manage. Times are unix seconds (UTC).
+ * an announcement message that doubles as a sign-up sheet). Viewing needs
+ * events.view; creating/editing/cancelling needs events.manage; seeing the full
+ * attendee list needs events.attendees. Members with events.view can sign
+ * themselves up (and pick a role). Times are unix seconds (UTC).
  */
 
 import { Hono } from 'hono';
-import { and, asc, eq, gte } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm';
 import * as s from '../../db/schema';
-import type { AppContext, Env } from '../env';
+import type { AppContext } from '../env';
 import { db, requirePermission } from '../middleware/auth';
-import { syncEventToDiscord, removeEventFromDiscord } from '../discord/events';
+import { syncEventToDiscord, removeEventFromDiscord, refreshEventMessage } from '../discord/events';
+import { loadEventState, setSignup, removeSignup } from '../events/signups';
 
 const events = new Hono<AppContext>();
 
+interface RoleInput {
+  id?: number;
+  name: string;
+  emoji?: string | null;
+  capacity?: number | null;
+}
 interface EventBody {
   title?: string;
   description?: string | null;
+  imageUrl?: string | null;
   startsAt?: number;
   endsAt?: number;
   location?: string;
   gameId?: number | null;
+  roles?: RoleInput[];
 }
 
 /** Validate the time/text fields shared by create and edit. Returns an error string or null. */
@@ -37,23 +48,68 @@ function validate(b: EventBody, requireAll: boolean): string | null {
   } else if (b.startsAt !== undefined || b.endsAt !== undefined) {
     return 'Change the start and end times together.';
   }
+  if (b.imageUrl != null && b.imageUrl !== '' && !b.imageUrl.startsWith('/media/events/')) {
+    return 'Invalid event image.';
+  }
   return null;
 }
 
-async function gameNameFor(env: Env, gameId: number | null): Promise<string | null> {
-  if (!gameId) return null;
-  const g = await db(env).query.games.findFirst({ where: eq(s.games.id, gameId) });
-  return g?.name ?? null;
+/**
+ * Persist an event's roles. When `roles` is given it's the full desired set:
+ * rows carrying an `id` are updated, new rows inserted, and any existing role
+ * not present is deleted (freeing its holders to "attending, no role"). Called
+ * on create (existing empty) and on edit (when roles are supplied).
+ */
+async function saveRoles(database: ReturnType<typeof db>, eventId: number, roles: RoleInput[]): Promise<void> {
+  const clean = roles
+    .map((r, idx) => ({
+      id: r.id,
+      name: (r.name ?? '').trim().slice(0, 40),
+      emoji: r.emoji?.trim()?.slice(0, 8) || null,
+      capacity: r.capacity != null && r.capacity > 0 ? Math.min(Math.floor(r.capacity), 999) : null,
+      sortOrder: idx,
+    }))
+    .filter((r) => r.name)
+    .slice(0, 20);
+
+  const existing = await database
+    .select({ id: s.eventRoles.id })
+    .from(s.eventRoles)
+    .where(eq(s.eventRoles.eventId, eventId));
+  const existingIds = new Set(existing.map((e) => e.id));
+  const keepIds = new Set(clean.filter((r) => r.id && existingIds.has(r.id)).map((r) => r.id!));
+
+  const toDelete = existing.filter((e) => !keepIds.has(e.id)).map((e) => e.id);
+  if (toDelete.length) {
+    await database.delete(s.eventRoles).where(inArray(s.eventRoles.id, toDelete));
+  }
+
+  for (const r of clean) {
+    if (r.id && existingIds.has(r.id)) {
+      await database
+        .update(s.eventRoles)
+        .set({ name: r.name, emoji: r.emoji, capacity: r.capacity, sortOrder: r.sortOrder })
+        .where(and(eq(s.eventRoles.id, r.id), eq(s.eventRoles.eventId, eventId)));
+    } else {
+      await database
+        .insert(s.eventRoles)
+        .values({ eventId, name: r.name, emoji: r.emoji, capacity: r.capacity, sortOrder: r.sortOrder });
+    }
+  }
 }
 
-/** Upcoming (and in-progress) events, soonest first. */
+/** Upcoming (and in-progress) events with their roles, counts, and the viewer's own sign-up. */
 events.get('/', requirePermission('events.view'), async (c) => {
+  const viewer = c.get('viewer')!;
   const nowSec = Math.floor(Date.now() / 1000);
-  const rows = await db(c.env)
+  const database = db(c.env);
+
+  const rows = await database
     .select({
       id: s.events.id,
       title: s.events.title,
       description: s.events.description,
+      imageUrl: s.events.imageUrl,
       startsAt: s.events.startsAt,
       endsAt: s.events.endsAt,
       location: s.events.location,
@@ -66,7 +122,67 @@ events.get('/', requirePermission('events.view'), async (c) => {
     .where(and(eq(s.events.status, 'scheduled'), gte(s.events.endsAt, nowSec)))
     .orderBy(asc(s.events.startsAt));
 
-  return c.json({ events: rows });
+  const ids = rows.map((r) => r.id);
+  if (ids.length === 0) return c.json({ events: [] });
+
+  // Three bounded queries regardless of how many events are listed.
+  const [roleRows, countRows, mine] = await Promise.all([
+    database
+      .select()
+      .from(s.eventRoles)
+      .where(inArray(s.eventRoles.eventId, ids))
+      .orderBy(asc(s.eventRoles.sortOrder), asc(s.eventRoles.id)),
+    database
+      .select({ eventId: s.eventSignups.eventId, roleId: s.eventSignups.eventRoleId, n: sql<number>`count(*)` })
+      .from(s.eventSignups)
+      .where(inArray(s.eventSignups.eventId, ids))
+      .groupBy(s.eventSignups.eventId, s.eventSignups.eventRoleId),
+    database
+      .select({ eventId: s.eventSignups.eventId, roleId: s.eventSignups.eventRoleId })
+      .from(s.eventSignups)
+      .where(and(inArray(s.eventSignups.eventId, ids), eq(s.eventSignups.userId, viewer.id))),
+  ]);
+
+  const totalByEvent = new Map<number, number>();
+  const roleCount = new Map<string, number>();
+  for (const cr of countRows) {
+    const n = Number(cr.n);
+    totalByEvent.set(cr.eventId, (totalByEvent.get(cr.eventId) ?? 0) + n);
+    if (cr.roleId != null) roleCount.set(`${cr.eventId}:${cr.roleId}`, n);
+  }
+
+  const rolesByEvent = new Map<number, unknown[]>();
+  for (const r of roleRows) {
+    const list = rolesByEvent.get(r.eventId) ?? [];
+    list.push({
+      id: r.id,
+      name: r.name,
+      emoji: r.emoji,
+      capacity: r.capacity,
+      count: roleCount.get(`${r.eventId}:${r.id}`) ?? 0,
+    });
+    rolesByEvent.set(r.eventId, list);
+  }
+
+  const mineByEvent = new Map<number, number | null>();
+  for (const m of mine) mineByEvent.set(m.eventId, m.roleId);
+
+  const enriched = rows.map((r) => ({
+    ...r,
+    roles: rolesByEvent.get(r.id) ?? [],
+    signupCount: totalByEvent.get(r.id) ?? 0,
+    mySignup: mineByEvent.has(r.id) ? { roleId: mineByEvent.get(r.id) ?? null } : null,
+  }));
+
+  return c.json({ events: enriched });
+});
+
+/** The full sign-up roster for one event — who's coming, and as what. */
+events.get('/:id/signups', requirePermission('events.attendees'), async (c) => {
+  const id = Number(c.req.param('id'));
+  const state = await loadEventState(db(c.env), id);
+  if (!state) return c.json({ error: 'No such event' }, 404);
+  return c.json({ signups: state.signups, roles: state.roles, total: state.total });
 });
 
 events.post('/', requirePermission('events.manage'), async (c) => {
@@ -82,6 +198,7 @@ events.post('/', requirePermission('events.manage'), async (c) => {
       .values({
         title: body.title!.trim().slice(0, 120),
         description: body.description?.trim().slice(0, 1500) || null,
+        imageUrl: body.imageUrl?.trim() || null,
         startsAt: body.startsAt!,
         endsAt: body.endsAt!,
         location: body.location!.trim().slice(0, 100),
@@ -90,6 +207,8 @@ events.post('/', requirePermission('events.manage'), async (c) => {
       })
       .returning()
   )[0]!;
+
+  if (body.roles) await saveRoles(database, created.id, body.roles);
 
   await database.insert(s.auditLog).values({
     actorId: viewer.id,
@@ -100,10 +219,9 @@ events.post('/', requirePermission('events.manage'), async (c) => {
   });
 
   // Mirror to Discord in the background, then store the returned ids.
-  const gameName = await gameNameFor(c.env, created.gameId);
   c.executionCtx.waitUntil(
     (async () => {
-      const ids = await syncEventToDiscord(c.env, created, gameName);
+      const ids = await syncEventToDiscord(c.env, created.id);
       if (ids.discordEventId !== created.discordEventId || ids.discordMessageId !== created.discordMessageId) {
         await database.update(s.events).set(ids).where(eq(s.events.id, created.id));
       }
@@ -126,17 +244,18 @@ events.patch('/:id', requirePermission('events.manage'), async (c) => {
   const patch: Partial<typeof s.events.$inferInsert> = { updatedAt: Math.floor(Date.now() / 1000) };
   if (body.title !== undefined) patch.title = body.title.trim().slice(0, 120);
   if (body.description !== undefined) patch.description = body.description?.trim().slice(0, 1500) || null;
+  if (body.imageUrl !== undefined) patch.imageUrl = body.imageUrl?.trim() || null;
   if (body.location !== undefined) patch.location = body.location.trim().slice(0, 100);
   if (body.startsAt !== undefined) patch.startsAt = body.startsAt;
   if (body.endsAt !== undefined) patch.endsAt = body.endsAt;
   if (body.gameId !== undefined) patch.gameId = body.gameId ?? null;
 
   const updated = (await database.update(s.events).set(patch).where(eq(s.events.id, id)).returning())[0]!;
+  if (body.roles !== undefined) await saveRoles(database, id, body.roles);
 
-  const gameName = await gameNameFor(c.env, updated.gameId);
   c.executionCtx.waitUntil(
     (async () => {
-      const ids = await syncEventToDiscord(c.env, updated, gameName);
+      const ids = await syncEventToDiscord(c.env, id);
       if (ids.discordEventId !== updated.discordEventId || ids.discordMessageId !== updated.discordMessageId) {
         await database.update(s.events).set(ids).where(eq(s.events.id, id));
       }
@@ -163,6 +282,29 @@ events.delete('/:id', requirePermission('events.manage'), async (c) => {
     meta: { title: event.title },
   });
 
+  return c.json({ ok: true });
+});
+
+/** Sign the viewer up (or move them to a different role). roleId null = no specific role. */
+events.post('/:id/signup', requirePermission('events.view'), async (c) => {
+  const id = Number(c.req.param('id'));
+  const { roleId } = await c.req.json<{ roleId?: number | null }>();
+  const viewer = c.get('viewer')!;
+
+  const res = await setSignup(db(c.env), id, viewer.id, roleId ?? null);
+  if (!res.ok) return c.json({ error: res.error }, 400);
+
+  c.executionCtx.waitUntil(refreshEventMessage(c.env, id));
+  return c.json({ ok: true });
+});
+
+/** Withdraw the viewer's own sign-up. */
+events.delete('/:id/signup', requirePermission('events.view'), async (c) => {
+  const id = Number(c.req.param('id'));
+  const viewer = c.get('viewer')!;
+
+  await removeSignup(db(c.env), id, viewer.id);
+  c.executionCtx.waitUntil(refreshEventMessage(c.env, id));
   return c.json({ ok: true });
 });
 

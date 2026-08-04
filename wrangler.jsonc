@@ -62,6 +62,11 @@
     // secret) go in .dev.vars locally and `wrangler secret put` in production.
     "SITE_NAME": "ClanTek",
 
+    // Canonical public origin, used to turn stored relative media URLs
+    // (/media/events/…) into absolute ones for Discord embeds, which a bot
+    // context can't derive from a request. Must match the custom domain above.
+    "SITE_URL": "https://clantek.919gaming.com",
+
     // Application ID — public; it appears in every bot invite URL.
     "DISCORD_CLIENT_ID": "1533902498065023286",
 

@@ -8,6 +8,8 @@
  */
 
 import { useEffect, useState } from 'react';
+import { MorphIcon } from 'morphicons/react';
+import { ChevronDown, ChevronRight } from 'lucide';
 import { api } from '../lib/api';
 
 interface Metric {
@@ -89,6 +91,7 @@ function Gauge({
 export default function UsageBar() {
   const [data, setData] = useState<Usage | null>(null);
   const [failed, setFailed] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
 
   useEffect(() => {
     api
@@ -115,8 +118,19 @@ export default function UsageBar() {
             <Gauge label="D1 rows written" sub="24h" used={data.rates.d1RowsWritten.used} limit={data.rates.d1RowsWritten.limit} format={formatNum} />
           </>
         ) : (
-          <details className="usage-connect">
-            <summary>Connect Analytics for live request &amp; query rates →</summary>
+          <details
+            className="usage-connect"
+            onToggle={(e) => setConnectOpen((e.target as HTMLDetailsElement).open)}
+          >
+            <summary>
+              <MorphIcon
+                className="disclosure-caret"
+                icon={connectOpen ? ChevronDown : ChevronRight}
+                size={14}
+                aria-hidden
+              />
+              Connect Analytics for live request &amp; query rates
+            </summary>
             <ol className="small muted">
               <li>Create a Cloudflare API token with <strong>Account Analytics: Read</strong>.</li>
               <li>

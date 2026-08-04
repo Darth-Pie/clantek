@@ -75,6 +75,13 @@ async function eventCoverDataUri(env: Env, imageUrl: string | null): Promise<str
   }
 }
 
+const RECURRENCE_LABEL: Record<string, string> = {
+  daily: 'Daily',
+  weekly: 'Weekly',
+  biweekly: 'Every 2 weeks',
+  monthly: 'Monthly',
+};
+
 function eventEmbed(state: EventState, siteUrl?: string): Embed {
   const { event, gameName } = state;
   const lines = [
@@ -82,6 +89,9 @@ function eventEmbed(state: EventState, siteUrl?: string): Embed {
     `**When:** <t:${event.startsAt}:F> (<t:${event.startsAt}:R>)`,
     `**Where:** ${event.location}`,
     gameName ? `**Game:** ${gameName}` : undefined,
+    event.recurrence && event.recurrence !== 'none'
+      ? `**Repeats:** 🔁 ${RECURRENCE_LABEL[event.recurrence] ?? event.recurrence}`
+      : undefined,
   ].filter(Boolean) as string[];
 
   const fields: NonNullable<Embed['fields']> = [];

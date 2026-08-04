@@ -71,6 +71,13 @@
       "when": 1785869669330,
       "tag": "0009_groovy_tattoo",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1785873227977,
+      "tag": "0010_faulty_puppet_master",
+      "breakpoints": true
     }
   ]
 }

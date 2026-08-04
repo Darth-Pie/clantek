@@ -398,6 +398,13 @@ export const events = sqliteTable(
     status: text('status', { enum: ['scheduled', 'cancelled'] })
       .notNull()
       .default('scheduled'),
+    // How often this event repeats. The event itself is the first occurrence;
+    // when it ends the cron spawns the next one and clears this back to 'none'
+    // on the finished row (the recurrence "baton" moves to the new occurrence).
+    // So at most one future occurrence per series carries a non-'none' value.
+    recurrence: text('recurrence', { enum: ['none', 'daily', 'weekly', 'biweekly', 'monthly'] })
+      .notNull()
+      .default('none'),
     createdAt: integer('created_at').notNull().default(now),
     updatedAt: integer('updated_at').notNull().default(now),
   },

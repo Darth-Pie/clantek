@@ -37,6 +37,7 @@ import { handleEventComponent, isEventComponent } from './discord/eventInteracti
 import { DiscordRest } from './discord/rest';
 import { syncMemberRankRoles, reconcileBatch } from './discord/sync';
 import { awardTenureMedals } from './medals/tenure';
+import { materializeRecurringEvents } from './events/recurrence';
 import ranks from './routes/ranks';
 import members from './routes/members';
 import settings from './routes/settings';
@@ -364,6 +365,13 @@ export default {
         awardTenureMedals(database)
           .then((r) => console.log('Hourly tenure award:', r.awarded.length, 'granted'))
           .catch((err) => console.error('Tenure award failed', err)),
+      );
+      // Roll ended recurring events forward to their next occurrence. Safe with
+      // or without the bot (the Discord sync no-ops when it's absent).
+      ctx.waitUntil(
+        materializeRecurringEvents(env)
+          .then((r) => r.spawned && console.log('Recurring events spawned:', r.spawned))
+          .catch((err) => console.error('Recurrence sweep failed', err)),
       );
       return;
     }

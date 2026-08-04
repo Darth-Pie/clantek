@@ -203,7 +203,7 @@ export default function MemberDetail() {
 
   return (
     <section className="panel member-detail">
-      <button className="back" onClick={() => navigate('/')}>
+      <button className="back" onClick={() => navigate('/roster')}>
         ← Roster
       </button>
 

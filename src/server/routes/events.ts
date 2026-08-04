@@ -22,6 +22,9 @@ interface RoleInput {
   emoji?: string | null;
   capacity?: number | null;
 }
+type Recurrence = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
+const RECURRENCES: Recurrence[] = ['none', 'daily', 'weekly', 'biweekly', 'monthly'];
+
 interface EventBody {
   title?: string;
   description?: string | null;
@@ -31,6 +34,7 @@ interface EventBody {
   location?: string;
   gameId?: number | null;
   roles?: RoleInput[];
+  recurrence?: Recurrence;
 }
 
 /** Validate the time/text fields shared by create and edit. Returns an error string or null. */
@@ -50,6 +54,9 @@ function validate(b: EventBody, requireAll: boolean): string | null {
   }
   if (b.imageUrl != null && b.imageUrl !== '' && !b.imageUrl.startsWith('/media/events/')) {
     return 'Invalid event image.';
+  }
+  if (b.recurrence !== undefined && !RECURRENCES.includes(b.recurrence)) {
+    return 'Invalid recurrence.';
   }
   return null;
 }
@@ -116,6 +123,7 @@ events.get('/', requirePermission('events.view'), async (c) => {
       gameId: s.events.gameId,
       gameName: s.games.name,
       createdBy: s.events.createdBy,
+      recurrence: s.events.recurrence,
     })
     .from(s.events)
     .leftJoin(s.games, eq(s.events.gameId, s.games.id))
@@ -204,6 +212,7 @@ events.post('/', requirePermission('events.manage'), async (c) => {
         location: body.location!.trim().slice(0, 100),
         gameId: body.gameId ?? null,
         createdBy: viewer.id,
+        recurrence: body.recurrence ?? 'none',
       })
       .returning()
   )[0]!;
@@ -249,6 +258,7 @@ events.patch('/:id', requirePermission('events.manage'), async (c) => {
   if (body.startsAt !== undefined) patch.startsAt = body.startsAt;
   if (body.endsAt !== undefined) patch.endsAt = body.endsAt;
   if (body.gameId !== undefined) patch.gameId = body.gameId ?? null;
+  if (body.recurrence !== undefined) patch.recurrence = body.recurrence;
 
   const updated = (await database.update(s.events).set(patch).where(eq(s.events.id, id)).returning())[0]!;
   if (body.roles !== undefined) await saveRoles(database, id, body.roles);

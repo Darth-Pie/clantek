@@ -29,6 +29,7 @@ interface EventItem {
   gameId: number | null;
   gameName: string | null;
   createdBy: number | null;
+  recurrence: Recurrence;
   roles: RoleState[];
   signupCount: number;
   mySignup: { roleId: number | null } | null;
@@ -37,6 +38,22 @@ interface GameOption {
   id: number;
   name: string;
 }
+
+type Recurrence = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
+const RECURRENCE_OPTIONS: { value: Recurrence; label: string }[] = [
+  { value: 'none', label: 'Doesn’t repeat' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Every 2 weeks' },
+  { value: 'monthly', label: 'Monthly' },
+];
+const RECURRENCE_BADGE: Record<Recurrence, string> = {
+  none: '',
+  daily: 'Daily',
+  weekly: 'Weekly',
+  biweekly: 'Every 2 weeks',
+  monthly: 'Monthly',
+};
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -169,6 +186,7 @@ export default function Events() {
                 <div className="muted small event-meta">
                   📍 {ev.location}
                   {ev.gameName && <> · 🎮 {ev.gameName}</>}
+                  {ev.recurrence !== 'none' && <> · 🔁 {RECURRENCE_BADGE[ev.recurrence]}</>}
                   {ev.signupCount > 0 && <> · 👥 {ev.signupCount} signed up</>}
                 </div>
                 {ev.description && <p className="event-desc">{ev.description}</p>}
@@ -355,6 +373,7 @@ interface EventPayload {
   endsAt: number;
   location: string;
   gameId: number | null;
+  recurrence: Recurrence;
   roles: RolePayload[];
 }
 
@@ -443,6 +462,7 @@ function EventForm({
   const [endsAt, setEndsAt] = useState<number | null>(initial?.endsAt ?? null);
   const [location, setLocation] = useState(initial?.location ?? '');
   const [gameId, setGameId] = useState<number | null>(initial?.gameId ?? null);
+  const [recurrence, setRecurrence] = useState<Recurrence>(initial?.recurrence ?? 'none');
   const [roles, setRoles] = useState<RoleDraft[]>(
     initial?.roles.map((r) => ({
       id: r.id,
@@ -469,6 +489,7 @@ function EventForm({
       endsAt: endsAt!,
       location: location.trim(),
       gameId,
+      recurrence,
       roles: roles
         .filter((r) => r.name.trim())
         .map((r) => ({
@@ -506,17 +527,29 @@ function EventForm({
         />
       </label>
 
-      <label>
-        Game <span className="muted small">(optional)</span>
-        <select value={gameId ?? ''} onChange={(e) => setGameId(e.target.value ? Number(e.target.value) : null)} disabled={busy}>
-          <option value="">— None —</option>
-          {games.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="field-row">
+        <label>
+          Game <span className="muted small">(optional)</span>
+          <select value={gameId ?? ''} onChange={(e) => setGameId(e.target.value ? Number(e.target.value) : null)} disabled={busy}>
+            <option value="">— None —</option>
+            {games.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Repeats
+          <select value={recurrence} onChange={(e) => setRecurrence(e.target.value as Recurrence)} disabled={busy}>
+            {RECURRENCE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <label>
         Description <span className="muted small">(optional)</span>

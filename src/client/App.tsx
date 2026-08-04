@@ -2,13 +2,10 @@ import type { ReactNode } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useSession } from './lib/session';
 import type { Permission } from '../shared/permissions';
-import { memberName } from '../shared/names';
-import { memberAvatar } from '../shared/avatar';
+import AccountMenu from './components/AccountMenu';
 import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
-import Medals from './pages/Medals';
-import Ranks from './pages/Ranks';
-import Roles from './pages/Roles';
+import Admin from './pages/Admin';
 import Roster from './pages/Roster';
 
 function Protected({ permission, children }: { permission?: Permission; children: ReactNode }) {
@@ -22,7 +19,7 @@ function Protected({ permission, children }: { permission?: Permission; children
 }
 
 export default function App() {
-  const { viewer, siteName, loading, can, logout } = useSession();
+  const { viewer, siteName, loading } = useSession();
 
   if (loading) return <div className="loading">Loading…</div>;
 
@@ -34,23 +31,12 @@ export default function App() {
         {viewer && (
           <nav className="nav">
             <NavLink to="/">Roster</NavLink>
-            {can('ranks.manage') && <NavLink to="/admin/ranks">Ranks</NavLink>}
-            {can('roles.manage') && <NavLink to="/admin/roles">Roles</NavLink>}
-            {can('medals.manage') && <NavLink to="/admin/medals">Medals</NavLink>}
           </nav>
         )}
 
         <div className="account">
           {viewer ? (
-            <>
-              <span className="who">
-                <img className="avatar sm" src={memberAvatar(viewer, 64)} alt="" width={28} height={28} />
-                {viewer.rank && <span className="rank-chip">{viewer.rank.name}</span>}
-                {memberName(viewer)}
-                {viewer.isGod && <span className="god-chip" title="God status">★</span>}
-              </span>
-              <button onClick={() => void logout()}>Sign out</button>
-            </>
+            <AccountMenu />
           ) : (
             <a className="discord-btn" href="/api/auth/login">
               Sign in with Discord
@@ -78,27 +64,20 @@ export default function App() {
               </Protected>
             }
           />
+          {/* One shell for every admin tool; the panel itself gates each section. */}
           <Route
-            path="/admin/ranks"
+            path="/admin"
             element={
-              <Protected permission="ranks.manage">
-                <Ranks />
+              <Protected>
+                <Admin />
               </Protected>
             }
           />
           <Route
-            path="/admin/roles"
+            path="/admin/:section"
             element={
-              <Protected permission="roles.manage">
-                <Roles />
-              </Protected>
-            }
-          />
-          <Route
-            path="/admin/medals"
-            element={
-              <Protected permission="medals.manage">
-                <Medals />
+              <Protected>
+                <Admin />
               </Protected>
             }
           />

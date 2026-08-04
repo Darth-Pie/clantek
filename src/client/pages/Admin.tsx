@@ -22,6 +22,7 @@ import Games from './Games';
 import WarRecords from './WarRecords';
 import Announcements from './Announcements';
 import Theme from './Theme';
+import AuditLog from './AuditLog';
 
 export interface AdminSection {
   key: string;
@@ -44,6 +45,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'warrecords', label: 'War Records', permission: 'warrecords.manage', render: () => <WarRecords /> },
   { key: 'announcements', label: 'Announcements', permission: 'settings.manage', render: () => <Announcements /> },
   { key: 'theme', label: 'Theme', permission: 'theme.manage', render: () => <Theme /> },
+  { key: 'audit', label: 'Activity Log', permission: 'audit.view', render: () => <AuditLog /> },
 ];
 
 export default function Admin() {

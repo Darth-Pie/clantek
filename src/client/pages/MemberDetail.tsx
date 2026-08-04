@@ -98,6 +98,26 @@ export default function MemberDetail() {
 
   const { run, busy, error, notice, warning, setError } = useAction(load);
 
+  // Negative actions (demote, remove/ban, revoke an award or role) require a
+  // written reason. Rather than a prompt per button, they funnel through one
+  // inline reason box: promptReason stashes the label + the call to make once a
+  // reason is entered, and the box renders near the top of the panel.
+  const [pending, setPending] = useState<{ label: string; onConfirm: (reason: string) => void } | null>(
+    null,
+  );
+  const [reasonText, setReasonText] = useState('');
+  const promptReason = (label: string, onConfirm: (reason: string) => void) => {
+    setReasonText('');
+    setPending({ label, onConfirm });
+  };
+  const confirmReason = () => {
+    const reason = reasonText.trim();
+    if (reason.length < 3 || !pending) return;
+    pending.onConfirm(reason);
+    setPending(null);
+    setReasonText('');
+  };
+
   useEffect(() => {
     setLoading(true);
     Promise.all([
@@ -139,11 +159,11 @@ export default function MemberDetail() {
   const outranksTarget = viewer?.isGod || (curOrder >= 0 && viewerOrder > curOrder) || curOrder < 0;
   const canPromoteTo = (r: Rank | null) => !!r && (viewer?.isGod || viewerOrder > r.sortOrder);
 
-  const setRank = (rankId: number | null, label: string) =>
+  const setRank = (rankId: number | null, label: string, reason?: string) =>
     run(async () => {
       const res = await api.put<{ rankRoleSync?: { added: string[]; removed: string[]; warnings: string[] } }>(
         `/members/${member.id}/rank`,
-        { rankId },
+        { rankId, reason },
       );
       const s = res.rankRoleSync;
       const changes = [
@@ -156,9 +176,9 @@ export default function MemberDetail() {
       return s?.warnings.length ? { warning: `${summary} ${s.warnings[0]}` } : summary;
     });
 
-  const setStatus = (status: string) =>
+  const setStatus = (status: string, reason?: string) =>
     run(async () => {
-      await api.patch(`/members/${member.id}/status`, { status });
+      await api.patch(`/members/${member.id}/status`, { status, reason });
       return `Status set to ${status}.`;
     });
 
@@ -180,9 +200,9 @@ export default function MemberDetail() {
       return res.warning ? { warning: res.warning } : 'Role granted.';
     });
 
-  const revokeRole = (roleId: number) =>
+  const revokeRole = (roleId: number, reason: string) =>
     run(async () => {
-      const res = await api.del<{ warning?: string }>(`/members/${member.id}/roles/${roleId}`);
+      const res = await api.del<{ warning?: string }>(`/members/${member.id}/roles/${roleId}`, { reason });
       return res.warning ? { warning: res.warning } : 'Role removed.';
     });
 
@@ -195,9 +215,9 @@ export default function MemberDetail() {
       return 'Medal awarded.';
     });
 
-  const revokeMedal = (awardId: number) =>
+  const revokeMedal = (awardId: number, reason: string) =>
     run(async () => {
-      await api.del(`/members/${member.id}/medals/${awardId}`);
+      await api.del(`/members/${member.id}/medals/${awardId}`, { reason });
       return 'Medal revoked.';
     });
 
@@ -210,9 +230,9 @@ export default function MemberDetail() {
       return 'War record awarded.';
     });
 
-  const revokeWarRecord = (awardId: number) =>
+  const revokeWarRecord = (awardId: number, reason: string) =>
     run(async () => {
-      await api.del(`/members/${member.id}/warrecords/${awardId}`);
+      await api.del(`/members/${member.id}/warrecords/${awardId}`, { reason });
       return 'War record revoked.';
     });
 
@@ -250,6 +270,34 @@ export default function MemberDetail() {
       </button>
 
       <Alerts error={error} warning={warning} notice={notice} />
+
+      {pending && (
+        <div className="reason-prompt">
+          <span className="reason-label">{pending.label} — reason required:</span>
+          <input
+            autoFocus
+            value={reasonText}
+            maxLength={500}
+            placeholder="Why is this happening?"
+            disabled={busy}
+            onChange={(e) => setReasonText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') confirmReason();
+              if (e.key === 'Escape') setPending(null);
+            }}
+          />
+          <button
+            className="danger mini"
+            disabled={busy || reasonText.trim().length < 3}
+            onClick={confirmReason}
+          >
+            Confirm
+          </button>
+          <button className="mini" disabled={busy} onClick={() => setPending(null)}>
+            Cancel
+          </button>
+        </div>
+      )}
 
       <header className="member-head">
         <AvatarBlock
@@ -294,7 +342,12 @@ export default function MemberDetail() {
                   <button
                     disabled={busy || !nextDown}
                     title={nextDown ? `Demote to ${nextDown.name}` : 'Already at the lowest rank'}
-                    onClick={() => nextDown && void setRank(nextDown.id, `Demoted to ${nextDown.name}`)}
+                    onClick={() =>
+                      nextDown &&
+                      promptReason(`Demote to ${nextDown.name}`, (reason) =>
+                        setRank(nextDown.id, `Demoted to ${nextDown.name}`, reason),
+                      )
+                    }
                   >
                     ▼ Demote
                   </button>
@@ -311,7 +364,19 @@ export default function MemberDetail() {
               <select
                 value={member.status}
                 disabled={busy || !outranksTarget}
-                onChange={(e) => void setStatus(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  // Ban/retire are negative — demand a reason. Softer states
+                  // (active/inactive/loa) apply straight away.
+                  if (next === 'banned' || next === 'retired') {
+                    promptReason(
+                      next === 'banned' ? 'Ban this member' : 'Retire this member',
+                      (reason) => setStatus(next, reason),
+                    );
+                  } else {
+                    void setStatus(next);
+                  }
+                }}
               >
                 {STATUSES.map((st) => (
                   <option key={st} value={st}>
@@ -323,7 +388,11 @@ export default function MemberDetail() {
                 <button
                   className="danger mini"
                   disabled={busy || !outranksTarget}
-                  onClick={() => void setStatus('retired')}
+                  onClick={() =>
+                    promptReason('Retire (remove) this member', (reason) =>
+                      setStatus('retired', reason),
+                    )
+                  }
                   title="Retire this member (keeps their history)"
                 >
                   Remove
@@ -343,7 +412,11 @@ export default function MemberDetail() {
                     className="mini danger"
                     disabled={busy}
                     title="Remove this role"
-                    onClick={() => void revokeRole(role.id)}
+                    onClick={() =>
+                      promptReason(`Remove role “${role.name}”`, (reason) =>
+                        revokeRole(role.id, reason),
+                      )
+                    }
                   >
                     ✕
                   </button>
@@ -436,7 +509,11 @@ export default function MemberDetail() {
                         className="mini danger"
                         disabled={busy}
                         title="Revoke this medal"
-                        onClick={() => void revokeMedal(m.awardId)}
+                        onClick={() =>
+                          promptReason(`Revoke medal “${m.name}”`, (reason) =>
+                            revokeMedal(m.awardId, reason),
+                          )
+                        }
                       >
                         ✕
                       </button>
@@ -478,7 +555,11 @@ export default function MemberDetail() {
                         className="mini danger"
                         disabled={busy}
                         title="Revoke this war record"
-                        onClick={() => void revokeWarRecord(w.awardId)}
+                        onClick={() =>
+                          promptReason(`Revoke war record “${w.name}”`, (reason) =>
+                            revokeWarRecord(w.awardId, reason),
+                          )
+                        }
                       >
                         ✕
                       </button>
@@ -693,22 +774,24 @@ function ProfileEditor({
   const [name, setName] = useState(displayName);
   const [text, setText] = useState(bio);
   const dirty = name !== displayName || text !== bio;
+  const nameValid = name.trim().length >= 2;
 
   return (
     <div className="bio-editor">
       <label className="field">
-        Display name
+        Display name <span className="req">*</span>
         <input
           value={name}
           maxLength={32}
-          placeholder={isSelf ? 'Your in-game name (optional)' : 'Set a display name'}
+          placeholder={isSelf ? 'Your in-game name' : 'Set a display name'}
           onChange={(e) => setName(e.target.value)}
           disabled={busy}
+          aria-invalid={!nameValid}
         />
       </label>
       <p className="muted small">
-        Shown across the site instead of the Discord name, and applied as the member’s Discord
-        nickname. Leave blank to use the Discord name.
+        Required. Shown across the site instead of the Discord name, and applied as the member’s
+        Discord nickname.
       </p>
 
       <label className="field">
@@ -726,7 +809,8 @@ function ProfileEditor({
       <div className="bio-actions">
         <button
           className="primary"
-          disabled={busy || !dirty}
+          disabled={busy || !dirty || !nameValid}
+          title={!nameValid ? 'A display name is required' : undefined}
           onClick={() => onSave({ displayName: name, bio: text })}
         >
           Save profile

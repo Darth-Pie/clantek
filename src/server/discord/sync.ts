@@ -72,7 +72,8 @@ export async function revokeRole(
     action: 'role.revoke',
     targetType: 'user',
     targetId: String(user.id),
-    meta: { roleId: role.id, roleName: role.name, reason: opts.reason },
+    reason: opts.reason ?? null,
+    meta: { roleId: role.id, roleName: role.name },
   });
 
   return pushToDiscord(rest, 'remove', user.discordId, role.discordRoleId, opts.reason);

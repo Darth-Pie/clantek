@@ -413,6 +413,10 @@ export const auditLog = sqliteTable(
     action: text('action').notNull(), // e.g. 'member.promote', 'role.grant'
     targetType: text('target_type'),
     targetId: text('target_id'),
+    // A human-written justification. Required for negative actions (demote,
+    // remove/ban, revoke a medal/war record/role); optional otherwise. Kept as
+    // its own column — not buried in meta — so the log can show and filter on it.
+    reason: text('reason'),
     meta: text('meta', { mode: 'json' }).$type<Record<string, unknown>>(),
     // 'web' for admin portal, 'discord' for slash commands
     source: text('source', { enum: ['web', 'discord', 'system'] })

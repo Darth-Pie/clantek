@@ -206,6 +206,25 @@ input:not([type]) {
   width: 100%;
 }
 
+/* Themed defaults for the remaining form controls, so any select or date/number
+   field reads correctly on the dark surface even when it isn't nested in a
+   .role-editor label. Specific components can still override. */
+select,
+input[type='date'],
+input[type='number'],
+input[type='datetime-local'] {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  color: var(--color-text);
+}
+/* The native calendar/spinner glyphs are near-invisible on a dark field in some
+   browsers; brighten them to match the text. */
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+}
+
 input:focus-visible,
 button:focus-visible,
 a:focus-visible {
@@ -2112,16 +2131,50 @@ input[aria-invalid='true'] {
   align-items: center;
   margin-bottom: 0.4rem;
 }
-.role-row .role-emoji {
-  width: 3rem;
+.role-row-head {
+  margin-bottom: 0.2rem;
+  padding: 0 0.1rem;
+}
+.role-col-icon {
+  width: 4rem;
+  text-align: center;
+  flex: none;
+}
+.role-col-name {
+  flex: 1;
+  min-width: 0;
+}
+.role-col-cap {
+  width: 8rem;
+  flex: none;
+}
+.role-col-rm {
+  width: 2rem;
+  flex: none;
   text-align: center;
 }
-.role-row .role-name {
+
+/* Date + time picker */
+.datetime-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   flex: 1;
+  min-width: 0;
 }
-.role-row .role-cap {
-  width: 4.5rem;
+.datetime-inputs {
+  display: flex;
+  gap: 0.4rem;
 }
+.datetime-inputs input[type='date'] {
+  flex: 1;
+  min-width: 7rem;
+}
+.datetime-inputs select {
+  flex: none;
+  min-width: 4.5rem;
+}
+
 .event-image-field {
   margin: 0.5rem 0;
 }

@@ -39,12 +39,21 @@ interface GameOption {
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
-/** unix seconds → the value a <input type="datetime-local"> expects (local time). */
-function toLocalInput(unixSec: number): string {
-  const d = new Date(unixSec * 1000);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-const fromLocalInput = (v: string): number => Math.floor(new Date(v).getTime() / 1000);
+
+// Time is picked as an hour (12-hour labels) plus a 15-minute slot, rather than
+// a raw datetime field, so the choices are unambiguous.
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, h) => ({
+  value: h,
+  label: `${((h + 11) % 12) + 1} ${h < 12 ? 'AM' : 'PM'}`,
+}));
+const MINUTE_OPTIONS = [0, 15, 30, 45];
+const roundTo15 = (m: number) => MINUTE_OPTIONS.reduce((a, b) => (Math.abs(b - m) < Math.abs(a - m) ? b : a), 0);
+
+// A curated set of icons for the Discord sign-up buttons. Optional — "—" leaves
+// the button text-only.
+const ROLE_EMOJIS = ['⚔️', '🛡️', '✨', '🩹', '🏹', '🎯', '🔫', '🧙', '🚀', '🚁', '🐎', '👑', '🎙️', '🛠️', '💥'];
+// Capacity choices for a role (1–30, or no limit).
+const CAP_OPTIONS = Array.from({ length: 30 }, (_, i) => i + 1);
 
 function whenLabel(startsAt: number, endsAt: number): string {
   const start = new Date(startsAt * 1000);
@@ -356,6 +365,64 @@ interface RoleDraft {
   capacity: string;
 }
 
+/**
+ * Date + time picker: a native date field plus an hour dropdown (12-hour
+ * labels) and a 15-minute slot dropdown. Emits the combined moment as unix
+ * seconds, or null until a date is chosen.
+ */
+function DateTimeField({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+  disabled?: boolean;
+}) {
+  const init = value != null ? new Date(value * 1000) : null;
+  const [date, setDate] = useState(
+    init ? `${init.getFullYear()}-${pad(init.getMonth() + 1)}-${pad(init.getDate())}` : '',
+  );
+  const [hour, setHour] = useState(init ? init.getHours() : 19);
+  const [minute, setMinute] = useState(init ? roundTo15(init.getMinutes()) : 0);
+
+  useEffect(() => {
+    if (!date) {
+      onChange(null);
+      return;
+    }
+    const dt = new Date(`${date}T00:00:00`);
+    dt.setHours(hour, minute, 0, 0);
+    onChange(Math.floor(dt.getTime() / 1000));
+    // onChange identity isn't a dependency — only the picked values matter.
+  }, [date, hour, minute]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="datetime-field">
+      <span className="field-label">{label}</span>
+      <div className="datetime-inputs">
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={disabled} />
+        <select value={hour} onChange={(e) => setHour(Number(e.target.value))} disabled={disabled} aria-label={`${label} hour`}>
+          {HOUR_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <select value={minute} onChange={(e) => setMinute(Number(e.target.value))} disabled={disabled} aria-label={`${label} minute`}>
+          {MINUTE_OPTIONS.map((m) => (
+            <option key={m} value={m}>
+              :{pad(m)}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 function EventForm({
   initial,
   games,
@@ -372,8 +439,8 @@ function EventForm({
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [imageUrl, setImageUrl] = useState<string | null>(initial?.imageUrl ?? null);
-  const [start, setStart] = useState(initial ? toLocalInput(initial.startsAt) : '');
-  const [end, setEnd] = useState(initial ? toLocalInput(initial.endsAt) : '');
+  const [startsAt, setStartsAt] = useState<number | null>(initial?.startsAt ?? null);
+  const [endsAt, setEndsAt] = useState<number | null>(initial?.endsAt ?? null);
   const [location, setLocation] = useState(initial?.location ?? '');
   const [gameId, setGameId] = useState<number | null>(initial?.gameId ?? null);
   const [roles, setRoles] = useState<RoleDraft[]>(
@@ -385,7 +452,7 @@ function EventForm({
     })) ?? [],
   );
 
-  const timesValid = !!start && !!end && fromLocalInput(end) > fromLocalInput(start);
+  const timesValid = startsAt != null && endsAt != null && endsAt > startsAt;
   const valid = title.trim() && location.trim() && timesValid;
 
   const addRole = () => setRoles((rs) => [...rs, { name: '', emoji: '', capacity: '' }]);
@@ -398,8 +465,8 @@ function EventForm({
       title: title.trim(),
       description: description.trim(),
       imageUrl,
-      startsAt: fromLocalInput(start),
-      endsAt: fromLocalInput(end),
+      startsAt: startsAt!,
+      endsAt: endsAt!,
       location: location.trim(),
       gameId,
       roles: roles
@@ -422,16 +489,12 @@ function EventForm({
       <EventImageField imageUrl={imageUrl} busy={busy} onSet={setImageUrl} />
 
       <div className="field-row">
-        <label>
-          Starts
-          <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} disabled={busy} />
-        </label>
-        <label>
-          Ends
-          <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} disabled={busy} />
-        </label>
+        <DateTimeField label="Starts" value={startsAt} onChange={setStartsAt} disabled={busy} />
+        <DateTimeField label="Ends" value={endsAt} onChange={setEndsAt} disabled={busy} />
       </div>
-      {!timesValid && (start || end) && <p className="small warn">The end must be after the start.</p>}
+      {!timesValid && (startsAt != null || endsAt != null) && (
+        <p className="small warn">The end must be after the start.</p>
+      )}
 
       <label>
         Location
@@ -464,35 +527,58 @@ function EventForm({
         <div className="field-label">
           Sign-up roles <span className="muted small">(optional — e.g. Tank, Healer, DPS)</span>
         </div>
+        {roles.length > 0 && (
+          <div className="role-row role-row-head">
+            <span className="role-col-icon muted small">Icon</span>
+            <span className="role-col-name muted small">Role name</span>
+            <span className="role-col-cap muted small">Max players</span>
+            <span className="role-col-rm" />
+          </div>
+        )}
         {roles.map((r, i) => (
           <div key={i} className="role-row">
-            <input
-              className="role-emoji"
+            <select
+              className="role-col-icon"
               value={r.emoji}
-              maxLength={4}
-              placeholder="🛡️"
               onChange={(e) => updateRole(i, { emoji: e.target.value })}
               disabled={busy}
-            />
+              aria-label="Role icon"
+            >
+              <option value="">—</option>
+              {ROLE_EMOJIS.map((em) => (
+                <option key={em} value={em}>
+                  {em}
+                </option>
+              ))}
+            </select>
             <input
-              className="role-name"
+              className="role-col-name"
               value={r.name}
               maxLength={40}
-              placeholder="Role name"
+              placeholder="e.g. Tank"
               onChange={(e) => updateRole(i, { name: e.target.value })}
               disabled={busy}
             />
-            <input
-              className="role-cap"
-              type="number"
-              min={1}
+            <select
+              className="role-col-cap"
               value={r.capacity}
-              placeholder="cap"
-              title="Max sign-ups for this role (optional)"
               onChange={(e) => updateRole(i, { capacity: e.target.value })}
               disabled={busy}
-            />
-            <button className="mini danger" onClick={() => removeRole(i)} disabled={busy} title="Remove role">
+              aria-label="Max players"
+            >
+              <option value="">No limit</option>
+              {CAP_OPTIONS.map((n) => (
+                <option key={n} value={String(n)}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <button
+              className="mini danger role-col-rm"
+              onClick={() => removeRole(i)}
+              disabled={busy}
+              title="Remove role"
+            >
               ✕
             </button>
           </div>

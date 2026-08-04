@@ -41,6 +41,9 @@ export interface ScheduledEventInput {
   privacy_level: 2; // GUILD_ONLY
   entity_type: 3; // EXTERNAL
   entity_metadata: { location: string };
+  // Cover image as a data URI (data:image/png;base64,…). Discord decodes and
+  // stores it; it can't fetch a URL here, which is why we inline the bytes.
+  image?: string;
 }
 
 /** A minimal Discord embed — the shape createMessage accepts. */

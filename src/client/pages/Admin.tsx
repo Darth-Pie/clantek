@@ -13,6 +13,7 @@ import { useParams, Navigate, NavLink } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useSession } from '../lib/session';
 import type { Permission } from '../../shared/permissions';
+import UsageBar from '../components/UsageBar';
 import NewsAdmin from './NewsAdmin';
 import Ranks from './Ranks';
 import Roles from './Roles';
@@ -57,20 +58,23 @@ export default function Admin() {
   if (!active) return <Navigate to={`/admin/${available[0]!.key}`} replace />;
 
   return (
-    <div className="admin-shell">
-      <nav className="admin-nav" aria-label="Admin sections">
+    <>
+      <UsageBar />
+      <div className="admin-shell">
+        <nav className="admin-nav" aria-label="Admin sections">
         <div className="admin-nav-title">Admin</div>
-        {available.map((s) => (
-          <NavLink
-            key={s.key}
-            to={`/admin/${s.key}`}
-            className={({ isActive }) => (isActive ? 'admin-nav-link active' : 'admin-nav-link')}
-          >
-            {s.label}
-          </NavLink>
-        ))}
-      </nav>
-      <div className="admin-content">{active.render()}</div>
-    </div>
+          {available.map((s) => (
+            <NavLink
+              key={s.key}
+              to={`/admin/${s.key}`}
+              className={({ isActive }) => (isActive ? 'admin-nav-link active' : 'admin-nav-link')}
+            >
+              {s.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="admin-content">{active.render()}</div>
+      </div>
+    </>
   );
 }

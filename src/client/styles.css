@@ -1885,3 +1885,135 @@ label.check {
   margin-top: 0.6rem;
   color: #e6a23c;
 }
+
+/* Activity log ----------------------------------------------------- */
+
+.audit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.chip {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.chip.active {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: var(--color-accent);
+}
+
+.audit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.audit-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 12rem) 1fr auto;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.6rem 0.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.audit-actor {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+.audit-actor a {
+  color: var(--color-text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.audit-actor a:hover {
+  text-decoration: underline;
+}
+.audit-body {
+  min-width: 0;
+}
+.audit-action {
+  font-weight: 600;
+}
+.audit-action.negative {
+  color: var(--color-accent);
+}
+.audit-detail {
+  margin-left: 0.5rem;
+  color: var(--color-muted);
+}
+.audit-reason {
+  margin-top: 0.2rem;
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+.audit-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+.audit-list .tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 0.35rem;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .audit-row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+}
+
+/* Reason prompt (member admin negative actions) -------------------- */
+
+.reason-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  margin: 0.4rem 0;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+.reason-prompt input {
+  flex: 1;
+  min-width: 12rem;
+}
+.reason-prompt .reason-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.req {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+input[aria-invalid='true'] {
+  border-color: var(--color-accent);
+}

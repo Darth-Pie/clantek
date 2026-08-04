@@ -18,6 +18,25 @@ function rest(env: AppContext['Bindings']): DiscordRest | null {
   return new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
 }
 
+const MIN_REASON = 3;
+const MAX_REASON = 500;
+/**
+ * Negative actions (demote, remove/ban, revoke an award or role) must carry a
+ * written justification. Returns the trimmed reason, or null when it is missing
+ * or too short — the caller turns null into a 400.
+ */
+function cleanReason(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const r = raw.trim();
+  if (r.length < MIN_REASON) return null;
+  return r.slice(0, MAX_REASON);
+}
+
+/** DELETE requests may arrive with no body; parse defensively. */
+async function jsonBody<T>(c: { req: { json: () => Promise<unknown> } }): Promise<Partial<T>> {
+  return (await c.req.json().catch(() => ({}))) as Partial<T>;
+}
+
 members.get('/', requireAuth, async (c) => {
   // Paginated so a page load reads one page, not the whole roster — the read
   // cost stays flat as the clan grows. The client appends pages ("load more").
@@ -169,7 +188,14 @@ members.patch('/:id/profile', requireAuth, async (c) => {
   let discordSync: { synced: boolean; warning?: string } | undefined;
 
   if (body.displayName !== undefined) {
-    displayName = body.displayName.trim().slice(0, 32) || null;
+    // Display name is a required profile field: it can't be blanked out. (It
+    // still defaults to the Discord name for members who've never opened the
+    // editor — this only guards an explicit save.)
+    const trimmed = body.displayName.trim();
+    if (trimmed.length < 2) {
+      return c.json({ error: 'A display name is required (at least 2 characters).' }, 400);
+    }
+    displayName = trimmed.slice(0, 32);
     const changed = displayName !== target.displayName;
     await database
       .update(s.users)
@@ -221,7 +247,7 @@ members.patch('/:id/profile', requireAuth, async (c) => {
 members.patch('/:id/status', requireAuth, async (c) => {
   const id = Number(c.req.param('id'));
   const viewer = c.get('viewer')!;
-  const { status } = await c.req.json<{ status: string }>();
+  const { status, reason } = await c.req.json<{ status: string; reason?: string }>();
 
   const allowed = ['active', 'inactive', 'loa', 'retired', 'banned'] as const;
   if (!allowed.includes(status as (typeof allowed)[number])) {
@@ -231,6 +257,13 @@ members.patch('/:id/status', requireAuth, async (c) => {
   const needsRemove = status === 'banned' || status === 'retired';
   if (!can(viewer, needsRemove ? 'roster.remove' : 'roster.edit')) {
     return c.json({ error: 'Forbidden' }, 403);
+  }
+
+  // Removing, retiring, or banning a member is a negative action — it demands
+  // a written reason, which is recorded on the audit entry.
+  const cleanedReason = cleanReason(reason);
+  if (needsRemove && !cleanedReason) {
+    return c.json({ error: 'A reason is required to retire or ban a member.' }, 400);
   }
 
   const database = db(c.env);
@@ -255,6 +288,7 @@ members.patch('/:id/status', requireAuth, async (c) => {
     action: 'member.status',
     targetType: 'user',
     targetId: String(id),
+    reason: cleanedReason,
     meta: { from: target.status, to: status },
     ip: c.req.header('cf-connecting-ip'),
   });
@@ -265,7 +299,7 @@ members.patch('/:id/status', requireAuth, async (c) => {
 /** Set a member's rank outright (the ladder-step version lives in Discord's /promote). */
 members.put('/:id/rank', requirePermission('roster.promote'), async (c) => {
   const id = Number(c.req.param('id'));
-  const { rankId } = await c.req.json<{ rankId: number | null }>();
+  const { rankId, reason } = await c.req.json<{ rankId: number | null; reason?: string }>();
   const viewer = c.get('viewer')!;
   const database = db(c.env);
 
@@ -287,6 +321,14 @@ members.put('/:id/rank', requirePermission('roster.promote'), async (c) => {
     return c.json({ error: 'You cannot assign a rank at or above your own' }, 403);
   }
 
+  // A demotion (or un-ranking) is negative and needs a written reason; a
+  // promotion does not. Treat "no new rank while they had one" as a demotion.
+  const isDemotion = !!currentRank && (!newRank || newRank.sortOrder < currentRank.sortOrder);
+  const cleanedReason = cleanReason(reason);
+  if (isDemotion && !cleanedReason) {
+    return c.json({ error: 'A reason is required to demote or un-rank a member.' }, 400);
+  }
+
   const nowSec = Math.floor(Date.now() / 1000);
   await database
     .update(s.users)
@@ -298,7 +340,8 @@ members.put('/:id/rank', requirePermission('roster.promote'), async (c) => {
     action: 'member.rank_change',
     targetType: 'user',
     targetId: String(id),
-    meta: { from: currentRank?.name ?? null, to: newRank?.name ?? null },
+    reason: cleanedReason,
+    meta: { from: currentRank?.name ?? null, to: newRank?.name ?? null, demotion: isDemotion },
     ip: c.req.header('cf-connecting-ip'),
   });
 
@@ -442,6 +485,12 @@ members.delete('/:id/medals/:awardId', requirePermission('medals.award'), async 
   const viewer = c.get('viewer')!;
   const database = db(c.env);
 
+  const { reason } = await jsonBody<{ reason: string }>(c);
+  const cleanedReason = cleanReason(reason);
+  if (!cleanedReason) {
+    return c.json({ error: 'A reason is required to revoke a medal.' }, 400);
+  }
+
   const award = await database.query.memberMedals.findFirst({
     where: and(eq(s.memberMedals.id, awardId), eq(s.memberMedals.userId, userId)),
   });
@@ -454,6 +503,7 @@ members.delete('/:id/medals/:awardId', requirePermission('medals.award'), async 
     action: 'medal.revoke',
     targetType: 'user',
     targetId: String(userId),
+    reason: cleanedReason,
     meta: { medalId: award.medalId, awardId },
     ip: c.req.header('cf-connecting-ip'),
   });
@@ -532,6 +582,12 @@ members.delete('/:id/warrecords/:awardId', requirePermission('warrecords.award')
   const viewer = c.get('viewer')!;
   const database = db(c.env);
 
+  const { reason } = await jsonBody<{ reason: string }>(c);
+  const cleanedReason = cleanReason(reason);
+  if (!cleanedReason) {
+    return c.json({ error: 'A reason is required to revoke a war record.' }, 400);
+  }
+
   const award = await database.query.memberWarRecords.findFirst({
     where: and(eq(s.memberWarRecords.id, awardId), eq(s.memberWarRecords.userId, userId)),
   });
@@ -544,6 +600,7 @@ members.delete('/:id/warrecords/:awardId', requirePermission('warrecords.award')
     action: 'warrecord.revoke',
     targetType: 'user',
     targetId: String(userId),
+    reason: cleanedReason,
     meta: { warRecordId: award.warRecordId, awardId },
     ip: c.req.header('cf-connecting-ip'),
   });
@@ -556,11 +613,17 @@ members.delete('/:id/roles/:roleId', requirePermission('roles.assign'), async (c
   const roleId = Number(c.req.param('roleId'));
   const viewer = c.get('viewer')!;
 
+  const { reason } = await jsonBody<{ reason: string }>(c);
+  const cleanedReason = cleanReason(reason);
+  if (!cleanedReason) {
+    return c.json({ error: 'A reason is required to revoke a role.' }, 400);
+  }
+
   const result = await revokeRole(db(c.env), rest(c.env), {
     userId,
     roleId,
     actorId: viewer.id,
-    reason: `Revoked by ${viewer.username} via ClanTek`,
+    reason: cleanedReason,
   });
 
   return c.json({ ok: true, ...result });

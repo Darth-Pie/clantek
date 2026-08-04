@@ -23,12 +23,56 @@ type EventRow = typeof s.events.$inferSelect;
 
 const iso = (unixSec: number) => new Date(unixSec * 1000).toISOString();
 
+/** base64-encode raw bytes (chunked so a ~1 MB image doesn't blow the call stack). */
+function bytesToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 /** Turn a stored relative media URL into an absolute one Discord can fetch. */
 function absoluteMedia(siteUrl: string | undefined, url: string | null): string | null {
   if (!url) return null;
   if (/^https?:\/\//.test(url)) return url;
   if (!siteUrl) return null;
   return `${siteUrl.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+/**
+ * The event banner as a data URI, for the scheduled event's cover image —
+ * Discord stores the bytes rather than fetching a URL, so we read the object
+ * out of R2 (a binding call, not a subrequest) and base64 it. Best-effort:
+ * any problem just means no cover image. Falls back to fetching the public URL
+ * if the media binding isn't available.
+ */
+async function eventCoverDataUri(env: Env, imageUrl: string | null): Promise<string | undefined> {
+  if (!imageUrl) return undefined;
+  try {
+    let bytes: ArrayBuffer;
+    let contentType = 'image/png';
+    if (env.MEDIA && imageUrl.startsWith('/media/')) {
+      const key = imageUrl.replace(/^\/media\//, '');
+      const obj = await env.MEDIA.get(key);
+      if (!obj) return undefined;
+      bytes = await obj.arrayBuffer();
+      contentType = obj.httpMetadata?.contentType || contentType;
+    } else {
+      const abs = absoluteMedia(env.SITE_URL, imageUrl);
+      if (!abs) return undefined;
+      const res = await fetch(abs);
+      if (!res.ok) return undefined;
+      bytes = await res.arrayBuffer();
+      contentType = res.headers.get('content-type') || contentType;
+    }
+    return `data:${contentType};base64,${bytesToBase64(bytes)}`;
+  } catch (err) {
+    console.error('Event cover image load failed', err);
+    return undefined;
+  }
 }
 
 function eventEmbed(state: EventState, siteUrl?: string): Embed {
@@ -141,6 +185,7 @@ export async function syncEventToDiscord(env: Env, eventId: number): Promise<Dis
     privacy_level: 2 as const,
     entity_type: 3 as const,
     entity_metadata: { location: event.location.slice(0, 100) },
+    image: await eventCoverDataUri(env, event.imageUrl),
   };
 
   try {

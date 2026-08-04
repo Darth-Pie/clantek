@@ -72,7 +72,15 @@
 
     // Your Discord server. Login is gated on membership in this guild:
     // no invite, no account.
-    "DISCORD_GUILD_ID": "607936444132098081"
+    "DISCORD_GUILD_ID": "607936444132098081",
+
+    // Optional — powers the live request/query-rate gauges in the admin usage
+    // dashboard. The account id is not a secret (it appears in dashboard URLs);
+    // fill it in and pair it with a read-only token:
+    //   npx wrangler secret put CLOUDFLARE_API_TOKEN
+    // (create the token as "Account Analytics: Read"). Left blank → the
+    // dashboard still shows storage, just not the daily rates.
+    "CLOUDFLARE_ACCOUNT_ID": ""
   },
 
   // Every 5 minutes: re-assert the website's Discord role state onto the guild,

@@ -1732,3 +1732,87 @@ label.check {
   color: var(--color-accent);
   text-decoration: underline;
 }
+
+/* ------------------------------------------------------------------ *
+ * Usage dashboard (top of the admin panel)
+ * ------------------------------------------------------------------ */
+
+.usage-bar {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.usage-bar.usage-loading {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.usage-gauges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1rem 1.25rem;
+  align-items: end;
+}
+
+.usage-gauge-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.usage-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.usage-sub {
+  font-weight: 400;
+  color: var(--color-muted);
+}
+.usage-value {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.usage-track {
+  height: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-border) 70%, transparent);
+  overflow: hidden;
+}
+.usage-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+.usage-pct {
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-connect {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+}
+.usage-connect summary {
+  cursor: pointer;
+  color: var(--color-accent);
+}
+.usage-connect ol {
+  margin: 0.5rem 0 0 1.1rem;
+  line-height: 1.5;
+}
+.usage-connect code {
+  font-size: 0.78rem;
+  background: color-mix(in srgb, var(--color-muted) 18%, transparent);
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+
+.usage-error {
+  margin-top: 0.6rem;
+  color: #e6a23c;
+}

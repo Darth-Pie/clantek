@@ -8,6 +8,7 @@ import MemberDetail from './pages/MemberDetail';
 import Roster from './pages/Roster';
 import News from './pages/News';
 import NewsPost from './pages/NewsPost';
+import Events from './pages/Events';
 
 // The admin panel pulls in the WYSIWYG editor (TipTap/ProseMirror), which is
 // large and admin-only — load it on demand so the feed and roster stay light.
@@ -24,7 +25,7 @@ function Protected({ permission, children }: { permission?: Permission; children
 }
 
 export default function App() {
-  const { viewer, siteName, loading } = useSession();
+  const { viewer, siteName, loading, can } = useSession();
 
   if (loading) return <div className="loading">Loading…</div>;
 
@@ -39,6 +40,7 @@ export default function App() {
               News
             </NavLink>
             <NavLink to="/roster">Roster</NavLink>
+            {can('events.view') && <NavLink to="/events">Events</NavLink>}
           </nav>
         )}
 
@@ -78,6 +80,14 @@ export default function App() {
             element={
               <Protected>
                 <Roster />
+              </Protected>
+            }
+          />
+          <Route
+            path="/events"
+            element={
+              <Protected permission="events.view">
+                <Events />
               </Protected>
             }
           />

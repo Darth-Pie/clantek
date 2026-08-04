@@ -32,6 +32,17 @@ export interface TextChannel {
   position: number;
 }
 
+/** An EXTERNAL guild scheduled event (entity_type 3). */
+export interface ScheduledEventInput {
+  name: string;
+  description?: string;
+  scheduled_start_time: string; // ISO 8601
+  scheduled_end_time: string; // ISO 8601 — required for EXTERNAL
+  privacy_level: 2; // GUILD_ONLY
+  entity_type: 3; // EXTERNAL
+  entity_metadata: { location: string };
+}
+
 /** A minimal Discord embed — the shape createMessage accepts. */
 export interface Embed {
   title?: string;
@@ -167,18 +178,64 @@ export class DiscordRest {
   }
 
   /**
-   * Post a message (optionally with embeds) to a channel. Needs the bot's
-   * VIEW_CHANNEL + SEND_MESSAGES permission in that channel.
+   * Post a message (optionally with embeds) to a channel and return its id.
+   * Needs the bot's VIEW_CHANNEL + SEND_MESSAGES permission in that channel.
    */
   async createMessage(
     channelId: string,
     payload: { content?: string; embeds?: Embed[]; allowed_mentions?: { users?: string[]; parse?: string[] } },
-  ): Promise<void> {
+  ): Promise<string> {
     const res = await this.call(`/channels/${channelId}/messages`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new DiscordError('createMessage', res.status, await res.text());
+    const body = (await res.json()) as { id: string };
+    return body.id;
+  }
+
+  async editMessage(
+    channelId: string,
+    messageId: string,
+    payload: { content?: string; embeds?: Embed[] },
+  ): Promise<void> {
+    const res = await this.call(`/channels/${channelId}/messages/${messageId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new DiscordError('editMessage', res.status, await res.text());
+  }
+
+  async deleteMessage(channelId: string, messageId: string): Promise<void> {
+    const res = await this.call(`/channels/${channelId}/messages/${messageId}`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 404) throw new DiscordError('deleteMessage', res.status, await res.text());
+  }
+
+  /**
+   * Native guild scheduled event (EXTERNAL entity). Needs the bot's
+   * MANAGE_EVENTS permission. Times are ISO 8601. Returns the new event's id.
+   */
+  async createScheduledEvent(payload: ScheduledEventInput): Promise<string> {
+    const res = await this.call(`/guilds/${this.guildId}/scheduled-events`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new DiscordError('createScheduledEvent', res.status, await res.text());
+    const body = (await res.json()) as { id: string };
+    return body.id;
+  }
+
+  async modifyScheduledEvent(eventId: string, payload: Partial<ScheduledEventInput> & { status?: number }): Promise<void> {
+    const res = await this.call(`/guilds/${this.guildId}/scheduled-events/${eventId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new DiscordError('modifyScheduledEvent', res.status, await res.text());
+  }
+
+  async deleteScheduledEvent(eventId: string): Promise<void> {
+    const res = await this.call(`/guilds/${this.guildId}/scheduled-events/${eventId}`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 404) throw new DiscordError('deleteScheduledEvent', res.status, await res.text());
   }
 
   /** Used by slash commands to reply after an initial deferred response. */

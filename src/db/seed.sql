@@ -43,6 +43,7 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
   (1, 'medals.award'), (1, 'medals.manage'),
   (1, 'games.manage'), (1, 'matches.record'), (1, 'matches.manage'),
   (1, 'warrecords.manage'), (1, 'warrecords.award'),
+  (1, 'events.view'), (1, 'events.manage'),
   (1, 'theme.manage'), (1, 'settings.manage'),
   (1, 'audit.view'), (1, 'discord.sync'),
   -- Officer
@@ -51,13 +52,14 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
   (2, 'news.create'), (2, 'news.publish'),
   (2, 'medals.award'), (2, 'warrecords.award'),
   (2, 'games.manage'), (2, 'matches.record'), (2, 'matches.manage'),
+  (2, 'events.view'), (2, 'events.manage'),
   (2, 'audit.view'),
   -- Editor
-  (3, 'roster.view'), (3, 'news.create'), (3, 'news.publish'),
+  (3, 'roster.view'), (3, 'news.create'), (3, 'news.publish'), (3, 'events.view'),
   -- Recorder
-  (4, 'roster.view'), (4, 'matches.record'),
+  (4, 'roster.view'), (4, 'matches.record'), (4, 'events.view'),
   -- Member
-  (5, 'roster.view');
+  (5, 'roster.view'), (5, 'events.view');
 
 /* ------------------------------------------------------------------ *
  * Founder account.

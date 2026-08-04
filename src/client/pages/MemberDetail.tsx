@@ -37,6 +37,23 @@ interface MedalDef {
   imageUrl: string | null;
   autoGrantMonths: number | null;
 }
+interface WarRecord {
+  awardId: number;
+  id: number;
+  name: string;
+  imageUrl: string | null;
+  gameName: string | null;
+  citation: string | null;
+  awardedBy: number | null;
+  awardedAt: number;
+}
+/** A war-record definition, for the award picker. */
+interface WarRecordDef {
+  id: number;
+  name: string;
+  imageUrl: string | null;
+  gameName: string | null;
+}
 interface Member {
   id: number;
   discordId: string;
@@ -50,6 +67,7 @@ interface Member {
   rank: { id: number; name: string; sortOrder: number; imageUrl: string | null } | null;
   roles: Role[];
   medals: Medal[];
+  warRecords: WarRecord[];
   bio: string | null;
 }
 interface Rank {
@@ -70,6 +88,7 @@ export default function MemberDetail() {
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [assignable, setAssignable] = useState<Role[]>([]);
   const [medalCatalog, setMedalCatalog] = useState<MedalDef[]>([]);
+  const [warRecordCatalog, setWarRecordCatalog] = useState<WarRecordDef[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -89,6 +108,11 @@ export default function MemberDetail() {
         : Promise.resolve(),
       can('medals.award')
         ? api.get<{ medals: MedalDef[] }>('/medals').then(({ medals }) => setMedalCatalog(medals))
+        : Promise.resolve(),
+      can('warrecords.award')
+        ? api
+            .get<{ warRecords: WarRecordDef[] }>('/warrecords')
+            .then(({ warRecords }) => setWarRecordCatalog(warRecords))
         : Promise.resolve(),
     ])
       .catch(() => setError('Failed to load member.'))
@@ -177,6 +201,21 @@ export default function MemberDetail() {
       return 'Medal revoked.';
     });
 
+  const awardWarRecord = (warRecordId: number, citation: string) =>
+    run(async () => {
+      await api.post(`/members/${member.id}/warrecords`, {
+        warRecordId,
+        citation: citation.trim() || undefined,
+      });
+      return 'War record awarded.';
+    });
+
+  const revokeWarRecord = (awardId: number) =>
+    run(async () => {
+      await api.del(`/members/${member.id}/warrecords/${awardId}`);
+      return 'War record revoked.';
+    });
+
   const setProfileImage = (profileImageUrl: string | null) =>
     run(async () => {
       await api.patch(`/members/${member.id}/profile`, { profileImageUrl });
@@ -190,6 +229,9 @@ export default function MemberDetail() {
 
   const heldMedalIds = new Set(member.medals.map((m) => m.id));
   const awardable = medalCatalog.filter((m) => !heldMedalIds.has(m.id));
+
+  const heldWarRecordIds = new Set(member.warRecords.map((w) => w.id));
+  const awardableWarRecords = warRecordCatalog.filter((w) => !heldWarRecordIds.has(w.id));
 
   // Manual roles are the only ones managed here; rank-derived roles are set on
   // the rank in the admin panel, so they aren't listed or revocable on a member.
@@ -412,6 +454,48 @@ export default function MemberDetail() {
                 )
               ))}
           </section>
+
+          <section className="block">
+            <h3>War Records</h3>
+            {member.warRecords.length === 0 ? (
+              <p className="muted">No war records yet.</p>
+            ) : (
+              <ul className="member-medals">
+                {member.warRecords.map((w) => (
+                  <li key={w.awardId} title={w.citation ?? ''}>
+                    {w.imageUrl ? (
+                      <img src={w.imageUrl} alt="" width={28} height={28} />
+                    ) : (
+                      <span className="medal-thumb-empty small">🏆</span>
+                    )}
+                    <span className="medal-label">
+                      {w.name}
+                      {w.gameName && <span className="tag">{w.gameName}</span>}
+                      {w.citation && <span className="medal-citation">{w.citation}</span>}
+                    </span>
+                    {can('warrecords.award') && (
+                      <button
+                        className="mini danger"
+                        disabled={busy}
+                        title="Revoke this war record"
+                        onClick={() => void revokeWarRecord(w.awardId)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {can('warrecords.award') &&
+              (awardableWarRecords.length > 0 ? (
+                <AwardWarRecordRow records={awardableWarRecords} busy={busy} onAward={awardWarRecord} />
+              ) : (
+                warRecordCatalog.length > 0 && (
+                  <p className="muted small">This member holds every war record in the catalog.</p>
+                )
+              ))}
+          </section>
       </div>
     </section>
   );
@@ -532,6 +616,57 @@ function AwardMedalRow({
           if (medalId !== '') {
             onAward(medalId, citation);
             setMedalId('');
+            setCitation('');
+          }
+        }}
+      >
+        Award
+      </button>
+    </div>
+  );
+}
+
+/** Pick a war record and (optionally) a citation, then award it. */
+function AwardWarRecordRow({
+  records,
+  busy,
+  onAward,
+}: {
+  records: WarRecordDef[];
+  busy: boolean;
+  onAward: (warRecordId: number, citation: string) => void;
+}) {
+  const [recordId, setRecordId] = useState<number | ''>('');
+  const [citation, setCitation] = useState('');
+
+  return (
+    <div className="award-row">
+      <select
+        value={recordId}
+        disabled={busy}
+        onChange={(e) => setRecordId(e.target.value ? Number(e.target.value) : '')}
+      >
+        <option value="">Award a war record…</option>
+        {records.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.name}
+            {r.gameName ? ` (${r.gameName})` : ''}
+          </option>
+        ))}
+      </select>
+      <input
+        value={citation}
+        placeholder="Citation (optional)"
+        maxLength={300}
+        disabled={busy || recordId === ''}
+        onChange={(e) => setCitation(e.target.value)}
+      />
+      <button
+        disabled={busy || recordId === ''}
+        onClick={() => {
+          if (recordId !== '') {
+            onAward(recordId, citation);
+            setRecordId('');
             setCitation('');
           }
         }}

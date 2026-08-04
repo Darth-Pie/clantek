@@ -28,6 +28,9 @@ export const PERMISSIONS = {
   'matches.record': 'Record match results',
   'matches.manage': 'Edit and delete any match record',
 
+  'warrecords.manage': 'Create, edit, and delete war records',
+  'warrecords.award': 'Award and revoke war records',
+
   'theme.manage': 'Edit site theme and appearance',
   'settings.manage': 'Edit site settings',
 

@@ -286,6 +286,48 @@ export const memberMedals = sqliteTable(
   ],
 );
 
+/* ------------------------------------------------------------------ *
+ * War records — awardable "items of pride", handed to members like medals
+ * but themed as clan-war honours. A definition (optionally tied to a game)
+ * plus a join table of who holds it. Distinct from `matches` below, which is
+ * the (currently unused) detailed battle-log design.
+ * ------------------------------------------------------------------ */
+
+export const warRecords = sqliteTable(
+  'war_records',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    description: text('description'),
+    imageUrl: text('image_url'),
+    // NULL = clan-wide. Set = specific to one game.
+    gameId: integer('game_id').references(() => games.id, { onDelete: 'set null' }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: integer('created_at').notNull().default(now),
+  },
+  (t) => [index('war_records_game_idx').on(t.gameId)],
+);
+
+export const memberWarRecords = sqliteTable(
+  'member_war_records',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    warRecordId: integer('war_record_id')
+      .notNull()
+      .references(() => warRecords.id, { onDelete: 'cascade' }),
+    citation: text('citation'),
+    awardedBy: integer('awarded_by').references(() => users.id, { onDelete: 'set null' }),
+    awardedAt: integer('awarded_at').notNull().default(now),
+  },
+  (t) => [
+    index('member_war_records_user_idx').on(t.userId),
+    index('member_war_records_record_idx').on(t.warRecordId),
+  ],
+);
+
 /** Replaces the original records + stat_records tables. */
 export const matches = sqliteTable(
   'matches',

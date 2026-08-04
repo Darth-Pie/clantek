@@ -14,7 +14,9 @@ import { can, outranks, type Viewer, type Permission } from '../../shared/permis
 import type { Env } from '../env';
 import { DiscordRest } from './rest';
 import { syncMemberRankRoles } from './sync';
+import { announce } from './announce';
 import { memberName } from '../../shared/names';
+import { discordAvatar } from '../../shared/avatar';
 import { ephemeral, invoker, optionValue, reply, type Interaction } from './interactions';
 
 type DB = ReturnType<typeof drizzle<typeof schema>>;
@@ -57,7 +59,7 @@ async function viewerFromDiscordId(db: DB, discordId: string): Promise<Viewer | 
   };
 }
 
-export async function handleCommand(env: Env, i: Interaction) {
+export async function handleCommand(env: Env, i: Interaction, baseUrl?: string) {
   const db = drizzle(env.DB, { schema });
   const caller = invoker(i);
   if (!caller) return ephemeral('Could not identify you.');
@@ -73,7 +75,7 @@ export async function handleCommand(env: Env, i: Interaction) {
     case 'roster':
       return roster(db);
     case 'promote':
-      return promote(env, db, viewer, i);
+      return promote(env, db, viewer, i, baseUrl);
     default:
       return ephemeral(`Unknown command: ${i.data?.name}`);
   }
@@ -126,7 +128,7 @@ async function roster(db: DB) {
   return reply(`**Roster — ${total} members**\n${lines.join('\n')}`);
 }
 
-async function promote(env: Env, db: DB, viewer: Viewer, i: Interaction) {
+async function promote(env: Env, db: DB, viewer: Viewer, i: Interaction, baseUrl?: string) {
   if (!can(viewer, 'roster.promote')) {
     return ephemeral('You do not have permission to promote members.');
   }
@@ -185,6 +187,20 @@ async function promote(env: Env, db: DB, viewer: Viewer, i: Interaction) {
   const roleNote = rankRoleSync.added.length
     ? `\nRoles added: ${rankRoleSync.added.join(', ')}`
     : '';
+
+  await announce(
+    env,
+    {
+      type: 'promotion',
+      memberName: memberName(target),
+      memberDiscordId: target.discordId,
+      memberAvatarUrl: discordAvatar(target.discordId, target.avatar, 128),
+      rankName: nextRank.name,
+      rankImageUrl: nextRank.imageUrl,
+      byName: memberName(viewer),
+    },
+    baseUrl,
+  );
 
   return reply(
     `**${memberName(target)}** promoted to **${nextRank.name}**` +

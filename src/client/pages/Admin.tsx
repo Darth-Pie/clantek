@@ -20,6 +20,7 @@ import Roles from './Roles';
 import Medals from './Medals';
 import Games from './Games';
 import WarRecords from './WarRecords';
+import Announcements from './Announcements';
 import Theme from './Theme';
 
 export interface AdminSection {
@@ -41,6 +42,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { key: 'medals', label: 'Medals', permission: 'medals.manage', render: () => <Medals /> },
   { key: 'games', label: 'Games', permission: 'games.manage', render: () => <Games /> },
   { key: 'warrecords', label: 'War Records', permission: 'warrecords.manage', render: () => <WarRecords /> },
+  { key: 'announcements', label: 'Announcements', permission: 'settings.manage', render: () => <Announcements /> },
   { key: 'theme', label: 'Theme', permission: 'theme.manage', render: () => <Theme /> },
 ];
 

@@ -26,6 +26,22 @@ export interface GuildMember {
   joinedAt: number | null;
 }
 
+export interface TextChannel {
+  id: string;
+  name: string;
+  position: number;
+}
+
+/** A minimal Discord embed — the shape createMessage accepts. */
+export interface Embed {
+  title?: string;
+  description?: string;
+  color?: number;
+  thumbnail?: { url: string };
+  author?: { name: string; icon_url?: string };
+  footer?: { text: string };
+}
+
 export class DiscordRest {
   constructor(
     private readonly botToken: string,
@@ -136,6 +152,33 @@ export class DiscordRest {
     if (!res.ok) {
       throw new DiscordError('setNickname', res.status, await res.text());
     }
+  }
+
+  /** Text and announcement channels in the guild, for the announcement-channel picker. */
+  async listTextChannels(): Promise<TextChannel[]> {
+    const res = await this.call(`/guilds/${this.guildId}/channels`);
+    if (!res.ok) throw new DiscordError('listChannels', res.status, await res.text());
+    const channels = (await res.json()) as { id: string; name: string; type: number; position: number }[];
+    // 0 = GUILD_TEXT, 5 = GUILD_ANNOUNCEMENT — the ones the bot can post plain messages to.
+    return channels
+      .filter((c) => c.type === 0 || c.type === 5)
+      .map((c) => ({ id: c.id, name: c.name, position: c.position }))
+      .sort((a, b) => a.position - b.position);
+  }
+
+  /**
+   * Post a message (optionally with embeds) to a channel. Needs the bot's
+   * VIEW_CHANNEL + SEND_MESSAGES permission in that channel.
+   */
+  async createMessage(
+    channelId: string,
+    payload: { content?: string; embeds?: Embed[]; allowed_mentions?: { users?: string[]; parse?: string[] } },
+  ): Promise<void> {
+    const res = await this.call(`/channels/${channelId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new DiscordError('createMessage', res.status, await res.text());
   }
 
   /** Used by slash commands to reply after an initial deferred response. */

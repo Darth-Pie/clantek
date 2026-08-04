@@ -919,6 +919,10 @@ button.active {
   gap: 0.5rem;
 }
 
+.announce-event {
+  align-items: flex-start;
+}
+
 .tenure legend {
   font-size: 0.85rem;
   color: var(--color-muted);

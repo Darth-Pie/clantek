@@ -78,11 +78,12 @@ app.post('/api/discord/interactions', async (c) => {
     // background and edit the placeholder with the result. A cold start plus a
     // handful of D1 round-trips can otherwise miss the deadline, which Discord
     // reports to the user as "didn't respond in time".
+    const baseUrl = new URL(c.req.url).origin;
     c.executionCtx.waitUntil(
       (async () => {
         let content: string;
         try {
-          const result = await handleCommand(c.env, interaction);
+          const result = await handleCommand(c.env, interaction, baseUrl);
           content = result.data.content;
         } catch (err) {
           console.error('Slash command failed', err);

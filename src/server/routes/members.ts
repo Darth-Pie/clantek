@@ -4,8 +4,11 @@ import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { can, outranks } from '../../shared/permissions';
+import { memberName } from '../../shared/names';
+import { discordAvatar } from '../../shared/avatar';
 import { DiscordRest, DiscordError } from '../discord/rest';
 import { grantRole, revokeRole, syncMemberRankRoles, reconcileMember } from '../discord/sync';
+import { announce } from '../discord/announce';
 import { deleteMediaByUrl } from './media';
 
 const members = new Hono<AppContext>();
@@ -306,6 +309,25 @@ members.put('/:id/rank', requirePermission('roster.promote'), async (c) => {
     actorId: viewer.id,
   });
 
+  // Announce only a move UP the ladder; demotions and un-ranking stay quiet.
+  if (newRank && newRank.sortOrder > (currentRank?.sortOrder ?? -1)) {
+    c.executionCtx.waitUntil(
+      announce(
+        c.env,
+        {
+          type: 'promotion',
+          memberName: memberName(target),
+          memberDiscordId: target.discordId,
+          memberAvatarUrl: discordAvatar(target.discordId, target.avatar, 128),
+          rankName: newRank.name,
+          rankImageUrl: newRank.imageUrl,
+          byName: memberName(viewer),
+        },
+        new URL(c.req.url).origin,
+      ),
+    );
+  }
+
   return c.json({ ok: true, rank: newRank ?? null, rankRoleSync });
 });
 
@@ -394,6 +416,22 @@ members.post('/:id/medals', requirePermission('medals.award'), async (c) => {
     ip: c.req.header('cf-connecting-ip'),
   });
 
+  c.executionCtx.waitUntil(
+    announce(
+      c.env,
+      {
+        type: 'medalAward',
+        memberName: memberName(target),
+        memberDiscordId: target.discordId,
+        memberAvatarUrl: discordAvatar(target.discordId, target.avatar, 128),
+        medalName: medal.name,
+        medalImageUrl: medal.imageUrl,
+        citation: citation?.trim() || null,
+      },
+      new URL(c.req.url).origin,
+    ),
+  );
+
   return c.json({ ok: true, awardId: award.id }, 201);
 });
 
@@ -463,6 +501,26 @@ members.post('/:id/warrecords', requirePermission('warrecords.award'), async (c)
     meta: { warRecordId, name: record.name, citation: citation?.trim() || null },
     ip: c.req.header('cf-connecting-ip'),
   });
+
+  const game = record.gameId
+    ? await database.query.games.findFirst({ where: eq(s.games.id, record.gameId) })
+    : null;
+  c.executionCtx.waitUntil(
+    announce(
+      c.env,
+      {
+        type: 'warRecordAward',
+        memberName: memberName(target),
+        memberDiscordId: target.discordId,
+        memberAvatarUrl: discordAvatar(target.discordId, target.avatar, 128),
+        recordName: record.name,
+        recordImageUrl: record.imageUrl,
+        gameName: game?.name ?? null,
+        citation: citation?.trim() || null,
+      },
+      new URL(c.req.url).origin,
+    ),
+  );
 
   return c.json({ ok: true, awardId: award.id }, 201);
 });

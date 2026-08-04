@@ -83,11 +83,14 @@
     "CLOUDFLARE_ACCOUNT_ID": "f9954b71f74407c9f7678cde6a4c21b0"
   },
 
-  // Every 5 minutes: re-assert the website's Discord role state onto the guild,
-  // correcting anything changed directly in Discord back to the site's settings.
-  // The handler is the `scheduled` export in src/server/index.ts.
+  // Two cadences (branched on controller.cron in src/server/index.ts):
+  //  - */5      : a bounded batch of the Discord role-reconcile sweep, so cost
+  //               stays flat as the roster grows.
+  //  - "7 * * * *" (hourly, minute 7): the tenure-medal sweep. Kept off the
+  //               5-min tick because tenure only changes daily; minute 7 avoids
+  //               colliding with the */5 ticks.
   "triggers": {
-    "crons": ["*/5 * * * *"]
+    "crons": ["*/5 * * * *", "7 * * * *"]
   },
 
   "observability": {

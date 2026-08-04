@@ -6,7 +6,7 @@
  * Discord's UI (which Workers cannot observe live — see interactions.ts).
  */
 
-import { and, eq, inArray, ne } from 'drizzle-orm';
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as s from '../../db/schema';
 import { DiscordRest, DiscordError } from './rest';
@@ -113,11 +113,14 @@ export async function reconcileMember(
   db: DB,
   rest: DiscordRest,
   userId: number,
+  allRoles?: (typeof s.roles.$inferSelect)[],
 ): Promise<{ added: string[]; removed: string[] }> {
   const user = await db.query.users.findFirst({ where: eq(s.users.id, userId) });
   if (!user) throw new Error(`No such member: ${userId}`);
 
-  const mapped = await db.select().from(s.roles);
+  // Callers that reconcile many members in a row (the cron batch) pass the role
+  // set in so it isn't re-queried per member.
+  const mapped = allRoles ?? (await db.select().from(s.roles));
   const byDiscordId = new Map(
     mapped.filter((r) => r.discordRoleId).map((r) => [r.discordRoleId!, r]),
   );
@@ -253,39 +256,65 @@ export async function syncMemberRankRoles(
 }
 
 /**
- * Enforce the website's role state onto Discord for every member: the sweep
- * behind "when Discord roles drift, they're corrected to the website's
- * settings". Runs on a cron and on demand.
+ * The drift-correction sweep, paced so it scales to any roster size.
  *
- * Each member costs one Discord read plus one call per role that needs fixing,
- * so a very large roster could approach the Workers per-invocation subrequest
- * limit; batch with a stored cursor if the roster ever grows past a few dozen.
- * Banned members are skipped — their roles are intentionally left alone.
+ * Each member costs one Discord read plus one call per role that needs fixing.
+ * The free plan caps a Worker invocation at 50 subrequests and Discord rate-
+ * limits us globally, so instead of touching everyone every tick we process the
+ * least-recently-reconciled members up to a call budget, stamping
+ * `lastReconciledAt` so the next tick picks up where this one left off. Over
+ * many ticks the whole roster is covered, and the per-tick cost is bounded no
+ * matter how large the clan grows. Banned members are skipped by design.
+ *
+ * This only paces *drift correction* — a website change (grant, rank, etc.)
+ * still pushes to Discord immediately when it happens.
  */
-export async function reconcileAllMembers(
+const RECONCILE_CALL_BUDGET = 40; // Discord calls per tick — under the 50-subrequest ceiling
+const RECONCILE_POOL = 60; // candidate rows to consider per tick
+
+export async function reconcileBatch(
   db: DB,
   rest: DiscordRest,
-): Promise<{ processed: number; changed: number; failed: number }> {
-  const members = await db
+  opts: { callBudget?: number; poolSize?: number } = {},
+): Promise<{ processed: number; changed: number; failed: number; calls: number }> {
+  const budget = opts.callBudget ?? RECONCILE_CALL_BUDGET;
+  const poolSize = opts.poolSize ?? RECONCILE_POOL;
+
+  // Load the role set once for the whole batch rather than per member.
+  const allRoles = await db.select().from(s.roles);
+
+  const candidates = await db
     .select({ id: s.users.id })
     .from(s.users)
-    .where(ne(s.users.status, 'banned'));
+    .where(ne(s.users.status, 'banned'))
+    // NULL (never reconciled) sorts first via the coalesce; then oldest first.
+    .orderBy(sql`coalesce(${s.users.lastReconciledAt}, 0) asc`)
+    .limit(poolSize);
 
+  const nowSec = Math.floor(Date.now() / 1000);
   let processed = 0;
   let changed = 0;
   let failed = 0;
-  for (const m of members) {
+  let calls = 0;
+
+  for (const m of candidates) {
+    if (calls >= budget) break;
     try {
-      const r = await reconcileMember(db, rest, m.id);
+      const r = await reconcileMember(db, rest, m.id, allRoles);
+      // getMember (1) + one call per role add/remove.
+      calls += 1 + r.added.length + r.removed.length;
       processed++;
       if (r.added.length || r.removed.length) changed++;
     } catch {
-      // One member's failure (rate limit, hierarchy, left the server) must not
-      // stop the sweep; the next run retries them.
+      calls += 1; // the getMember attempt still counted against the budget
       failed++;
     }
+    // Stamp regardless of outcome so a persistently-failing member rotates to
+    // the back rather than blocking everyone behind it.
+    await db.update(s.users).set({ lastReconciledAt: nowSec }).where(eq(s.users.id, m.id));
   }
-  return { processed, changed, failed };
+
+  return { processed, changed, failed, calls };
 }
 
 /** Re-apply a rank's role set to everyone currently holding that rank. */

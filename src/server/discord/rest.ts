@@ -49,9 +49,28 @@ export interface Embed {
   description?: string;
   color?: number;
   thumbnail?: { url: string };
+  image?: { url: string };
   author?: { name: string; icon_url?: string };
   footer?: { text: string };
+  fields?: { name: string; value: string; inline?: boolean }[];
 }
+
+/**
+ * A message component action row (type 1) holding buttons (type 2). Kept loose
+ * — the event sign-up buttons are the only components we build, in
+ * discord/events.ts. Button styles: 1 primary, 2 secondary, 3 success, 4 danger.
+ */
+export type ActionRow = {
+  type: 1;
+  components: {
+    type: 2;
+    style: 1 | 2 | 3 | 4;
+    label: string;
+    custom_id: string;
+    emoji?: { name: string };
+    disabled?: boolean;
+  }[];
+};
 
 export class DiscordRest {
   constructor(
@@ -183,7 +202,12 @@ export class DiscordRest {
    */
   async createMessage(
     channelId: string,
-    payload: { content?: string; embeds?: Embed[]; allowed_mentions?: { users?: string[]; parse?: string[] } },
+    payload: {
+      content?: string;
+      embeds?: Embed[];
+      components?: ActionRow[];
+      allowed_mentions?: { users?: string[]; parse?: string[] };
+    },
   ): Promise<string> {
     const res = await this.call(`/channels/${channelId}/messages`, {
       method: 'POST',
@@ -197,7 +221,7 @@ export class DiscordRest {
   async editMessage(
     channelId: string,
     messageId: string,
-    payload: { content?: string; embeds?: Embed[] },
+    payload: { content?: string; embeds?: Embed[]; components?: ActionRow[] },
   ): Promise<void> {
     const res = await this.call(`/channels/${channelId}/messages/${messageId}`, {
       method: 'PATCH',

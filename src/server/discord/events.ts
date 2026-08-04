@@ -1,33 +1,112 @@
 /**
  * Mirrors a ClanTek event into Discord: a native guild scheduled event (so
- * members can RSVP and get reminders) AND an announcement message in the
- * configured channel. Both are best-effort — a Discord failure is logged and
- * swallowed, never blocking the site action. Callers run this in ctx.waitUntil
- * and persist the returned ids so later edits/cancels can find them.
+ * members get reminders) AND an announcement message that doubles as the
+ * sign-up sheet — an embed with live per-role counts plus a row of buttons
+ * (one per role, "Attending", "Withdraw"). Clicking a button is a
+ * MESSAGE_COMPONENT interaction handled in discord/eventInteractions.ts, which
+ * writes the same event_signups rows the website uses, so the two stay in sync.
  *
- * The announcement channel is the same one the medal/promotion announcements
- * use (settings key 'announcements'); the native scheduled event needs the
- * bot's MANAGE_EVENTS permission.
+ * Everything here is best-effort — a Discord failure is logged and swallowed,
+ * never blocking the site action. The announcement channel is the one the
+ * medal/promotion announcements use (settings key 'announcements'); the native
+ * scheduled event needs the bot's MANAGE_EVENTS permission.
  */
 
 import { drizzle } from 'drizzle-orm/d1';
 import * as s from '../../db/schema';
 import type { Env } from '../env';
-import { DiscordRest, type Embed } from './rest';
+import { DiscordRest, type ActionRow, type Embed } from './rest';
 import { loadAnnouncementConfig } from './announce';
+import { loadEventState, type EventState } from '../events/signups';
 
 type EventRow = typeof s.events.$inferSelect;
 
 const iso = (unixSec: number) => new Date(unixSec * 1000).toISOString();
 
-function eventEmbed(event: EventRow, gameName: string | null): Embed {
+/** Turn a stored relative media URL into an absolute one Discord can fetch. */
+function absoluteMedia(siteUrl: string | undefined, url: string | null): string | null {
+  if (!url) return null;
+  if (/^https?:\/\//.test(url)) return url;
+  if (!siteUrl) return null;
+  return `${siteUrl.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+function eventEmbed(state: EventState, siteUrl?: string): Embed {
+  const { event, gameName } = state;
   const lines = [
     event.description || undefined,
     `**When:** <t:${event.startsAt}:F> (<t:${event.startsAt}:R>)`,
     `**Where:** ${event.location}`,
     gameName ? `**Game:** ${gameName}` : undefined,
   ].filter(Boolean) as string[];
-  return { color: 0x5865f2, title: `📅 ${event.title}`, description: lines.join('\n') };
+
+  const fields: NonNullable<Embed['fields']> = [];
+  for (const r of state.roles) {
+    const names = state.signups.filter((su) => su.roleId === r.id).map((su) => su.name);
+    fields.push({
+      name: `${r.emoji ? r.emoji + ' ' : ''}${r.name} — ${r.count}${r.capacity != null ? `/${r.capacity}` : ''}`.slice(0, 256),
+      value: (names.length ? names.join(', ') : '—').slice(0, 1024),
+      inline: true,
+    });
+  }
+  const noRole = state.signups.filter((su) => su.roleId === null).map((su) => su.name);
+  if (noRole.length) {
+    fields.push({ name: `Attending — ${noRole.length}`, value: noRole.join(', ').slice(0, 1024), inline: true });
+  }
+
+  const embed: Embed = {
+    color: 0x5865f2,
+    title: `📅 ${event.title}`,
+    description: lines.join('\n'),
+    footer: { text: `${state.total} signed up` },
+  };
+  if (fields.length) embed.fields = fields;
+  const img = absoluteMedia(siteUrl, event.imageUrl);
+  if (img) embed.image = { url: img };
+  return embed;
+}
+
+/**
+ * The sign-up buttons: one per role (secondary, showing its count), then a
+ * final row with "Attending" (join with no specific role) and "Withdraw".
+ * Discord caps a message at 5 action rows of 5 buttons; role buttons take up to
+ * four rows (20 roles) and the controls take the fifth.
+ */
+function eventComponents(state: EventState): ActionRow[] {
+  const eid = state.event.id;
+  const rows: ActionRow[] = [];
+
+  const roleButtons = state.roles.slice(0, 20).map((r) => {
+    const count = r.capacity != null ? ` ${r.count}/${r.capacity}` : r.count ? ` (${r.count})` : '';
+    const button: ActionRow['components'][number] = {
+      type: 2,
+      style: 2,
+      label: `${r.name}${count}`.slice(0, 80),
+      custom_id: `evt:role:${eid}:${r.id}`,
+    };
+    if (r.emoji) button.emoji = { name: r.emoji };
+    return button;
+  });
+  for (let i = 0; i < roleButtons.length; i += 5) {
+    rows.push({ type: 1, components: roleButtons.slice(i, i + 5) });
+  }
+
+  rows.push({
+    type: 1,
+    components: [
+      { type: 2, style: 1, label: 'Attending', custom_id: `evt:role:${eid}:none` },
+      { type: 2, style: 4, label: 'Withdraw', custom_id: `evt:withdraw:${eid}` },
+    ],
+  });
+  return rows;
+}
+
+/** The full announcement message payload for an event's current state. */
+export function buildEventMessage(
+  state: EventState,
+  siteUrl?: string,
+): { embeds: Embed[]; components: ActionRow[] } {
+  return { embeds: [eventEmbed(state, siteUrl)], components: eventComponents(state) };
 }
 
 export interface DiscordEventIds {
@@ -36,22 +115,23 @@ export interface DiscordEventIds {
 }
 
 /**
- * Create or update the Discord scheduled event and channel message for an
- * event. Reuses the ids already on the row when present (an edit), or creates
- * fresh ones. Returns the ids to persist. Never throws.
+ * Create or update the Discord scheduled event and announcement message for an
+ * event. Reuses the ids already on the row when present (an edit). Returns the
+ * ids to persist. Never throws.
  */
-export async function syncEventToDiscord(
-  env: Env,
-  event: EventRow,
-  gameName: string | null,
-): Promise<DiscordEventIds> {
+export async function syncEventToDiscord(env: Env, eventId: number): Promise<DiscordEventIds> {
+  const db = drizzle(env.DB, { schema: s });
+  const state = await loadEventState(db, eventId);
+  if (!state) return { discordEventId: null, discordMessageId: null };
+
   const ids: DiscordEventIds = {
-    discordEventId: event.discordEventId,
-    discordMessageId: event.discordMessageId,
+    discordEventId: state.event.discordEventId,
+    discordMessageId: state.event.discordMessageId,
   };
   if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return ids;
 
   const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
+  const event = state.event;
 
   const scheduled = {
     name: event.title.slice(0, 100),
@@ -74,14 +154,13 @@ export async function syncEventToDiscord(
   }
 
   try {
-    const db = drizzle(env.DB, { schema: s });
     const channelId = (await loadAnnouncementConfig(db)).channelId;
     if (channelId) {
-      const embed = eventEmbed(event, gameName);
+      const message = buildEventMessage(state, env.SITE_URL);
       if (ids.discordMessageId) {
-        await rest.editMessage(channelId, ids.discordMessageId, { embeds: [embed] });
+        await rest.editMessage(channelId, ids.discordMessageId, message);
       } else {
-        ids.discordMessageId = await rest.createMessage(channelId, { embeds: [embed] });
+        ids.discordMessageId = await rest.createMessage(channelId, message);
       }
     }
   } catch (err) {
@@ -89,6 +168,27 @@ export async function syncEventToDiscord(
   }
 
   return ids;
+}
+
+/**
+ * Re-render just the announcement message (embed counts + button labels) after
+ * a sign-up changes on the website. No scheduled-event touch. Never throws.
+ */
+export async function refreshEventMessage(env: Env, eventId: number): Promise<void> {
+  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return;
+  const db = drizzle(env.DB, { schema: s });
+  const state = await loadEventState(db, eventId);
+  if (!state || !state.event.discordMessageId) return;
+
+  const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
+  try {
+    const channelId = (await loadAnnouncementConfig(db)).channelId;
+    if (channelId) {
+      await rest.editMessage(channelId, state.event.discordMessageId, buildEventMessage(state, env.SITE_URL));
+    }
+  } catch (err) {
+    console.error('Event message refresh failed', err);
+  }
 }
 
 /** Remove an event's Discord scheduled event and announcement message. Never throws. */

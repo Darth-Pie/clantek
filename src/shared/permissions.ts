@@ -33,6 +33,7 @@ export const PERMISSIONS = {
 
   'events.view': 'See the events page',
   'events.manage': 'Create, edit, and cancel events',
+  'events.attendees': 'See who has signed up for an event',
 
   'theme.manage': 'Edit site theme and appearance',
   'settings.manage': 'Edit site settings',

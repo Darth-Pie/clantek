@@ -382,6 +382,9 @@ export const events = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     title: text('title').notNull(),
     description: text('description'),
+    // An optional banner image (an R2 /media/events/… URL), shown on the events
+    // page and as the Discord announcement embed image.
+    imageUrl: text('image_url'),
     startsAt: integer('starts_at').notNull(),
     // Discord's external scheduled events require an end time and a location.
     endsAt: integer('ends_at').notNull(),
@@ -399,6 +402,56 @@ export const events = sqliteTable(
     updatedAt: integer('updated_at').notNull().default(now),
   },
   (t) => [index('events_starts_idx').on(t.startsAt)],
+);
+
+/**
+ * The sign-up "roles" for an event — e.g. Tank / Healer / DPS. Defined per
+ * event when it's created. A member picks at most one; an optional capacity
+ * caps how many can hold it. Deleting a role frees its holders back to
+ * "attending, no role" (the signup's eventRoleId is set null).
+ */
+export const eventRoles = sqliteTable(
+  'event_roles',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    eventId: integer('event_id')
+      .notNull()
+      .references(() => events.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    // Optional emoji shown on the Discord sign-up button (a unicode char).
+    emoji: text('emoji'),
+    // NULL = unlimited. Otherwise the max number of members who can hold it.
+    capacity: integer('capacity'),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  (t) => [index('event_roles_event_idx').on(t.eventId)],
+);
+
+/**
+ * A member's sign-up for an event. One row per member per event (unique), so
+ * choosing a different role updates the same row and withdrawing deletes it.
+ * eventRoleId NULL means "attending, no specific role". Written from both the
+ * website and Discord button clicks — the two stay in sync because they share
+ * this table.
+ */
+export const eventSignups = sqliteTable(
+  'event_signups',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    eventId: integer('event_id')
+      .notNull()
+      .references(() => events.id, { onDelete: 'cascade' }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    eventRoleId: integer('event_role_id').references(() => eventRoles.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at').notNull().default(now),
+    updatedAt: integer('updated_at').notNull().default(now),
+  },
+  (t) => [
+    uniqueIndex('event_signups_event_user_idx').on(t.eventId, t.userId),
+    index('event_signups_event_idx').on(t.eventId),
+  ],
 );
 
 /* ------------------------------------------------------------------ *

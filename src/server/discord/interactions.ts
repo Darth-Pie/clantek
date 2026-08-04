@@ -29,6 +29,10 @@ export const InteractionResponseType = {
   PONG: 1,
   CHANNEL_MESSAGE_WITH_SOURCE: 4,
   DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE: 5,
+  // For component (button) clicks: acknowledge without a visible loading state,
+  // then edit the source message later via editOriginalMessage().
+  DEFERRED_UPDATE_MESSAGE: 6,
+  UPDATE_MESSAGE: 7,
 } as const;
 
 export const MessageFlags = { EPHEMERAL: 1 << 6 } as const;
@@ -91,7 +95,17 @@ export interface Interaction {
   type: number;
   token: string;
   guild_id?: string;
-  data?: { id: string; name: string; options?: InteractionOption[] };
+  // Slash commands carry name/options; component (button) clicks carry
+  // custom_id/component_type.
+  data?: {
+    id?: string;
+    name?: string;
+    options?: InteractionOption[];
+    custom_id?: string;
+    component_type?: number;
+  };
+  // Present on component interactions — the message the button lives on.
+  message?: { id: string };
   member?: {
     user: { id: string; username: string; global_name: string | null };
     roles: string[];
@@ -155,5 +169,50 @@ export async function editOriginalResponse(
   );
   if (!res.ok) {
     console.error(`Failed to edit interaction response (${res.status}):`, await res.text());
+  }
+}
+
+/** A deferred acknowledgement for a component (button) click. */
+export function deferUpdate() {
+  return { type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE };
+}
+
+/**
+ * Edit the message a component interaction belongs to (its "@original"). For a
+ * button click that's the announcement/sign-up message — this refreshes its
+ * embed counts and button labels. No bot token needed; the interaction token
+ * authenticates it.
+ */
+export async function editOriginalMessage(
+  applicationId: string,
+  interactionToken: string,
+  payload: { content?: string; embeds?: unknown[]; components?: unknown[] },
+): Promise<void> {
+  const res = await fetch(
+    `https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}/messages/@original`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (!res.ok) {
+    console.error(`Failed to edit component message (${res.status}):`, await res.text());
+  }
+}
+
+/** Send a private (ephemeral) follow-up to whoever triggered the interaction. */
+export async function followUpEphemeral(
+  applicationId: string,
+  interactionToken: string,
+  content: string,
+): Promise<void> {
+  const res = await fetch(`https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content, flags: MessageFlags.EPHEMERAL }),
+  });
+  if (!res.ok) {
+    console.error(`Failed to send follow-up (${res.status}):`, await res.text());
   }
 }

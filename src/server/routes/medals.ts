@@ -12,6 +12,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
+import { deleteMediaByUrl } from './media';
 
 const medals = new Hono<AppContext>();
 
@@ -108,7 +109,13 @@ medals.patch('/:id', requirePermission('medals.manage'), async (c) => {
     patch.name = body.name.trim();
   }
   if (body.description !== undefined) patch.description = body.description?.trim() || null;
-  if (body.imageUrl !== undefined) patch.imageUrl = body.imageUrl?.trim() || null;
+  if (body.imageUrl !== undefined) {
+    patch.imageUrl = body.imageUrl?.trim() || null;
+    // Free the object the image is replacing, once the update has committed.
+    if (patch.imageUrl !== medal.imageUrl) {
+      c.executionCtx.waitUntil(deleteMediaByUrl(c.env, medal.imageUrl));
+    }
+  }
   if (body.autoGrantMonths !== undefined) {
     try {
       patch.autoGrantMonths = parseAutoGrantMonths(body.autoGrantMonths) ?? null;
@@ -146,6 +153,7 @@ medals.delete('/:id', requirePermission('medals.manage'), async (c) => {
   if (!medal) return c.json({ error: 'No such medal' }, 404);
 
   await database.delete(s.medals).where(eq(s.medals.id, id));
+  c.executionCtx.waitUntil(deleteMediaByUrl(c.env, medal.imageUrl));
 
   await database.insert(s.auditLog).values({
     actorId: c.get('viewer')!.id,

@@ -49,6 +49,7 @@ async function viewerFromDiscordId(db: DB, discordId: string): Promise<Viewer | 
     globalName: user.globalName,
     displayName: user.displayName,
     avatar: user.avatar,
+    profileImageUrl: user.profileImageUrl,
     isGod: user.isGod,
     rank: rank ? { id: rank.id, name: rank.name, sortOrder: rank.sortOrder } : null,
     roles: [...roles.values()],

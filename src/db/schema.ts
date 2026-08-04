@@ -21,6 +21,10 @@ export const users = sqliteTable(
     // place of the Discord name everywhere; see shared/names.ts for the order.
     displayName: text('display_name'),
     avatar: text('avatar'), // Discord avatar hash, not a URL
+    // A member-chosen profile image (an R2 /media/avatars/… URL). When set it
+    // overrides the Discord avatar everywhere the member is shown; NULL falls
+    // back to the Discord avatar. See shared/avatar.ts for the resolution order.
+    profileImageUrl: text('profile_image_url'),
     email: text('email'),
 
     rankId: integer('rank_id').references(() => ranks.id, { onDelete: 'set null' }),

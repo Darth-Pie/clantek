@@ -51,6 +51,7 @@ export interface Viewer {
   globalName: string | null;
   displayName: string | null;
   avatar: string | null;
+  profileImageUrl: string | null;
   isGod: boolean;
   rank: { id: number; name: string; sortOrder: number } | null;
   roles: { id: number; name: string; color: string | null }[];

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { memberName } from '../../shared/names';
+import { memberAvatar } from '../../shared/avatar';
 
 interface Member {
   id: number;
@@ -10,18 +11,10 @@ interface Member {
   globalName: string | null;
   displayName: string | null;
   avatar: string | null;
+  profileImageUrl: string | null;
   status: string;
   joinedAt: number;
   rankName: string | null;
-}
-
-function avatarUrl(discordId: string, hash: string | null): string {
-  if (!hash) {
-    const index = (BigInt(discordId) >> 22n) % 6n;
-    return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
-  }
-  const ext = hash.startsWith('a_') ? 'gif' : 'png';
-  return `https://cdn.discordapp.com/avatars/${discordId}/${hash}.${ext}?size=64`;
 }
 
 export default function Roster() {
@@ -48,7 +41,14 @@ export default function Roster() {
         {members.map((m) => (
           <li key={m.id}>
             <Link to={`/members/${m.id}`} className="roster-link">
-              <img src={avatarUrl(m.discordId, m.avatar)} alt="" width={40} height={40} />
+              <img
+                className="avatar"
+                src={memberAvatar(m, 64)}
+                alt=""
+                width={40}
+                height={40}
+                loading="lazy"
+              />
               <div>
                 <div className="name">{memberName(m)}</div>
                 <div className="muted small">

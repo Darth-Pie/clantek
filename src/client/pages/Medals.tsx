@@ -121,7 +121,7 @@ export default function Medals() {
               })
             }
             onUpload={async (file) => {
-              const { url } = await api.upload<{ url: string }>('/media', file);
+              const { url } = await api.upload<{ url: string }>('/media/medals', file);
               return url;
             }}
             onDelete={() =>

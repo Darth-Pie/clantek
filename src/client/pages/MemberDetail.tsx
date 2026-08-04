@@ -6,12 +6,13 @@
  * top-level Command role see them, and God is a fallback — not a special case.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
 import { memberName } from '../../shared/names';
+import { memberAvatar } from '../../shared/avatar';
 
 interface Role {
   id: number;
@@ -43,6 +44,7 @@ interface Member {
   globalName: string | null;
   displayName: string | null;
   avatar: string | null;
+  profileImageUrl: string | null;
   status: string;
   joinedAt: number;
   rank: { id: number; name: string; sortOrder: number } | null;
@@ -57,12 +59,6 @@ interface Rank {
 }
 
 const STATUSES = ['active', 'inactive', 'loa', 'retired', 'banned'] as const;
-
-function avatarUrl(discordId: string, hash: string | null): string {
-  if (!hash) return `https://cdn.discordapp.com/embed/avatars/${(BigInt(discordId) >> 22n) % 6n}.png`;
-  const ext = hash.startsWith('a_') ? 'gif' : 'png';
-  return `https://cdn.discordapp.com/avatars/${discordId}/${hash}.${ext}?size=128`;
-}
 
 export default function MemberDetail() {
   const { id } = useParams();
@@ -182,6 +178,14 @@ export default function MemberDetail() {
       return 'Medal revoked.';
     });
 
+  const setProfileImage = (profileImageUrl: string | null) =>
+    run(async () => {
+      await api.patch(`/members/${member.id}/profile`, { profileImageUrl });
+      return profileImageUrl
+        ? 'Profile image updated.'
+        : 'Profile image removed — using the Discord avatar.';
+    });
+
   const heldRoleIds = new Set(member.roles.map((r) => r.id));
   const grantable = assignable.filter((r) => !heldRoleIds.has(r.id));
 
@@ -197,7 +201,13 @@ export default function MemberDetail() {
       <Alerts error={error} warning={warning} notice={notice} />
 
       <header className="member-head">
-        <img src={avatarUrl(member.discordId, member.avatar)} alt="" width={72} height={72} />
+        <AvatarBlock
+          member={member}
+          canEdit={canEditProfile}
+          hasOverride={!!member.profileImageUrl}
+          busy={busy}
+          onSet={setProfileImage}
+        />
         <div>
           <h2>{displayName}</h2>
           {showsDiscordHandle && <div className="muted small">Discord: {discordHandle}</div>}
@@ -427,6 +437,76 @@ export default function MemberDetail() {
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * The member's avatar, with self-service upload when the viewer may edit this
+ * profile. Uploads land in R2 under avatars/ and the returned URL is saved as
+ * the profile-image override; "Use Discord" clears it back to the Discord
+ * avatar. Defaults to the Discord avatar until an override is set.
+ */
+function AvatarBlock({
+  member,
+  canEdit,
+  hasOverride,
+  busy,
+  onSet,
+}: {
+  member: { discordId: string; avatar: string | null; profileImageUrl: string | null };
+  canEdit: boolean;
+  hasOverride: boolean;
+  busy: boolean;
+  onSet: (url: string | null) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  async function pickFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const { url } = await api.upload<{ url: string }>('/media/avatars', file);
+      onSet(url);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="member-avatar">
+      <img className="avatar lg" src={memberAvatar(member, 128)} alt="" width={72} height={72} />
+      {canEdit && (
+        <div className="avatar-controls">
+          <label className="upload-btn mini">
+            {uploading ? 'Uploading…' : hasOverride ? 'Change' : 'Upload'}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              onChange={(e) => void pickFile(e)}
+              disabled={busy || uploading}
+              hidden
+            />
+          </label>
+          {hasOverride && (
+            <button
+              className="mini"
+              disabled={busy || uploading}
+              onClick={() => onSet(null)}
+              title="Revert to the Discord avatar"
+            >
+              Use Discord
+            </button>
+          )}
+          {uploadError && <span className="small warn">{uploadError}</span>}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -8,7 +8,7 @@
  * Discord.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
@@ -17,6 +17,7 @@ interface Rank {
   id: number;
   name: string;
   abbreviation: string | null;
+  imageUrl: string | null;
   sortOrder: number;
   reqDays: number;
   reqWins: number;
@@ -66,6 +67,8 @@ export default function Ranks() {
 
   const rename = (id: number, name: string) => run(() => api.patch(`/ranks/${id}`, { name }));
   const setDefault = (id: number) => run(() => api.patch(`/ranks/${id}`, { isDefault: true }));
+  const setImage = (id: number, imageUrl: string | null) =>
+    run(() => api.patch(`/ranks/${id}`, { imageUrl }));
   const remove = (id: number) => run(() => api.del(`/ranks/${id}`));
 
   const move = (index: number, direction: -1 | 1) =>
@@ -120,6 +123,7 @@ export default function Ranks() {
         <thead>
           <tr>
             <th>Order</th>
+            <th>Image</th>
             <th>Name</th>
             <th>Members</th>
             <th>Default</th>
@@ -140,6 +144,13 @@ export default function Ranks() {
                 >
                   ↓
                 </button>
+              </td>
+              <td>
+                <RankImageCell
+                  rank={rank}
+                  busy={busy}
+                  onSet={(url) => setImage(rank.id, url)}
+                />
               </td>
               <td>
                 <input
@@ -201,6 +212,63 @@ export default function Ranks() {
         />
       )}
     </section>
+  );
+}
+
+/**
+ * A rank's insignia image, with upload/remove. Uploads land in R2 under ranks/
+ * and the returned URL is saved to the rank; the previous object is cleaned up
+ * server-side.
+ */
+function RankImageCell({
+  rank,
+  busy,
+  onSet,
+}: {
+  rank: Rank;
+  busy: boolean;
+  onSet: (url: string | null) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+
+  async function pickFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { url } = await api.upload<{ url: string }>('/media/ranks', file);
+      onSet(url);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="rank-image-cell">
+      <span className="rank-thumb">
+        {rank.imageUrl ? (
+          <img src={rank.imageUrl} alt="" width={28} height={28} />
+        ) : (
+          <span className="rank-thumb-empty">—</span>
+        )}
+      </span>
+      <label className="upload-btn mini">
+        {uploading ? '…' : rank.imageUrl ? 'Change' : 'Upload'}
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp"
+          onChange={(e) => void pickFile(e)}
+          disabled={busy || uploading}
+          hidden
+        />
+      </label>
+      {rank.imageUrl && (
+        <button className="mini" disabled={busy || uploading} onClick={() => onSet(null)} title="Remove image">
+          ✕
+        </button>
+      )}
+    </div>
   );
 }
 

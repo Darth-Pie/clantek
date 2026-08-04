@@ -306,9 +306,7 @@ app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404));
 // outside /api so the no-store middleware doesn't apply and they cache hard.
 // wrangler.jsonc puts /media/* in run_worker_first so these reach the Worker.
 app.get('/media/*', async (c) => {
-  const key = c.req.path.slice('/media/'.length);
-  if (!key) return c.json({ error: 'Not found' }, 404);
-  const res = await serveMediaObject(c.env, key);
+  const res = await serveMediaObject(c.env, c.req.raw, c.executionCtx);
   return res ?? c.json({ error: 'Not found' }, 404);
 });
 

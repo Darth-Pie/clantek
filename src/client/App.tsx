@@ -3,6 +3,7 @@ import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useSession } from './lib/session';
 import type { Permission } from '../shared/permissions';
 import { memberName } from '../shared/names';
+import { memberAvatar } from '../shared/avatar';
 import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
 import Medals from './pages/Medals';
@@ -43,6 +44,7 @@ export default function App() {
           {viewer ? (
             <>
               <span className="who">
+                <img className="avatar sm" src={memberAvatar(viewer, 64)} alt="" width={28} height={28} />
                 {viewer.rank && <span className="rank-chip">{viewer.rank.name}</span>}
                 {memberName(viewer)}
                 {viewer.isGod && <span className="god-chip" title="God status">★</span>}

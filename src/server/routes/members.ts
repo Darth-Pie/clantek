@@ -6,6 +6,7 @@ import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { can, outranks } from '../../shared/permissions';
 import { DiscordRest, DiscordError } from '../discord/rest';
 import { grantRole, revokeRole, syncMemberRankRoles, reconcileMember } from '../discord/sync';
+import { deleteMediaByUrl } from './media';
 
 const members = new Hono<AppContext>();
 
@@ -23,6 +24,7 @@ members.get('/', requireAuth, async (c) => {
       globalName: s.users.globalName,
       displayName: s.users.displayName,
       avatar: s.users.avatar,
+      profileImageUrl: s.users.profileImageUrl,
       status: s.users.status,
       joinedAt: s.users.joinedAt,
       rankId: s.ranks.id,
@@ -77,12 +79,16 @@ members.get('/:id', requireAuth, async (c) => {
 });
 
 /**
- * Edit a member's profile — display name and bio. A member may always edit
- * their own; editing anyone else's needs roster.edit.
+ * Edit a member's profile — display name, bio, and profile image. A member may
+ * always edit their own; editing anyone else's needs roster.edit.
  *
  * Changing the display name also sets the member's Discord nickname (their
  * per-server name). Website stays the source of truth; the push is best-effort
  * and reported back, never blocking the save.
+ *
+ * profileImageUrl is a /media/avatars/… URL from a prior upload, or null to
+ * clear it and revert to the Discord avatar. Replacing or clearing it deletes
+ * the previous R2 object so orphans don't pile up.
  */
 members.patch('/:id/profile', requireAuth, async (c) => {
   const id = Number(c.req.param('id'));
@@ -92,12 +98,33 @@ members.patch('/:id/profile', requireAuth, async (c) => {
     return c.json({ error: 'You can only edit your own profile.' }, 403);
   }
 
-  const body = await c.req.json<{ bio?: string; displayName?: string }>();
+  const body = await c.req.json<{
+    bio?: string;
+    displayName?: string;
+    profileImageUrl?: string | null;
+  }>();
   const nowSec = Math.floor(Date.now() / 1000);
   const database = db(c.env);
 
   const target = await database.query.users.findFirst({ where: eq(s.users.id, id) });
   if (!target) return c.json({ error: 'No such member' }, 404);
+
+  let profileImageUrl = target.profileImageUrl;
+  if (body.profileImageUrl !== undefined) {
+    const next = body.profileImageUrl?.trim() || null;
+    // Only accept a cleared value or one of our own uploaded avatar URLs — never
+    // an arbitrary off-site URL, which would let this field point <img> tags at
+    // anything and bypass the raster-only upload guard.
+    if (next !== null && !next.startsWith('/media/avatars/')) {
+      return c.json({ error: 'Invalid profile image.' }, 400);
+    }
+    if (next !== target.profileImageUrl) {
+      await database.update(s.users).set({ profileImageUrl: next, updatedAt: nowSec }).where(eq(s.users.id, id));
+      // Drop the image it replaced (best effort, off the request path).
+      c.executionCtx.waitUntil(deleteMediaByUrl(c.env, target.profileImageUrl));
+      profileImageUrl = next;
+    }
+  }
 
   let bio: string | undefined;
   if (body.bio !== undefined) {
@@ -152,7 +179,7 @@ members.patch('/:id/profile', requireAuth, async (c) => {
     }
   }
 
-  return c.json({ ok: true, bio, displayName, discordSync });
+  return c.json({ ok: true, bio, displayName, profileImageUrl, discordSync });
 });
 
 /**

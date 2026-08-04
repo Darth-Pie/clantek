@@ -12,6 +12,7 @@ import type { AppContext } from '../env';
 import { db, requirePermission } from '../middleware/auth';
 import { DiscordRest } from '../discord/rest';
 import { syncRankHolders } from '../discord/sync';
+import { deleteMediaByUrl } from './media';
 
 const ranks = new Hono<AppContext>();
 
@@ -137,6 +138,12 @@ ranks.patch('/:id', requirePermission('ranks.manage'), async (c) => {
   const body = await c.req.json<Partial<typeof s.ranks.$inferInsert>>();
   const database = db(c.env);
 
+  // The image being replaced, so we can free it once the update commits.
+  const previousImageUrl =
+    body.imageUrl !== undefined
+      ? ((await database.query.ranks.findFirst({ where: eq(s.ranks.id, id) }))?.imageUrl ?? null)
+      : null;
+
   // Exactly one default rank, or new recruits land nowhere.
   if (body.isDefault) {
     await database.update(s.ranks).set({ isDefault: false }).where(ne(s.ranks.id, id));
@@ -149,6 +156,11 @@ ranks.patch('/:id', requirePermission('ranks.manage'), async (c) => {
     .returning();
 
   if (!updated.length) return c.json({ error: 'No such rank' }, 404);
+
+  if (body.imageUrl !== undefined && previousImageUrl !== updated[0]!.imageUrl) {
+    c.executionCtx.waitUntil(deleteMediaByUrl(c.env, previousImageUrl));
+  }
+
   return c.json({ rank: updated[0] });
 });
 
@@ -199,6 +211,7 @@ ranks.delete('/:id', requirePermission('ranks.manage'), async (c) => {
   }
 
   await database.delete(s.ranks).where(eq(s.ranks.id, id));
+  c.executionCtx.waitUntil(deleteMediaByUrl(c.env, rank.imageUrl));
   await database.insert(s.auditLog).values({
     actorId: c.get('viewer')!.id,
     action: 'rank.delete',

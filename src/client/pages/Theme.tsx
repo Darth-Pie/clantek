@@ -29,6 +29,12 @@ const FONT_TOKENS: { key: string; label: string }[] = [
   { key: '--font-body', label: 'Body' },
 ];
 
+const NAV_ALIGN: { label: string; value: string }[] = [
+  { label: 'Left', value: 'flex-start' },
+  { label: 'Center', value: 'center' },
+  { label: 'Right', value: 'flex-end' },
+];
+
 const FONT_STACKS: { label: string; value: string }[] = [
   { label: 'System', value: 'system-ui, sans-serif' },
   { label: 'Humanist sans', value: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' },
@@ -153,7 +159,13 @@ export default function Theme() {
       <div className="theme-presets">
         <span className="mab-label">Start from</span>
         {PRESETS.map((p) => (
-          <button key={p.name} className="preset" disabled={busy} onClick={() => applyTokens(p.tokens)}>
+          <button
+            key={p.name}
+            className="preset"
+            disabled={busy}
+            // A palette shouldn't reset a layout choice, so keep the current menu alignment.
+            onClick={() => applyTokens({ ...p.tokens, '--nav-justify': draft['--nav-justify'] ?? 'flex-start' })}
+          >
             <span className="preset-swatch" style={{ background: p.tokens['--color-accent'] }} />
             {p.name}
           </button>
@@ -248,6 +260,33 @@ export default function Theme() {
                 <span className="theme-radius-value">{draft['--radius']}</span>
               </div>
             </div>
+          </fieldset>
+
+          <fieldset className="theme-group">
+            <legend>Header menu</legend>
+            <div className="theme-row">
+              <label className="theme-row-label">
+                Menu alignment
+                <code>--nav-justify</code>
+              </label>
+              <div className="theme-row-controls seg-control">
+                {NAV_ALIGN.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    className={(draft['--nav-justify'] ?? 'flex-start') === o.value ? 'seg active' : 'seg'}
+                    disabled={busy}
+                    onClick={() => update('--nav-justify', o.value)}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="muted small">
+              Where the top menu sits relative to the logo. “Left” keeps it just past the logo’s
+              widest (full-size) footprint so they never overlap.
+            </p>
           </fieldset>
         </div>
 

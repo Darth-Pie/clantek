@@ -73,10 +73,14 @@ export default function App() {
 
   const hasLogo = !!branding.logoUrl;
   const collapsed = 38; // logo height (px) once docked inside the bar
+  const cap = 460; // matches the logo's CSS max-width, so the reserved slot agrees
   const topbarStyle = {
     '--logo-expanded': `${branding.logoSize}px`,
     '--logo-collapsed': `${collapsed}px`,
-    '--logo-slot': `${Math.round(collapsed * logoAspect)}px`,
+    // Reserve the logo's full (expanded) footprint so it never covers the menu;
+    // --logo-fp-min is the docked footprint used on mobile.
+    '--logo-fp': `${Math.min(Math.round(branding.logoSize * logoAspect), cap)}px`,
+    '--logo-fp-min': `${Math.round(collapsed * logoAspect)}px`,
   } as CSSProperties;
 
   return (

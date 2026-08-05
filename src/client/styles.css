@@ -60,9 +60,10 @@ input {
 /* --- Header logo: oversized + overhanging at the top, docked once scrolled --- */
 .topbar.has-logo .brand {
   position: relative;
-  /* Reserve exactly the docked logo's width (measured aspect × collapsed height)
-     so the nav never jumps between the expanded and docked states. */
-  width: var(--logo-slot, 120px);
+  /* Reserve the logo's *full* (expanded) footprint so it never covers the menu —
+     the nav sits just past the widest the logo ever gets. The docked logo simply
+     left-aligns within this reserved column. */
+  width: var(--logo-fp, 120px);
   align-self: stretch;
 }
 
@@ -86,8 +87,12 @@ input {
   filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
 }
 
-/* On narrow screens the nav wraps and space is tight, so keep the logo docked. */
+/* On narrow screens the nav wraps and space is tight, so keep the logo docked
+   and reserve only the docked footprint (the big overhang is a desktop touch). */
 @media (max-width: 720px) {
+  .topbar.has-logo .brand {
+    width: var(--logo-fp-min, 44px);
+  }
   .topbar.has-logo:not(.scrolled) .brand-logo {
     height: var(--logo-collapsed, 38px);
     top: 50%;
@@ -100,6 +105,8 @@ input {
   display: flex;
   gap: 0.25rem;
   flex: 1;
+  /* Menu alignment is a theme choice (left / center / right of the logo). */
+  justify-content: var(--nav-justify, flex-start);
 }
 
 .nav a {
@@ -155,6 +162,8 @@ input {
     gap: 0.15rem;
     display: none;
     margin-top: 0.5rem;
+    /* Column dropdown: keep links top-aligned regardless of the desktop choice. */
+    justify-content: flex-start;
   }
 
   .nav.open {
@@ -2716,6 +2725,33 @@ button.mini {
   font-size: 0.78rem;
   color: var(--color-muted);
   line-height: 1.2;
+}
+
+/* Segmented control (e.g. theme menu-alignment) */
+.seg-control {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.seg-control .seg {
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  border-right: 1px solid var(--color-border);
+}
+.seg-control .seg:last-child {
+  border-right: 0;
+}
+.seg-control .seg.active {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+.seg-control .seg:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 /* Branding admin */

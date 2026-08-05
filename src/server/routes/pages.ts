@@ -60,6 +60,21 @@ pages.get('/nav', async (c) => {
   return c.json({ pages: rows.filter((r) => r.slug !== HOME_SLUG) });
 });
 
+/**
+ * The role list for the editor's "Visible to" audience picker. Gated on
+ * pages.manage (a page editor may hold neither roles.manage nor roles.assign,
+ * so /roles and /roles/assignable aren't reachable to them). Non-sensitive —
+ * role names and colours already show on the public roster. Lives under a
+ * two-segment path so it can never collide with a custom page's `/:slug`.
+ */
+pages.get('/meta/roles', requirePermission('pages.manage'), async (c) => {
+  const list = await db(c.env)
+    .select({ id: s.roles.id, name: s.roles.name, color: s.roles.color })
+    .from(s.roles)
+    .orderBy(asc(s.roles.sortOrder), asc(s.roles.name));
+  return c.json({ roles: list });
+});
+
 /** Public: a page's layout. `exists` distinguishes a real page from a 404 target. */
 pages.get('/:slug', async (c) => {
   const slug = c.req.param('slug');

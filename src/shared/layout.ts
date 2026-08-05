@@ -11,7 +11,6 @@
  * the exact same JSON drives the web app now and can drive a native app later.
  */
 
-import { isPermission } from './permissions';
 import { resolveEmbed } from './embeds';
 
 export type ModuleType =
@@ -36,10 +35,11 @@ export interface LayoutModule {
   /** Per-module options (title, item limit, rich-text html, …). */
   config: Record<string, unknown>;
   /**
-   * Optional audience gate: when set to a Permission, the module renders only
-   * for viewers who hold it (e.g. a leadership-only callout). Absent = everyone.
+   * Optional audience gate: when set to a role id, the module renders only for
+   * viewers who hold that role (e.g. a leadership-only callout). God bypasses it.
+   * Absent = everyone. Referenced by id so renaming the role never breaks a page.
    */
-  visibleTo?: string;
+  visibleToRole?: number;
 }
 
 export interface LayoutColumn {
@@ -372,9 +372,11 @@ export function sanitizeLayout(raw: unknown, sanitizeText?: (html: string) => st
           type,
           config: cleanConfig(type, mod.config, sanitizeText),
         };
-        // Only a real permission slug becomes an audience gate; anything else is dropped.
-        if (typeof mod.visibleTo === 'string' && isPermission(mod.visibleTo)) {
-          cleaned.visibleTo = mod.visibleTo;
+        // Only a positive integer role id becomes an audience gate; anything else
+        // is dropped (so a stale/invalid gate fails open to "everyone", not hidden).
+        const roleId = Number(mod.visibleToRole);
+        if (Number.isInteger(roleId) && roleId > 0) {
+          cleaned.visibleToRole = roleId;
         }
         modules.push(cleaned);
       }

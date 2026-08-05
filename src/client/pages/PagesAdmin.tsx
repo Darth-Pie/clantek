@@ -26,7 +26,6 @@ import {
   type LayoutModule,
   type ModuleType,
 } from '../../shared/layout';
-import { PERMISSIONS } from '../../shared/permissions';
 import { resolveEmbed } from '../../shared/embeds';
 
 interface PageMeta {
@@ -35,6 +34,13 @@ interface PageMeta {
   showInNav: boolean;
   navOrder: number;
   isHome: boolean;
+}
+
+/** A role option for the "Visible to" audience picker. */
+interface RoleOpt {
+  id: number;
+  name: string;
+  color: string | null;
 }
 
 function newId(prefix: string): string {
@@ -49,6 +55,7 @@ type Drag = { rowId: string; colId: string; moduleId: string };
 
 export default function PagesAdmin() {
   const [pages, setPages] = useState<PageMeta[]>([]);
+  const [roles, setRoles] = useState<RoleOpt[]>([]);
   const [slug, setSlug] = useState(HOME_SLUG);
   const [layout, setLayout] = useState<PageLayout | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,6 +73,10 @@ export default function PagesAdmin() {
 
   useEffect(() => {
     void loadPages();
+    api
+      .get<{ roles: RoleOpt[] }>('/pages/meta/roles')
+      .then(({ roles }) => setRoles(roles))
+      .catch(() => setRoles([]));
   }, []);
 
   useEffect(() => {
@@ -210,12 +221,12 @@ export default function PagesAdmin() {
       const mod = findCol(rows, rowId, colId)?.modules.find((m) => m.id === moduleId);
       if (mod) mod.config = { ...mod.config, ...patch };
     });
-  const setVisibility = (rowId: string, colId: string, moduleId: string, visibleTo: string | undefined) =>
+  const setVisibility = (rowId: string, colId: string, moduleId: string, visibleToRole: number | undefined) =>
     edit((rows) => {
       const mod = findCol(rows, rowId, colId)?.modules.find((m) => m.id === moduleId);
       if (!mod) return;
-      if (visibleTo) mod.visibleTo = visibleTo;
-      else delete mod.visibleTo;
+      if (visibleToRole != null) mod.visibleToRole = visibleToRole;
+      else delete mod.visibleToRole;
     });
 
   /** Drop the dragged module into `toCol`, before `beforeId` (or at the end). */
@@ -334,7 +345,7 @@ export default function PagesAdmin() {
       {preview ? (
         <div className="pages-preview">
           <div className="muted small pages-preview-label">Preview — {pageTitle}</div>
-          <PageRenderer layout={layout} showHidden />
+          <PageRenderer layout={layout} showHidden roles={roles} />
         </div>
       ) : (
         <div className="layout-editor">
@@ -354,6 +365,7 @@ export default function PagesAdmin() {
               onMoveModule={moveModule}
               onPatchConfig={patchConfig}
               onSetVisibility={setVisibility}
+              roles={roles}
               onDragStartModule={(d) => (dragRef.current = d)}
               onDropModule={dropModule}
             />
@@ -384,7 +396,8 @@ function RowEditor(props: {
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
   onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
-  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleTo: string | undefined) => void;
+  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleToRole: number | undefined) => void;
+  roles: RoleOpt[];
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
 }) {
@@ -418,7 +431,8 @@ function ColumnEditor(props: {
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
   onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
-  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleTo: string | undefined) => void;
+  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleToRole: number | undefined) => void;
+  roles: RoleOpt[];
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
 }) {
@@ -498,7 +512,8 @@ function ModuleEditor(props: {
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
   onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
-  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleTo: string | undefined) => void;
+  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleToRole: number | undefined) => void;
+  roles: RoleOpt[];
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
 }) {
@@ -535,13 +550,15 @@ function ModuleEditor(props: {
         <label className="inline-field module-audience">
           Visible to
           <select
-            value={m.visibleTo ?? ''}
-            onChange={(e) => props.onSetVisibility(rowId, colId, m.id, e.target.value || undefined)}
+            value={m.visibleToRole != null ? String(m.visibleToRole) : ''}
+            onChange={(e) =>
+              props.onSetVisibility(rowId, colId, m.id, e.target.value ? Number(e.target.value) : undefined)
+            }
           >
             <option value="">Everyone</option>
-            {Object.entries(PERMISSIONS).map(([perm, desc]) => (
-              <option key={perm} value={perm}>
-                {desc}
+            {props.roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
               </option>
             ))}
           </select>

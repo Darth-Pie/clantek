@@ -1358,6 +1358,12 @@ button.active {
   top: 1rem;
 }
 
+/* Each group stacks its items vertically. */
+.admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
 .admin-nav-group + .admin-nav-group {
   margin-top: 0.75rem;
   padding-top: 0.5rem;
@@ -1372,33 +1378,38 @@ button.active {
   padding: 0.35rem 0.6rem;
 }
 
-/* Recently-viewed records under a group. */
-.admin-recent {
-  margin: 0.2rem 0 0.1rem;
-  padding: 0.25rem 0.6rem 0.1rem;
+/* Recently-viewed: a horizontal strip above the content, not in the sidebar. */
+.admin-recentbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
 }
-.admin-recent-title {
+.admin-recentbar-title {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-muted);
-  opacity: 0.8;
-  margin-bottom: 0.15rem;
+  margin-right: 0.15rem;
 }
-.admin-recent-link {
-  display: block;
-  padding: 0.2rem 0.3rem;
-  border-radius: var(--radius);
+.admin-recentbar-link {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
   color: var(--color-muted);
   text-decoration: none;
   font-size: 0.82rem;
+  max-width: 220px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.admin-recent-link:hover {
+.admin-recentbar-link:hover {
   color: var(--color-text);
-  background: color-mix(in srgb, var(--color-border) 40%, transparent);
+  border-color: var(--color-accent);
 }
 
 /* Tabs inside a multi-tool admin item (e.g. Ranks & Roles). */

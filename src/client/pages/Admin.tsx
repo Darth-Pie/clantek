@@ -73,41 +73,44 @@ export default function Admin() {
   const tabs = activeItem.tabs; // already filtered to allowed
   const activeTab = tabs.find((t) => t.key === tabParam) ?? tabs[0]!;
 
+  // Recently-viewed records for the group the active item belongs to, shown as a
+  // horizontal strip above the content (not crammed into the sidebar).
+  const activeGroup = groups.find((g) => g.items.some((i) => i.key === activeItem.key));
+  const recent = activeGroup ? getRecent(activeGroup.key) : [];
+
   return (
     <>
       <UsageBar />
       <div className="admin-shell">
         <nav className="admin-nav" aria-label="Admin sections">
-          {groups.map((g) => {
-            const recent = getRecent(g.key);
-            return (
-              <div className="admin-nav-group" key={g.key}>
-                <div className="admin-nav-title">{g.label}</div>
-                {g.items.map((i) => (
-                  <NavLink
-                    key={i.key}
-                    to={`/admin/${i.key}`}
-                    className={i.key === activeItem.key ? 'admin-nav-link active' : 'admin-nav-link'}
-                  >
-                    {i.label}
-                  </NavLink>
-                ))}
-                {recent.length > 0 && (
-                  <div className="admin-recent">
-                    <div className="admin-recent-title">Recently viewed</div>
-                    {recent.map((r) => (
-                      <Link key={r.to} to={r.to} className="admin-recent-link" title={r.label}>
-                        {r.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {groups.map((g) => (
+            <div className="admin-nav-group" key={g.key}>
+              <div className="admin-nav-title">{g.label}</div>
+              {g.items.map((i) => (
+                <NavLink
+                  key={i.key}
+                  to={`/admin/${i.key}`}
+                  className={i.key === activeItem.key ? 'admin-nav-link active' : 'admin-nav-link'}
+                >
+                  {i.label}
+                </NavLink>
+              ))}
+            </div>
+          ))}
         </nav>
 
         <div className="admin-content">
+          {recent.length > 0 && (
+            <div className="admin-recentbar">
+              <span className="admin-recentbar-title">Recently viewed</span>
+              {recent.map((r) => (
+                <Link key={r.to} to={r.to} className="admin-recentbar-link" title={r.label}>
+                  {r.label}
+                </Link>
+              ))}
+            </div>
+          )}
+
           {tabs.length > 1 && (
             <div className="admin-tabs" role="tablist" aria-label={activeItem.label}>
               {tabs.map((t) => (

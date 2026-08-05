@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
-import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useSession } from './lib/session';
+import { useBranding } from './lib/branding';
 import type { Permission } from '../shared/permissions';
 import { ADMIN_SECTIONS } from './lib/adminSections';
 import AccountMenu from './components/AccountMenu';
@@ -35,8 +36,21 @@ interface NavPage {
 
 export default function App() {
   const { viewer, siteName, loading, can } = useSession();
+  const { branding } = useBranding();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navPages, setNavPages] = useState<NavPage[]>([]);
+  const [scrolled, setScrolled] = useState(false);
+  // Logo aspect ratio (width/height), measured on load, so the header can
+  // reserve exactly the collapsed logo's width and the nav never jumps.
+  const [logoAspect, setLogoAspect] = useState(1);
+
+  // Shrink the header (and its logo) once the page scrolls past the top.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Custom pages that opted into the top nav. Loaded once the viewer is known.
   useEffect(() => {
@@ -57,9 +71,20 @@ export default function App() {
   // authorized users rather than buried.
   const showAdmin = !!viewer && ADMIN_SECTIONS.some((s) => can(s.permission));
 
+  const hasLogo = !!branding.logoUrl;
+  const collapsed = 38; // logo height (px) once docked inside the bar
+  const topbarStyle = {
+    '--logo-expanded': `${branding.logoSize}px`,
+    '--logo-collapsed': `${collapsed}px`,
+    '--logo-slot': `${Math.round(collapsed * logoAspect)}px`,
+  } as CSSProperties;
+
   return (
     <div className="app">
-      <header className="topbar">
+      <header
+        className={`topbar${scrolled ? ' scrolled' : ''}${hasLogo ? ' has-logo' : ''}`}
+        style={hasLogo ? topbarStyle : undefined}
+      >
         {viewer && (
           <button
             className="nav-toggle"
@@ -70,7 +95,21 @@ export default function App() {
             ☰
           </button>
         )}
-        <div className="brand">{siteName}</div>
+        <Link to="/" className="brand" aria-label={siteName}>
+          {hasLogo ? (
+            <img
+              className="brand-logo"
+              src={branding.logoUrl}
+              alt={siteName}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                if (img.naturalHeight > 0) setLogoAspect(img.naturalWidth / img.naturalHeight);
+              }}
+            />
+          ) : (
+            <span className="brand-name">{siteName}</span>
+          )}
+        </Link>
 
         {viewer && (
           <nav className={menuOpen ? 'nav open' : 'nav'} onClick={() => setMenuOpen(false)}>

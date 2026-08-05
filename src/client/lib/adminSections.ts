@@ -25,6 +25,7 @@ export const ADMIN_SECTIONS: AdminSectionMeta[] = [
   { key: 'games', label: 'Games', permission: 'games.manage' },
   { key: 'warrecords', label: 'War Records', permission: 'warrecords.manage' },
   { key: 'announcements', label: 'Announcements', permission: 'settings.manage' },
+  { key: 'branding', label: 'Branding', permission: 'settings.manage' },
   { key: 'theme', label: 'Theme', permission: 'theme.manage' },
   { key: 'audit', label: 'Activity Log', permission: 'audit.view' },
 ];

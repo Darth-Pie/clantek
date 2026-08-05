@@ -4,15 +4,18 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { SessionProvider } from './lib/session';
 import { ThemeProvider } from './lib/theme';
+import { BrandingProvider } from './lib/branding';
 import './styles.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <ThemeProvider>
-        <SessionProvider>
-          <App />
-        </SessionProvider>
+        <BrandingProvider>
+          <SessionProvider>
+            <App />
+          </SessionProvider>
+        </BrandingProvider>
       </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,

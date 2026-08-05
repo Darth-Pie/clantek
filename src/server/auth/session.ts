@@ -2,40 +2,23 @@ import { eq, lt } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as s from '../../db/schema';
 import type { Permission, Viewer } from '../../shared/permissions';
+import { randomToken, sha256Base64url } from './crypto';
 
 export const SESSION_COOKIE = 'ct_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 type DB = DrizzleD1Database<typeof s>;
 
-function base64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-/**
- * The cookie carries the raw token; the database stores only its SHA-256.
- * A leaked database dump therefore cannot be replayed as a live session.
- */
-async function hashToken(token: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
-  return base64url(new Uint8Array(digest));
-}
-
 export async function createSession(
   db: DB,
   userId: number,
   meta: { userAgent?: string | null; ip?: string | null } = {},
 ): Promise<{ token: string; expiresAt: number }> {
-  const raw = new Uint8Array(32);
-  crypto.getRandomValues(raw);
-  const token = base64url(raw);
+  const token = randomToken();
   const expiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
 
   await db.insert(s.sessions).values({
-    id: await hashToken(token),
+    id: await sha256Base64url(token),
     userId,
     expiresAt,
     userAgent: meta.userAgent ?? null,
@@ -46,22 +29,13 @@ export async function createSession(
 }
 
 /**
- * Resolves a session token to a Viewer, collapsing the user's rank and the
- * union of every permission across all their roles into one object.
+ * Build the Viewer for a user id — their rank plus the union of every permission
+ * across all their roles. Shared by session and API-token auth so both credential
+ * kinds resolve to exactly the same identity and permission set. Returns null for
+ * a missing or banned user.
  */
-export async function resolveViewer(db: DB, token: string | undefined): Promise<Viewer | null> {
-  if (!token) return null;
-
-  const id = await hashToken(token);
-  const session = await db.query.sessions.findFirst({ where: eq(s.sessions.id, id) });
-  if (!session) return null;
-
-  if (session.expiresAt < Math.floor(Date.now() / 1000)) {
-    await db.delete(s.sessions).where(eq(s.sessions.id, id));
-    return null;
-  }
-
-  const user = await db.query.users.findFirst({ where: eq(s.users.id, session.userId) });
+export async function buildViewer(db: DB, userId: number): Promise<Viewer | null> {
+  const user = await db.query.users.findFirst({ where: eq(s.users.id, userId) });
   if (!user || user.status === 'banned') return null;
 
   const rank = user.rankId
@@ -102,8 +76,27 @@ export async function resolveViewer(db: DB, token: string | undefined): Promise<
   };
 }
 
+/**
+ * Resolves a session token (from the cookie) to a Viewer, expiring the row if
+ * it's past its TTL.
+ */
+export async function resolveViewer(db: DB, token: string | undefined): Promise<Viewer | null> {
+  if (!token) return null;
+
+  const id = await sha256Base64url(token);
+  const session = await db.query.sessions.findFirst({ where: eq(s.sessions.id, id) });
+  if (!session) return null;
+
+  if (session.expiresAt < Math.floor(Date.now() / 1000)) {
+    await db.delete(s.sessions).where(eq(s.sessions.id, id));
+    return null;
+  }
+
+  return buildViewer(db, session.userId);
+}
+
 export async function invalidateSession(db: DB, token: string): Promise<void> {
-  await db.delete(s.sessions).where(eq(s.sessions.id, await hashToken(token)));
+  await db.delete(s.sessions).where(eq(s.sessions.id, await sha256Base64url(token)));
 }
 
 /** Called opportunistically via ctx.waitUntil — no need to block a request on it. */

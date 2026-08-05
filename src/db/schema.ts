@@ -200,6 +200,31 @@ export const sessions = sqliteTable(
 );
 
 /* ------------------------------------------------------------------ *
+ * API tokens — long-lived personal access tokens for the mobile/native app and
+ * scripts. Like sessions, only the SHA-256 of the token is stored, so a database
+ * dump can't be replayed. Unlike sessions they carry a user-chosen label and a
+ * short display prefix, are managed from account settings, and resolve to the
+ * same Viewer (rank + union of role permissions) as a web session.
+ * ------------------------------------------------------------------ */
+
+export const apiTokens = sqliteTable(
+  'api_tokens',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(), // SHA-256 (base64url) of the raw token
+    label: text('label').notNull(),
+    prefix: text('prefix').notNull(), // e.g. "clt_ab12cd" — shown so a token is identifiable
+    expiresAt: integer('expires_at'), // null = no expiry
+    lastUsedAt: integer('last_used_at'),
+    createdAt: integer('created_at').notNull().default(now),
+  },
+  (t) => [index('api_tokens_user_idx').on(t.userId)],
+);
+
+/* ------------------------------------------------------------------ *
  * Content
  * ------------------------------------------------------------------ */
 

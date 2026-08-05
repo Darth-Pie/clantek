@@ -31,6 +31,8 @@ export interface Env {
 
 export interface Variables {
   viewer: Viewer | null;
+  /** How the viewer authenticated: a browser session cookie, or a bearer API token. */
+  authKind: 'web' | 'token' | null;
 }
 
 export type AppContext = { Bindings: Env; Variables: Variables };

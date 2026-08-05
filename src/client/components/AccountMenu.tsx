@@ -14,7 +14,7 @@ import { ChevronDown, ChevronUp } from 'lucide';
 import { useSession } from '../lib/session';
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
-import { ADMIN_SECTIONS } from '../pages/Admin';
+import { ADMIN_SECTIONS } from '../lib/adminSections';
 
 export default function AccountMenu() {
   const { viewer, can, logout } = useSession();

@@ -17,3 +17,12 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </StrictMode>,
 );
+
+// Register the PWA service worker (offline shell + installable). Best-effort:
+// on localhost dev and unsupported browsers this simply no-ops. Skipped for the
+// Vite dev server, whose module URLs the SW's asset caching shouldn't touch.
+if ('serviceWorker' in navigator && !import.meta.env.DEV) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}

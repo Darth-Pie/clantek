@@ -36,6 +36,7 @@ export const PERMISSIONS = {
   'events.attendees': 'See who has signed up for an event',
 
   'theme.manage': 'Edit site theme and appearance',
+  'pages.manage': 'Arrange page layouts and modules',
   'settings.manage': 'Edit site settings',
 
   'audit.view': 'View the audit log',

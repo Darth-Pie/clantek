@@ -69,6 +69,53 @@ input {
   background: var(--color-accent);
 }
 
+/* Admin gets an accent so authorized users can find it at a glance. */
+.nav a.nav-admin {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.nav a.nav-admin.active {
+  color: var(--color-accent-text);
+}
+
+/* Hamburger — hidden on desktop, shown when the nav collapses on mobile. */
+.nav-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius);
+}
+
+@media (max-width: 720px) {
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Full-width dropdown below the bar; hidden until the hamburger opens it. */
+  .nav {
+    order: 3;
+    flex: 0 0 100%;
+    flex-direction: column;
+    gap: 0.15rem;
+    display: none;
+    margin-top: 0.5rem;
+  }
+
+  .nav.open {
+    display: flex;
+  }
+
+  .nav a {
+    padding: 0.6rem 0.75rem;
+  }
+}
+
 .account {
   margin-left: auto;
   display: flex;
@@ -102,9 +149,9 @@ input {
 
 .content {
   flex: 1;
-  width: min(1000px, 100%);
+  width: min(1280px, 100%);
   margin-inline: auto;
-  padding: 1.5rem 1.25rem 3rem;
+  padding: 1.5rem 1.5rem 3rem;
 }
 
 .panel {
@@ -2177,4 +2224,340 @@ input[aria-invalid='true'] {
 
 .event-image-field {
   margin: 0.5rem 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Page layout system — responsive module grid (drag-and-drop pages)
+ *
+ * A page is a stack of rows; each row is a 12-unit grid of columns. A column's
+ * width comes from its --span custom property. Below 860px every column takes
+ * the full width, so the page becomes one readable stack on phones.
+ * ------------------------------------------------------------------ */
+
+.page-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.page-col {
+  grid-column: span var(--span, 12);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (max-width: 860px) {
+  .page-col {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Module cards reuse .panel; the head becomes a title + action row. */
+.module .panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.module-heading {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+/* Roster mini-module */
+.roster-mini {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.roster-mini-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.roster-mini-item:hover {
+  background: color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: var(--color-border);
+}
+
+.roster-mini-name {
+  font-weight: 600;
+}
+
+.roster-mini-item .small {
+  margin-left: auto;
+}
+
+/* Events mini-module */
+.events-mini {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.events-mini-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.events-mini-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex: none;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 38%, transparent);
+}
+
+.events-mini-mon {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+}
+
+.events-mini-day {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.events-mini-title {
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ *
+ * Page layout editor (admin → Pages)
+ * ------------------------------------------------------------------ */
+
+.pages-admin-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pages-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.add-row {
+  width: 100%;
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  padding: 0.6rem;
+}
+
+.add-row:hover:not(:disabled) {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.layout-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.row-editor {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-bg) 40%, transparent);
+  padding: 0.75rem;
+}
+
+.row-editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.row-editor-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+}
+
+.row-editor-tools,
+.module-editor-tools {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.row-editor-cols {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.col-editor {
+  min-width: 12rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.col-editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.col-span-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.col-span-label select {
+  padding: 0.2rem 0.35rem;
+}
+
+.col-dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 3rem;
+  border-radius: var(--radius);
+  padding: 0.25rem;
+  transition: background 0.12s, outline-color 0.12s;
+  outline: 2px dashed transparent;
+}
+
+.col-dropzone.over {
+  outline-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.col-empty {
+  text-align: center;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  padding: 0.75rem;
+}
+
+.add-module {
+  width: 100%;
+}
+
+.module-editor {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+  padding: 0.5rem;
+}
+
+.module-editor-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.module-editor-drag {
+  cursor: grab;
+  color: var(--color-muted);
+  user-select: none;
+}
+
+.module-editor-type {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-right: auto;
+}
+
+.module-editor-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.module-editor-config input[type='text'],
+.module-editor-config input[type='number'] {
+  width: 100%;
+}
+
+.inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--color-muted);
+}
+
+.inline-field input[type='number'] {
+  width: 5rem;
+}
+
+button.mini {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.pages-preview {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: color-mix(in srgb, var(--color-bg) 40%, transparent);
+}
+
+.pages-preview-label {
+  margin-bottom: 0.75rem;
 }

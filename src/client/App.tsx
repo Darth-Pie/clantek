@@ -53,16 +53,22 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Custom pages that opted into the top nav. Loaded once the viewer is known.
+  // Custom pages that opted into the top nav. Loaded once the viewer is known,
+  // and refreshed live when an admin renames/creates/deletes a page (PagesAdmin
+  // fires `ct-pages-changed`) so the menu never shows a stale name.
   useEffect(() => {
     if (!viewer) {
       setNavPages([]);
       return;
     }
-    api
-      .get<{ pages: NavPage[] }>('/pages/nav')
-      .then((d) => setNavPages(d.pages))
-      .catch(() => setNavPages([]));
+    const loadNav = () =>
+      api
+        .get<{ pages: NavPage[] }>('/pages/nav')
+        .then((d) => setNavPages(d.pages))
+        .catch(() => setNavPages([]));
+    void loadNav();
+    window.addEventListener('ct-pages-changed', loadNav);
+    return () => window.removeEventListener('ct-pages-changed', loadNav);
   }, [viewer]);
 
   if (loading) return <div className="loading">Loading…</div>;

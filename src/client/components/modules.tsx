@@ -24,6 +24,73 @@ const num = (c: Config, k: string, d: number): number => {
   return Number.isFinite(n) ? n : d;
 };
 
+/** A link that stays inside the SPA for internal paths and opens externally otherwise. */
+function SmartLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
+  if (href.startsWith('/')) {
+    return (
+      <Link to={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <a href={href} className={className} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
+}
+
+/** A small image gallery shared by the medals / war-records / games modules. */
+function GalleryModule({
+  title,
+  endpoint,
+  pick,
+  limit,
+  fallbackIcon,
+}: {
+  title: string;
+  endpoint: string;
+  pick: (data: unknown) => { key: string | number; name: string; image: string | null; note?: string }[];
+  limit: number;
+  fallbackIcon: string;
+}) {
+  const [items, setItems] = useState<ReturnType<typeof pick> | null>(null);
+
+  useEffect(() => {
+    api
+      .get<unknown>(endpoint)
+      .then((data) => setItems(pick(data)))
+      .catch(() => setItems([]));
+    // pick/endpoint are stable per module instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint]);
+
+  if (items === null) return <ModuleCard title={title}><p className="muted">Loading…</p></ModuleCard>;
+
+  return (
+    <ModuleCard title={title}>
+      {items.length === 0 ? (
+        <p className="muted">Nothing here yet.</p>
+      ) : (
+        <ul className="module-gallery">
+          {items.slice(0, limit).map((it) => (
+            <li key={it.key} className="module-gallery-item" title={it.note ? `${it.name} — ${it.note}` : it.name}>
+              {it.image ? (
+                <img src={it.image} alt="" loading="lazy" />
+              ) : (
+                <span className="module-gallery-icon" aria-hidden>
+                  {fallbackIcon}
+                </span>
+              )}
+              <span className="module-gallery-name">{it.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </ModuleCard>
+  );
+}
+
 /** Shared card chrome so every module reads as part of one system. */
 function ModuleCard({
   title,
@@ -253,6 +320,87 @@ function EventsModule({ config }: { config: Config }) {
   );
 }
 
+function ImageModule({ config }: { config: Config }) {
+  const url = str(config, 'url');
+  if (!url) return null;
+  const href = str(config, 'href');
+  const alt = str(config, 'alt');
+  const caption = str(config, 'caption');
+  const img = <img className="module-image-img" src={url} alt={alt} loading="lazy" />;
+  return (
+    <figure className="module module-image">
+      {href ? <SmartLink href={href}>{img}</SmartLink> : img}
+      {caption && <figcaption className="muted small module-image-caption">{caption}</figcaption>}
+    </figure>
+  );
+}
+
+function ButtonModule({ config }: { config: Config }) {
+  const href = str(config, 'href');
+  if (!href) return null;
+  const label = str(config, 'label', 'Learn more');
+  const primary = str(config, 'style', 'primary') === 'primary';
+  return (
+    <div className="module module-button">
+      <SmartLink href={href} className={primary ? 'btn-cta primary' : 'btn-cta'}>
+        {label}
+      </SmartLink>
+    </div>
+  );
+}
+
+function DividerModule() {
+  return <hr className="module module-divider" />;
+}
+
+function MedalsModule({ config }: { config: Config }) {
+  return (
+    <GalleryModule
+      title={str(config, 'title', 'Medals')}
+      endpoint="/medals"
+      limit={num(config, 'limit', 12)}
+      fallbackIcon="🎖️"
+      pick={(d) =>
+        ((d as { medals?: { id: number; name: string; imageUrl: string | null; awardCount?: number }[] }).medals ?? []).map(
+          (m) => ({ key: m.id, name: m.name, image: m.imageUrl ?? null, note: m.awardCount ? `${m.awardCount} awarded` : undefined }),
+        )
+      }
+    />
+  );
+}
+
+function WarRecordsModule({ config }: { config: Config }) {
+  return (
+    <GalleryModule
+      title={str(config, 'title', 'War Records')}
+      endpoint="/warrecords"
+      limit={num(config, 'limit', 12)}
+      fallbackIcon="🏆"
+      pick={(d) =>
+        ((d as { warRecords?: { id: number; name: string; imageUrl: string | null; gameName?: string | null }[] }).warRecords ?? []).map(
+          (w) => ({ key: w.id, name: w.name, image: w.imageUrl ?? null, note: w.gameName ?? undefined }),
+        )
+      }
+    />
+  );
+}
+
+function GamesModule({ config }: { config: Config }) {
+  return (
+    <GalleryModule
+      title={str(config, 'title', 'Games We Play')}
+      endpoint="/games"
+      limit={num(config, 'limit', 12)}
+      fallbackIcon="🎮"
+      pick={(d) =>
+        ((d as { games?: { id: number; name: string; iconUrl: string | null; active?: boolean }[] }).games ?? [])
+          .filter((g) => g.active !== false)
+          .map((g) => ({ key: g.id, name: g.name, image: g.iconUrl ?? null }))
+      }
+    />
+  );
+}
+
 /* ------------------------------------------------------------------ *
  * Registry — the single map the renderer and editor read.
  * ------------------------------------------------------------------ */
@@ -260,7 +408,13 @@ function EventsModule({ config }: { config: Config }) {
 export const MODULE_RENDERERS: Record<ModuleType, (props: { config: Config }) => ReactNode> = {
   heading: HeadingModule,
   text: TextModule,
+  image: ImageModule,
+  button: ButtonModule,
+  divider: DividerModule,
   news: NewsModule,
   roster: RosterModule,
   events: EventsModule,
+  medals: MedalsModule,
+  warrecords: WarRecordsModule,
+  games: GamesModule,
 };

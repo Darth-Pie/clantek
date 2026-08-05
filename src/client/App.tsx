@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useSession } from './lib/session';
 import type { Permission } from '../shared/permissions';
@@ -8,9 +8,11 @@ import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
 import Roster from './pages/Roster';
 import Home from './pages/Home';
+import CustomPage from './pages/CustomPage';
 import News from './pages/News';
 import NewsPost from './pages/NewsPost';
 import Events from './pages/Events';
+import { api } from './lib/api';
 
 // The admin panel pulls in the WYSIWYG editor (TipTap/ProseMirror), which is
 // large and admin-only — load it on demand so the feed and roster stay light.
@@ -26,9 +28,27 @@ function Protected({ permission, children }: { permission?: Permission; children
   return <>{children}</>;
 }
 
+interface NavPage {
+  slug: string;
+  title: string | null;
+}
+
 export default function App() {
   const { viewer, siteName, loading, can } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navPages, setNavPages] = useState<NavPage[]>([]);
+
+  // Custom pages that opted into the top nav. Loaded once the viewer is known.
+  useEffect(() => {
+    if (!viewer) {
+      setNavPages([]);
+      return;
+    }
+    api
+      .get<{ pages: NavPage[] }>('/pages/nav')
+      .then((d) => setNavPages(d.pages))
+      .catch(() => setNavPages([]));
+  }, [viewer]);
 
   if (loading) return <div className="loading">Loading…</div>;
 
@@ -60,6 +80,11 @@ export default function App() {
             <NavLink to="/news">News</NavLink>
             <NavLink to="/roster">Roster</NavLink>
             {can('events.view') && <NavLink to="/events">Events</NavLink>}
+            {navPages.map((p) => (
+              <NavLink key={p.slug} to={`/p/${p.slug}`}>
+                {p.title ?? p.slug}
+              </NavLink>
+            ))}
             {showAdmin && (
               <NavLink to="/admin" className="nav-admin">
                 Admin
@@ -112,6 +137,14 @@ export default function App() {
             element={
               <Protected>
                 <Roster />
+              </Protected>
+            }
+          />
+          <Route
+            path="/p/:slug"
+            element={
+              <Protected>
+                <CustomPage />
               </Protected>
             }
           />

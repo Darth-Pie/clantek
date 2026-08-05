@@ -2380,6 +2380,25 @@ input[aria-invalid='true'] {
   flex-wrap: wrap;
 }
 
+.pages-admin-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin: 0.25rem 0 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pages-admin-meta .inline-field {
+  color: var(--color-text);
+}
+
+.page-title {
+  font-family: var(--font-display);
+  margin: 0 0 1rem;
+}
+
 button.ghost {
   background: transparent;
   border: 1px solid var(--color-border);
@@ -2560,4 +2579,136 @@ button.mini {
 
 .pages-preview-label {
   margin-bottom: 0.75rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Extra content modules (image, button, divider, galleries)
+ * ------------------------------------------------------------------ */
+
+.module-image {
+  margin: 0;
+}
+
+.module-image-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+
+.module-image-caption {
+  margin-top: 0.4rem;
+  text-align: center;
+}
+
+.module-button {
+  display: flex;
+  justify-content: center;
+}
+
+.btn-cta {
+  display: inline-block;
+  padding: 0.6rem 1.4rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 600;
+  transition: filter 0.12s;
+}
+
+.btn-cta:hover {
+  filter: brightness(1.08);
+}
+
+.btn-cta.primary {
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  border-color: transparent;
+}
+
+.module-divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 0.5rem 0;
+}
+
+/* Medals / war-records / games galleries */
+.module-gallery {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 0.75rem;
+}
+
+.module-gallery-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.module-gallery-item img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.module-gallery-icon {
+  font-size: 2rem;
+  line-height: 48px;
+}
+
+.module-gallery-name {
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  line-height: 1.2;
+}
+
+/* Image module config (editor) */
+.module-image-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.module-image-preview {
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+}
+
+.module-image-err {
+  color: var(--color-accent);
+}
+
+/* Visibility-gated module (shown only in the editor preview) */
+.module-gated {
+  opacity: 0.9;
+}
+
+.module-gated-badge {
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 38%, transparent);
+  color: var(--color-text);
+}
+
+.module-audience {
+  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.module-audience select {
+  max-width: 14rem;
 }

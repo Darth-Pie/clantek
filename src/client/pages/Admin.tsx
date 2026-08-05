@@ -12,7 +12,7 @@
 import { useParams, Navigate, NavLink } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useSession } from '../lib/session';
-import type { Permission } from '../../shared/permissions';
+import { ADMIN_SECTIONS } from '../lib/adminSections';
 import UsageBar from '../components/UsageBar';
 import NewsAdmin from './NewsAdmin';
 import Ranks from './Ranks';
@@ -22,31 +22,27 @@ import Games from './Games';
 import WarRecords from './WarRecords';
 import Announcements from './Announcements';
 import Theme from './Theme';
+import PagesAdmin from './PagesAdmin';
 import AuditLog from './AuditLog';
 
-export interface AdminSection {
-  key: string;
-  label: string;
-  permission: Permission;
-  render: () => ReactNode;
-}
-
 /**
- * The registry. Order here is the sidebar order. `permission` gates both the
- * sidebar link and direct navigation to /admin/<key>. Future sections (News,
- * Theme, Settings, Games, War records) slot in as one line each.
+ * Section key → its component. The metadata (labels, permissions, order) lives
+ * in lib/adminSections.ts so lightweight consumers (the account menu, the nav)
+ * can gate on the admin areas without pulling these pages — and TipTap — into
+ * the initial bundle. Every key in ADMIN_SECTIONS must have an entry here.
  */
-export const ADMIN_SECTIONS: AdminSection[] = [
-  { key: 'news', label: 'News', permission: 'news.create', render: () => <NewsAdmin /> },
-  { key: 'ranks', label: 'Ranks', permission: 'ranks.manage', render: () => <Ranks /> },
-  { key: 'roles', label: 'Roles', permission: 'roles.manage', render: () => <Roles /> },
-  { key: 'medals', label: 'Medals', permission: 'medals.manage', render: () => <Medals /> },
-  { key: 'games', label: 'Games', permission: 'games.manage', render: () => <Games /> },
-  { key: 'warrecords', label: 'War Records', permission: 'warrecords.manage', render: () => <WarRecords /> },
-  { key: 'announcements', label: 'Announcements', permission: 'settings.manage', render: () => <Announcements /> },
-  { key: 'theme', label: 'Theme', permission: 'theme.manage', render: () => <Theme /> },
-  { key: 'audit', label: 'Activity Log', permission: 'audit.view', render: () => <AuditLog /> },
-];
+const SECTION_RENDERERS: Record<string, () => ReactNode> = {
+  news: () => <NewsAdmin />,
+  pages: () => <PagesAdmin />,
+  ranks: () => <Ranks />,
+  roles: () => <Roles />,
+  medals: () => <Medals />,
+  games: () => <Games />,
+  warrecords: () => <WarRecords />,
+  announcements: () => <Announcements />,
+  theme: () => <Theme />,
+  audit: () => <AuditLog />,
+};
 
 export default function Admin() {
   const { section } = useParams();
@@ -81,7 +77,7 @@ export default function Admin() {
             </NavLink>
           ))}
         </nav>
-        <div className="admin-content">{active.render()}</div>
+        <div className="admin-content">{SECTION_RENDERERS[active.key]?.()}</div>
       </div>
     </>
   );

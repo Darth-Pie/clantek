@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ClanTek">
+  <rect width="512" height="512" rx="104" fill="#0f1115"/>
+  <!-- Shield kept within the central safe zone so the icon survives maskable cropping. -->
+  <path d="M256 120l112 42v98c0 78-50 124-112 142-62-18-112-64-112-142v-98z" fill="#c0392b"/>
+  <text x="256" y="296" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+        font-size="132" font-weight="700" fill="#ffffff" text-anchor="middle">CT</text>
+</svg>

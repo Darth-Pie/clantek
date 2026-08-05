@@ -44,7 +44,7 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
   (1, 'games.manage'), (1, 'matches.record'), (1, 'matches.manage'),
   (1, 'warrecords.manage'), (1, 'warrecords.award'),
   (1, 'events.view'), (1, 'events.manage'), (1, 'events.attendees'),
-  (1, 'theme.manage'), (1, 'settings.manage'),
+  (1, 'theme.manage'), (1, 'pages.manage'), (1, 'settings.manage'),
   (1, 'audit.view'), (1, 'discord.sync'),
   -- Officer
   (2, 'roster.view'), (2, 'roster.edit'), (2, 'roster.promote'),

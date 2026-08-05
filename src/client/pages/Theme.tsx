@@ -37,43 +37,66 @@ const FONT_STACKS: { label: string; value: string }[] = [
 ];
 
 // Complete palettes as starting points. Each is a full token set so applying
-// one leaves nothing half-changed.
+// one leaves nothing half-changed. Dark palettes spread the default and swap a
+// few tokens; light palettes are spelled out in full (different text/muted).
+// A light base every light theme builds on.
+const LIGHT_BASE: ThemeTokens = {
+  '--color-bg': '#f6f7f9',
+  '--color-surface': '#ffffff',
+  '--color-border': '#d9dee6',
+  '--color-text': '#1b1f27',
+  '--color-muted': '#5c6672',
+  '--color-accent': '#c0392b',
+  '--color-accent-text': '#ffffff',
+  '--font-body': 'system-ui, sans-serif',
+  '--font-display': 'system-ui, sans-serif',
+  '--radius': '8px',
+};
+
 const PRESETS: { name: string; tokens: ThemeTokens }[] = [
+  // --- Dark ---
   { name: 'Midnight', tokens: DEFAULT_THEME },
   {
     name: 'Slate',
-    tokens: {
-      ...DEFAULT_THEME,
-      '--color-bg': '#0d1117',
-      '--color-surface': '#161b22',
-      '--color-border': '#30363d',
-      '--color-accent': '#2f81f7',
-    },
+    tokens: { ...DEFAULT_THEME, '--color-bg': '#0d1117', '--color-surface': '#161b22', '--color-border': '#30363d', '--color-accent': '#2f81f7' },
   },
   {
     name: 'Forest',
-    tokens: {
-      ...DEFAULT_THEME,
-      '--color-bg': '#0e1512',
-      '--color-surface': '#152019',
-      '--color-border': '#26362c',
-      '--color-accent': '#2f9e5f',
-    },
+    tokens: { ...DEFAULT_THEME, '--color-bg': '#0e1512', '--color-surface': '#152019', '--color-border': '#26362c', '--color-accent': '#2f9e5f' },
   },
   {
-    name: 'Light',
-    tokens: {
-      '--color-bg': '#f6f7f9',
-      '--color-surface': '#ffffff',
-      '--color-border': '#d9dee6',
-      '--color-text': '#1b1f27',
-      '--color-muted': '#5c6672',
-      '--color-accent': '#c0392b',
-      '--color-accent-text': '#ffffff',
-      '--font-body': 'system-ui, sans-serif',
-      '--font-display': 'system-ui, sans-serif',
-      '--radius': '8px',
-    },
+    name: 'Ember',
+    tokens: { ...DEFAULT_THEME, '--color-bg': '#17110d', '--color-surface': '#211812', '--color-border': '#3a2a1e', '--color-accent': '#e8833a' },
+  },
+  {
+    name: 'Amethyst',
+    tokens: { ...DEFAULT_THEME, '--color-bg': '#131019', '--color-surface': '#1c1726', '--color-border': '#2f2740', '--color-accent': '#a56bf0' },
+  },
+  {
+    name: 'Ocean',
+    tokens: { ...DEFAULT_THEME, '--color-bg': '#0b1417', '--color-surface': '#111f24', '--color-border': '#1f333b', '--color-accent': '#22b8cf', '--color-accent-text': '#04141a' },
+  },
+  {
+    name: 'Rose',
+    tokens: { ...DEFAULT_THEME, '--color-bg': '#190f14', '--color-surface': '#24151d', '--color-border': '#3a2330', '--color-accent': '#ec4899' },
+  },
+  {
+    name: 'Nord',
+    tokens: { ...DEFAULT_THEME, '--color-bg': '#2e3440', '--color-surface': '#3b4252', '--color-border': '#4c566a', '--color-text': '#eceff4', '--color-muted': '#c2cbdc', '--color-accent': '#88c0d0', '--color-accent-text': '#2e3440' },
+  },
+  {
+    name: 'Mono',
+    tokens: { ...DEFAULT_THEME, '--color-bg': '#000000', '--color-surface': '#0d0d0d', '--color-border': '#2a2a2a', '--color-text': '#ffffff', '--color-muted': '#a0a0a0', '--color-accent': '#ffffff', '--color-accent-text': '#000000' },
+  },
+  // --- Light ---
+  { name: 'Daylight', tokens: LIGHT_BASE },
+  {
+    name: 'Paper',
+    tokens: { ...LIGHT_BASE, '--color-bg': '#f5f1e8', '--color-surface': '#fffdf8', '--color-border': '#e2dccb', '--color-text': '#2b2620', '--color-muted': '#6b6355', '--color-accent': '#b45309' },
+  },
+  {
+    name: 'Sky',
+    tokens: { ...LIGHT_BASE, '--color-bg': '#f4f8fc', '--color-surface': '#ffffff', '--color-border': '#d5e2ef', '--color-text': '#14243a', '--color-muted': '#566a82', '--color-accent': '#2563eb' },
   },
 ];
 

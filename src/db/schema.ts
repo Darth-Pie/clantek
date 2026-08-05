@@ -237,6 +237,23 @@ export const settings = sqliteTable('settings', {
   updatedAt: integer('updated_at').notNull().default(now),
 });
 
+/**
+ * Drag-and-drop page layouts. Each standard page (home, etc.) is one row keyed
+ * by a stable `slug`; `layout` is the JSON module tree (rows → columns →
+ * modules) defined in src/shared/layout.ts. Any client — the web app today, a
+ * native app later — renders the same data, so the layout is deliberately kept
+ * as portable JSON rather than baked into components. A missing row falls back
+ * to the built-in DEFAULT_LAYOUTS for that slug.
+ */
+export const pageLayouts = sqliteTable('page_layouts', {
+  slug: text('slug').primaryKey(),
+  // Optional human title for the admin page list; the slug is the identity.
+  title: text('title'),
+  layout: text('layout', { mode: 'json' }).$type<unknown>().notNull(),
+  updatedBy: integer('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  updatedAt: integer('updated_at').notNull().default(now),
+});
+
 /* ------------------------------------------------------------------ *
  * Competition
  * ------------------------------------------------------------------ */

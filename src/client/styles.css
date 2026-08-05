@@ -2958,6 +2958,129 @@ button.mini {
   border-color: var(--color-accent);
 }
 
+/* Org chart (leadership tree) */
+.org-scroll {
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  max-height: 72vh;
+}
+.org-canvas {
+  position: relative;
+}
+.org-edges {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.org-edge {
+  fill: none;
+  stroke: var(--color-muted);
+  stroke-width: 2;
+  opacity: 0.7;
+}
+.org-edge-editable {
+  pointer-events: stroke;
+  cursor: pointer;
+  stroke-width: 3;
+}
+.org-edge-editable:hover {
+  stroke: var(--color-accent);
+  opacity: 1;
+}
+.org-box {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  text-decoration: none;
+  color: var(--color-text);
+  overflow: hidden;
+  z-index: 1;
+}
+a.org-box:hover {
+  border-color: var(--color-accent);
+}
+.org-box-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  object-fit: cover;
+}
+.org-box-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.org-box-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.org-box-rank {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+/* Designer interactions */
+.org-editing .org-box-editable {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.org-connect .org-box-editable {
+  cursor: pointer;
+}
+.org-box-editable.connecting {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.org-box-hidden {
+  opacity: 0.5;
+  border-style: dashed;
+}
+.org-box-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent) 85%, transparent);
+  color: #fff;
+  font-size: 0.7rem;
+  cursor: pointer;
+  opacity: 0;
+}
+.org-box-editable:hover .org-box-remove {
+  opacity: 1;
+}
+.org-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 1rem;
+}
+.org-designer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 /* Segmented control (e.g. theme menu-alignment) */
 .seg-control {
   display: inline-flex;

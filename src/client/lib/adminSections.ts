@@ -64,6 +64,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
           { key: 'games', label: 'Games', permission: 'games.manage' },
         ],
       },
+      { key: 'org-chart', label: 'Org Chart', tabs: [{ key: 'orgchart', label: 'Org Chart', permission: 'ranks.manage' }] },
     ],
   },
   {

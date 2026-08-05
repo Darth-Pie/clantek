@@ -10,6 +10,7 @@ import MemberDetail from './pages/MemberDetail';
 import AccountSettings from './pages/AccountSettings';
 import Roster from './pages/Roster';
 import Home from './pages/Home';
+import Leadership from './pages/Leadership';
 import CustomPage from './pages/CustomPage';
 import News from './pages/News';
 import NewsPost from './pages/NewsPost';
@@ -122,6 +123,7 @@ export default function App() {
               Home
             </NavLink>
             <NavLink to="/news">News</NavLink>
+            <NavLink to="/leadership">Leadership</NavLink>
             {can('roster.view') && <NavLink to="/roster">Roster</NavLink>}
             {can('events.view') && <NavLink to="/events">Events</NavLink>}
             {navPages.map((p) => (
@@ -173,6 +175,14 @@ export default function App() {
             element={
               <Protected>
                 <NewsPost />
+              </Protected>
+            }
+          />
+          <Route
+            path="/leadership"
+            element={
+              <Protected>
+                <Leadership />
               </Protected>
             }
           />

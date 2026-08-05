@@ -24,6 +24,7 @@ import Announcements from './Announcements';
 import Theme from './Theme';
 import BrandingAdmin from './BrandingAdmin';
 import PagesAdmin from './PagesAdmin';
+import OrgChartDesigner from './OrgChartDesigner';
 import AuditLog from './AuditLog';
 
 /** Tab key → its component. Every tab key in adminSections.ts needs an entry. */
@@ -35,6 +36,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   medals: () => <Medals />,
   warrecords: () => <WarRecords />,
   games: () => <Games />,
+  orgchart: () => <OrgChartDesigner />,
   announcements: () => <Announcements />,
   theme: () => <Theme />,
   branding: () => <BrandingAdmin />,

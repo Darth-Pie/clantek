@@ -1,0 +1,16 @@
+# Security headers for every asset/navigation response served by the static-assets
+# layer (Cloudflare Workers honors this file). /api/* and /media/* are answered by
+# the Worker (run_worker_first) and are not covered here — they return JSON/media,
+# not documents, so the CSP that matters guards the HTML shell below.
+#
+# The Content-Security-Policy is the seatbelt behind the render-time HTML
+# sanitizer: script-src 'self' (no 'unsafe-inline') means even a sanitizer bypass
+# can't run inline script. frame-src is the ONLY place third-party frames are
+# allowed, and it lists exactly the video-embed origins from shared/embeds.ts —
+# keep the two in sync when adding a provider.
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; media-src 'self' https:; frame-src https://www.youtube-nocookie.com https://player.twitch.tv https://clips.twitch.tv https://player.vimeo.com https://streamable.com
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()

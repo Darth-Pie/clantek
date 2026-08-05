@@ -11,9 +11,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { sanitizeHtml, excerptFromHtml } from '../lib/richtext';
+import { sanitizeHtml, sanitizePageHtml, excerptFromHtml } from '../lib/richtext';
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
+import { isAllowedEmbedSrc } from '../../shared/embeds';
 import type { ModuleType } from '../../shared/layout';
 
 type Config = Record<string, unknown>;
@@ -131,6 +132,58 @@ function TextModule({ config }: { config: Config }) {
     <section className="panel module module-text">
       <div className="news-body" dangerouslySetInnerHTML={{ __html: html }} />
     </section>
+  );
+}
+
+/**
+ * Hand-written HTML from a page author. Sanitized here at render time with the
+ * wider page allow-list — this render-time pass is the authoritative backstop
+ * (the stored html is never trusted), so even a hand-crafted API write can't
+ * execute. See sanitizePageHtml for exactly what survives.
+ */
+function HtmlModule({ config }: { config: Config }) {
+  const html = sanitizePageHtml(str(config, 'html'));
+  if (!html.trim()) return null;
+  return (
+    <section className="module module-html">
+      <div className="news-body page-html" dangerouslySetInnerHTML={{ __html: html }} />
+    </section>
+  );
+}
+
+/**
+ * A video embed. `config.src` is produced by resolveEmbed inside sanitizeLayout,
+ * but we re-verify it here against the origin allow-list before emitting an
+ * iframe — belt and suspenders. The frame is sandboxed and cross-origin, so the
+ * provider's player runs boxed off from the page.
+ */
+function EmbedModule({ config }: { config: Config }) {
+  const src = str(config, 'src');
+  const title = str(config, 'title') || 'Embedded video';
+  const ratio = str(config, 'ratio', '16:9') === '4:3' ? '4:3' : '16:9';
+
+  if (!isAllowedEmbedSrc(src)) {
+    return (
+      <section className="panel module module-embed-empty">
+        <p className="muted small">
+          No video yet — add a YouTube, Twitch, Vimeo, or Streamable link in the editor.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <div className="module module-embed" data-ratio={ratio}>
+      <iframe
+        src={src}
+        title={title}
+        loading="lazy"
+        allowFullScreen
+        sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+        allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
+        referrerPolicy="strict-origin-when-cross-origin"
+      />
+    </div>
   );
 }
 
@@ -408,8 +461,10 @@ function GamesModule({ config }: { config: Config }) {
 export const MODULE_RENDERERS: Record<ModuleType, (props: { config: Config }) => ReactNode> = {
   heading: HeadingModule,
   text: TextModule,
+  html: HtmlModule,
   image: ImageModule,
   button: ButtonModule,
+  embed: EmbedModule,
   divider: DividerModule,
   news: NewsModule,
   roster: RosterModule,

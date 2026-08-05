@@ -23,6 +23,8 @@ export const DEFAULT_THEME: ThemeTokens = {
   '--font-body': 'system-ui, sans-serif',
   '--font-display': 'system-ui, sans-serif',
   '--radius': '8px',
+  // Header menu alignment: flex-start (left) | center | flex-end (right).
+  '--nav-justify': 'flex-start',
 };
 
 interface ThemeValue {

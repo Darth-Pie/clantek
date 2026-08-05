@@ -247,9 +247,13 @@ export const settings = sqliteTable('settings', {
  */
 export const pageLayouts = sqliteTable('page_layouts', {
   slug: text('slug').primaryKey(),
-  // Optional human title for the admin page list; the slug is the identity.
+  // Human title, shown in the admin page list and used as the nav label.
   title: text('title'),
   layout: text('layout', { mode: 'json' }).$type<unknown>().notNull(),
+  // Custom pages can be surfaced in the top nav. 'home' is navigated to at / and
+  // is never listed here. nav_order sorts the extra links.
+  showInNav: integer('show_in_nav', { mode: 'boolean' }).notNull().default(false),
+  navOrder: integer('nav_order').notNull().default(0),
   updatedBy: integer('updated_by').references(() => users.id, { onDelete: 'set null' }),
   updatedAt: integer('updated_at').notNull().default(now),
 });

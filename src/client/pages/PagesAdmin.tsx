@@ -14,10 +14,11 @@ import { api } from '../lib/api';
 import PageRenderer from '../components/PageRenderer';
 import RichTextEditor from '../components/RichTextEditor';
 import {
-  EDITABLE_PAGES,
+  HOME_SLUG,
   MODULE_SPECS,
   moduleSpec,
   defaultLayout,
+  slugify,
   GRID_UNITS,
   type PageLayout,
   type LayoutRow,
@@ -25,6 +26,15 @@ import {
   type LayoutModule,
   type ModuleType,
 } from '../../shared/layout';
+import { PERMISSIONS } from '../../shared/permissions';
+
+interface PageMeta {
+  slug: string;
+  title: string | null;
+  showInNav: boolean;
+  navOrder: number;
+  isHome: boolean;
+}
 
 function newId(prefix: string): string {
   const rand =
@@ -37,7 +47,8 @@ function newId(prefix: string): string {
 type Drag = { rowId: string; colId: string; moduleId: string };
 
 export default function PagesAdmin() {
-  const [slug, setSlug] = useState(EDITABLE_PAGES[0]?.slug ?? 'home');
+  const [pages, setPages] = useState<PageMeta[]>([]);
+  const [slug, setSlug] = useState(HOME_SLUG);
   const [layout, setLayout] = useState<PageLayout | null>(null);
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
@@ -45,6 +56,16 @@ export default function PagesAdmin() {
   const [preview, setPreview] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const dragRef = useRef<Drag | null>(null);
+
+  const loadPages = () =>
+    api
+      .get<{ pages: PageMeta[] }>('/pages')
+      .then(({ pages }) => setPages(pages))
+      .catch(() => setPages([{ slug: HOME_SLUG, title: 'Home page', showInNav: false, navOrder: 0, isHome: true }]));
+
+  useEffect(() => {
+    void loadPages();
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -55,6 +76,59 @@ export default function PagesAdmin() {
       .catch(() => setLayout(defaultLayout(slug)))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const current = pages.find((p) => p.slug === slug);
+
+  /* --- page management --- */
+  async function createPage() {
+    const title = window.prompt('Name the new page (e.g. "About Us"):')?.trim();
+    if (!title) return;
+    const suggested = slugify(title);
+    const chosen = window.prompt('Page address (/p/…):', suggested)?.trim().toLowerCase();
+    if (!chosen) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await api.post<{ slug: string }>('/pages', { title, slug: chosen });
+      await loadPages();
+      setSlug(res.slug);
+      setMessage('Page created. Add some modules and Save.');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not create the page.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function renamePage() {
+    if (!current) return;
+    const title = window.prompt('Rename this page:', current.title ?? '')?.trim();
+    if (!title) return;
+    await api.patch(`/pages/${slug}`, { title }).catch(() => {});
+    await loadPages();
+  }
+
+  async function toggleNav(next: boolean) {
+    if (!current || current.isHome) return;
+    await api.patch(`/pages/${slug}`, { showInNav: next }).catch(() => {});
+    await loadPages();
+  }
+
+  async function deletePage() {
+    if (!current || current.isHome) return;
+    if (!window.confirm(`Delete the page “${current.title ?? slug}”? This can’t be undone.`)) return;
+    setSaving(true);
+    try {
+      await api.del(`/pages/${slug}`);
+      await loadPages();
+      setSlug(HOME_SLUG);
+      setMessage('Page deleted.');
+    } catch {
+      setMessage('Could not delete the page.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   /** Immutable edit: clone, mutate the rows, mark dirty. */
   function edit(mutator: (rows: LayoutRow[]) => void) {
@@ -135,6 +209,13 @@ export default function PagesAdmin() {
       const mod = findCol(rows, rowId, colId)?.modules.find((m) => m.id === moduleId);
       if (mod) mod.config = { ...mod.config, ...patch };
     });
+  const setVisibility = (rowId: string, colId: string, moduleId: string, visibleTo: string | undefined) =>
+    edit((rows) => {
+      const mod = findCol(rows, rowId, colId)?.modules.find((m) => m.id === moduleId);
+      if (!mod) return;
+      if (visibleTo) mod.visibleTo = visibleTo;
+      else delete mod.visibleTo;
+    });
 
   /** Drop the dragged module into `toCol`, before `beforeId` (or at the end). */
   const dropModule = (toRowId: string, toColId: string, beforeId: string | null) => {
@@ -186,10 +267,7 @@ export default function PagesAdmin() {
     }
   }
 
-  const pageTitle = useMemo(
-    () => EDITABLE_PAGES.find((p) => p.slug === slug)?.title ?? slug,
-    [slug],
-  );
+  const pageTitle = useMemo(() => current?.title ?? slug, [current, slug]);
 
   if (loading || !layout) return <div className="loading">Loading…</div>;
 
@@ -198,23 +276,22 @@ export default function PagesAdmin() {
       <header className="panel-head pages-admin-head">
         <div>
           <h2>Pages</h2>
-          <p className="muted">Arrange the modules on your standard pages. Columns stack on mobile.</p>
+          <p className="muted">Arrange modules on the home page, or build custom pages. Columns stack on mobile.</p>
         </div>
         <div className="pages-admin-actions">
-          {EDITABLE_PAGES.length > 1 && (
-            <select value={slug} onChange={(e) => setSlug(e.target.value)}>
-              {EDITABLE_PAGES.map((p) => (
-                <option key={p.slug} value={p.slug}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
-          )}
+          <select value={slug} onChange={(e) => setSlug(e.target.value)} title="Page to edit">
+            {pages.map((p) => (
+              <option key={p.slug} value={p.slug}>
+                {p.isHome ? 'Home page' : p.title ?? p.slug}
+                {!p.isHome ? ` (/p/${p.slug})` : ''}
+              </option>
+            ))}
+          </select>
+          <button type="button" className="ghost" onClick={createPage} disabled={saving}>
+            + New page
+          </button>
           <button type="button" className="ghost" onClick={() => setPreview((p) => !p)}>
             {preview ? 'Edit' : 'Preview'}
-          </button>
-          <button type="button" className="ghost" onClick={resetDefault} disabled={saving}>
-            Reset
           </button>
           <button type="button" className="primary" onClick={save} disabled={saving || !dirty}>
             {saving ? 'Saving…' : dirty ? 'Save' : 'Saved'}
@@ -222,12 +299,41 @@ export default function PagesAdmin() {
         </div>
       </header>
 
+      {/* Per-page controls: nav placement + rename/delete for custom pages, reset for home. */}
+      <div className="pages-admin-meta">
+        {current?.isHome ? (
+          <button type="button" className="ghost" onClick={resetDefault} disabled={saving}>
+            Reset home to default
+          </button>
+        ) : (
+          <>
+            <label className="inline-field">
+              <input
+                type="checkbox"
+                checked={!!current?.showInNav}
+                onChange={(e) => void toggleNav(e.target.checked)}
+              />
+              Show in top menu
+            </label>
+            <button type="button" className="ghost" onClick={renamePage} disabled={saving}>
+              Rename
+            </button>
+            <button type="button" className="ghost danger" onClick={deletePage} disabled={saving}>
+              Delete page
+            </button>
+            <a className="btn-link" href={`/p/${slug}`} target="_blank" rel="noopener noreferrer">
+              View ↗
+            </a>
+          </>
+        )}
+      </div>
+
       {message && <div className="notice">{message}</div>}
 
       {preview ? (
         <div className="pages-preview">
           <div className="muted small pages-preview-label">Preview — {pageTitle}</div>
-          <PageRenderer layout={layout} />
+          <PageRenderer layout={layout} showHidden />
         </div>
       ) : (
         <div className="layout-editor">
@@ -246,6 +352,7 @@ export default function PagesAdmin() {
               onRemoveModule={removeModule}
               onMoveModule={moveModule}
               onPatchConfig={patchConfig}
+              onSetVisibility={setVisibility}
               onDragStartModule={(d) => (dragRef.current = d)}
               onDropModule={dropModule}
             />
@@ -276,6 +383,7 @@ function RowEditor(props: {
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
   onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
+  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleTo: string | undefined) => void;
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
 }) {
@@ -309,6 +417,7 @@ function ColumnEditor(props: {
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
   onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
+  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleTo: string | undefined) => void;
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
 }) {
@@ -388,6 +497,7 @@ function ModuleEditor(props: {
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
   onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
+  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleTo: string | undefined) => void;
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
 }) {
@@ -421,6 +531,21 @@ function ModuleEditor(props: {
       </div>
 
       <div className="module-editor-config">
+        <label className="inline-field module-audience">
+          Visible to
+          <select
+            value={m.visibleTo ?? ''}
+            onChange={(e) => props.onSetVisibility(rowId, colId, m.id, e.target.value || undefined)}
+          >
+            <option value="">Everyone</option>
+            {Object.entries(PERMISSIONS).map(([perm, desc]) => (
+              <option key={perm} value={perm}>
+                {desc}
+              </option>
+            ))}
+          </select>
+        </label>
+
         {m.type === 'heading' && (
           <>
             <input
@@ -451,7 +576,12 @@ function ModuleEditor(props: {
           />
         )}
 
-        {(m.type === 'news' || m.type === 'roster' || m.type === 'events') && (
+        {(m.type === 'news' ||
+          m.type === 'roster' ||
+          m.type === 'events' ||
+          m.type === 'medals' ||
+          m.type === 'warrecords' ||
+          m.type === 'games') && (
           <>
             <input
               type="text"
@@ -471,7 +601,112 @@ function ModuleEditor(props: {
             </label>
           </>
         )}
+
+        {m.type === 'image' && (
+          <ImageConfig
+            config={cfg}
+            onPatch={(patch) => props.onPatchConfig(rowId, colId, m.id, patch)}
+          />
+        )}
+
+        {m.type === 'button' && (
+          <>
+            <input
+              type="text"
+              value={typeof cfg.label === 'string' ? cfg.label : ''}
+              placeholder="Button label"
+              onChange={(e) => props.onPatchConfig(rowId, colId, m.id, { label: e.target.value })}
+            />
+            <input
+              type="text"
+              value={typeof cfg.href === 'string' ? cfg.href : ''}
+              placeholder="Link URL (/roster or https://…)"
+              onChange={(e) => props.onPatchConfig(rowId, colId, m.id, { href: e.target.value })}
+            />
+            <label className="inline-field">
+              Style
+              <select
+                value={cfg.style === 'default' ? 'default' : 'primary'}
+                onChange={(e) => props.onPatchConfig(rowId, colId, m.id, { style: e.target.value })}
+              >
+                <option value="primary">Primary</option>
+                <option value="default">Subtle</option>
+              </select>
+            </label>
+          </>
+        )}
+
+        {m.type === 'divider' && <p className="muted small">A horizontal divider — no options.</p>}
       </div>
+    </div>
+  );
+}
+
+/** Image module config: an uploader (to the 'pages' media category) plus alt/link/caption. */
+function ImageConfig({
+  config,
+  onPatch,
+}: {
+  config: Record<string, unknown>;
+  onPatch: (patch: Record<string, unknown>) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const url = typeof config.url === 'string' ? config.url : '';
+
+  return (
+    <div className="module-image-config">
+      {url && <img className="module-image-preview" src={url} alt="" />}
+      <div className="avatar-controls">
+        <label className="upload-btn mini">
+          {uploading ? 'Uploading…' : url ? 'Change image' : 'Upload image'}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            hidden
+            disabled={uploading}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              setErr(null);
+              setUploading(true);
+              try {
+                const res = await api.upload<{ url: string }>('/media/pages', file);
+                onPatch({ url: res.url });
+              } catch (e2) {
+                setErr(e2 instanceof Error ? e2.message : 'Upload failed.');
+              } finally {
+                setUploading(false);
+              }
+            }}
+          />
+        </label>
+        {url && (
+          <button type="button" className="mini" disabled={uploading} onClick={() => onPatch({ url: '' })}>
+            Remove
+          </button>
+        )}
+      </div>
+      {err && <p className="muted small module-image-err">{err}</p>}
+      <input
+        type="text"
+        value={typeof config.alt === 'string' ? config.alt : ''}
+        placeholder="Alt text (accessibility)"
+        onChange={(e) => onPatch({ alt: e.target.value })}
+      />
+      <input
+        type="text"
+        value={typeof config.href === 'string' ? config.href : ''}
+        placeholder="Link URL (optional)"
+        onChange={(e) => onPatch({ href: e.target.value })}
+      />
+      <input
+        type="text"
+        value={typeof config.caption === 'string' ? config.caption : ''}
+        placeholder="Caption (optional)"
+        onChange={(e) => onPatch({ caption: e.target.value })}
+      />
     </div>
   );
 }

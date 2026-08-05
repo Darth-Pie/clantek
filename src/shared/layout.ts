@@ -11,7 +11,20 @@
  * the exact same JSON drives the web app now and can drive a native app later.
  */
 
-export type ModuleType = 'heading' | 'text' | 'news' | 'roster' | 'events';
+import { isPermission } from './permissions';
+
+export type ModuleType =
+  | 'heading'
+  | 'text'
+  | 'image'
+  | 'button'
+  | 'divider'
+  | 'news'
+  | 'roster'
+  | 'events'
+  | 'medals'
+  | 'warrecords'
+  | 'games';
 
 export interface LayoutModule {
   /** Stable id for React keys and drag-and-drop; not meaningful to the server. */
@@ -19,6 +32,11 @@ export interface LayoutModule {
   type: ModuleType;
   /** Per-module options (title, item limit, rich-text html, …). */
   config: Record<string, unknown>;
+  /**
+   * Optional audience gate: when set to a Permission, the module renders only
+   * for viewers who hold it (e.g. a leadership-only callout). Absent = everyone.
+   */
+  visibleTo?: string;
 }
 
 export interface LayoutColumn {
@@ -69,6 +87,24 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     defaultConfig: { html: '<p>Write something…</p>' },
   },
   {
+    type: 'image',
+    label: 'Image / banner',
+    description: 'A standalone image, optionally linked.',
+    defaultConfig: { url: '', alt: '', href: '', caption: '' },
+  },
+  {
+    type: 'button',
+    label: 'Button / link',
+    description: 'A call-to-action link.',
+    defaultConfig: { label: 'Learn more', href: '/', style: 'primary' },
+  },
+  {
+    type: 'divider',
+    label: 'Divider',
+    description: 'A horizontal rule to separate content.',
+    defaultConfig: {},
+  },
+  {
     type: 'news',
     label: 'News feed',
     description: 'The latest news posts.',
@@ -85,6 +121,24 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     label: 'Events',
     description: 'Upcoming clan events.',
     defaultConfig: { title: 'Upcoming Events', limit: 5 },
+  },
+  {
+    type: 'medals',
+    label: 'Medals',
+    description: 'The medals the clan awards.',
+    defaultConfig: { title: 'Medals', limit: 12 },
+  },
+  {
+    type: 'warrecords',
+    label: 'War records',
+    description: 'The clan’s war-record honours.',
+    defaultConfig: { title: 'War Records', limit: 12 },
+  },
+  {
+    type: 'games',
+    label: 'Games',
+    description: 'The games the clan plays.',
+    defaultConfig: { title: 'Games We Play', limit: 12 },
   },
 ];
 
@@ -126,10 +180,40 @@ export const DEFAULT_LAYOUTS: Record<string, PageLayout> = {
   },
 };
 
-/** The pages the admin editor exposes. Extend as more standard pages get layouts. */
-export const EDITABLE_PAGES: { slug: string; title: string }[] = [
-  { slug: 'home', title: 'Home page' },
+/** The always-present built-in page, navigated to at `/`. */
+export const HOME_SLUG = 'home';
+
+/**
+ * Slugs a custom page may not claim: the built-in home plus every top-level app
+ * route, so a custom page can never shadow /roster, /admin, the API, etc.
+ */
+export const RESERVED_PAGE_SLUGS = [
+  'home',
+  'news',
+  'roster',
+  'events',
+  'members',
+  'admin',
+  'login',
+  'api',
+  'media',
+  'p',
 ];
+
+/** A valid custom-page slug: url-safe, reasonable length, not reserved. */
+export function isValidPageSlug(slug: string): boolean {
+  return /^[a-z0-9][a-z0-9-]{1,40}$/.test(slug) && !RESERVED_PAGE_SLUGS.includes(slug);
+}
+
+/** Turn free-text (a page title) into a candidate slug. */
+export function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+}
 
 export function defaultLayout(slug: string): PageLayout {
   return DEFAULT_LAYOUTS[slug] ?? { version: 1, rows: [] };
@@ -168,6 +252,20 @@ function cleanId(v: unknown, prefix: string): string {
 }
 
 /**
+ * Accept only same-origin paths ("/…") and absolute http(s) URLs. Everything
+ * else — javascript:, data:, mailto:, protocol-relative — becomes empty, so a
+ * stored url/href can never smuggle a script into an <img src> or <a href>.
+ */
+function cleanUrl(v: unknown): string {
+  if (typeof v !== 'string') return '';
+  const t = v.trim();
+  if (!t) return '';
+  if (t.startsWith('/') && !t.startsWith('//')) return t.slice(0, 500);
+  if (/^https?:\/\//i.test(t)) return t.slice(0, 500);
+  return '';
+}
+
+/**
  * Sanitize a module's config to a small, known set of primitive keys so nothing
  * unexpected is persisted. `sanitizeText` (a DOM-aware html cleaner) is injected
  * because it isn't available in the worker without a dependency; when omitted,
@@ -199,6 +297,19 @@ function cleanConfig(
     out.html = sanitizeText ? sanitizeText(html) : html;
   }
 
+  if (type === 'image') {
+    out.url = cleanUrl(src.url);
+    out.href = cleanUrl(src.href);
+    out.alt = (typeof src.alt === 'string' ? src.alt : '').slice(0, 200);
+    out.caption = (typeof src.caption === 'string' ? src.caption : '').slice(0, 200);
+  }
+
+  if (type === 'button') {
+    out.label = (typeof src.label === 'string' ? src.label : 'Learn more').slice(0, 80);
+    out.href = cleanUrl(src.href);
+    out.style = src.style === 'default' ? 'default' : 'primary';
+  }
+
   return out;
 }
 
@@ -221,11 +332,16 @@ export function sanitizeLayout(raw: unknown, sanitizeText?: (html: string) => st
         const mod = asObject(modRaw);
         const type = mod.type as ModuleType;
         if (!MODULE_TYPES.includes(type)) continue;
-        modules.push({
+        const cleaned: LayoutModule = {
           id: cleanId(mod.id, 'm'),
           type,
           config: cleanConfig(type, mod.config, sanitizeText),
-        });
+        };
+        // Only a real permission slug becomes an audience gate; anything else is dropped.
+        if (typeof mod.visibleTo === 'string' && isPermission(mod.visibleTo)) {
+          cleaned.visibleTo = mod.visibleTo;
+        }
+        modules.push(cleaned);
       }
 
       columns.push({ id: cleanId(col.id, 'c'), span: clampSpan(col.span), modules });

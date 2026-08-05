@@ -37,13 +37,63 @@ input {
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   flex-wrap: wrap;
+  /* Sticky so the logo can shrink into the bar as the page scrolls. */
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.brand-name {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1.1rem;
   letter-spacing: 0.02em;
+}
+
+/* --- Header logo: oversized + overhanging at the top, docked once scrolled --- */
+.topbar.has-logo .brand {
+  position: relative;
+  /* Reserve exactly the docked logo's width (measured aspect × collapsed height)
+     so the nav never jumps between the expanded and docked states. */
+  width: var(--logo-slot, 120px);
+  align-self: stretch;
+}
+
+.brand-logo {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: var(--logo-collapsed, 38px);
+  width: auto;
+  max-width: min(48vw, 460px);
+  z-index: 120;
+  transition: height 0.22s ease, top 0.22s ease, transform 0.22s ease, filter 0.22s ease;
+}
+
+/* At the top of the page: grow and overhang the bar, floating over the menu. */
+.topbar.has-logo:not(.scrolled) .brand-logo {
+  height: var(--logo-expanded, 88px);
+  top: 0.4rem;
+  transform: none;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+}
+
+/* On narrow screens the nav wraps and space is tight, so keep the logo docked. */
+@media (max-width: 720px) {
+  .topbar.has-logo:not(.scrolled) .brand-logo {
+    height: var(--logo-collapsed, 38px);
+    top: 50%;
+    transform: translateY(-50%);
+    filter: none;
+  }
 }
 
 .nav {
@@ -2666,6 +2716,66 @@ button.mini {
   font-size: 0.78rem;
   color: var(--color-muted);
   line-height: 1.2;
+}
+
+/* Branding admin */
+.branding-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .branding-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.branding-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.branding-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  /* A checkerboard so transparent logos read clearly. */
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.04) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+.branding-preview img {
+  height: var(--h, 88px);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+.branding-size {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+.branding-size input[type='range'] {
+  width: 100%;
+}
+.branding-err {
+  color: var(--color-accent);
+}
+.branding-hint ul {
+  margin: 0.4rem 0 0 1.1rem;
+  padding: 0;
+}
+.branding-hint li {
+  margin: 0.3rem 0;
 }
 
 /* HTML block module */

@@ -22,6 +22,7 @@ import Games from './Games';
 import WarRecords from './WarRecords';
 import Announcements from './Announcements';
 import Theme from './Theme';
+import BrandingAdmin from './BrandingAdmin';
 import PagesAdmin from './PagesAdmin';
 import AuditLog from './AuditLog';
 
@@ -40,6 +41,7 @@ const SECTION_RENDERERS: Record<string, () => ReactNode> = {
   games: () => <Games />,
   warrecords: () => <WarRecords />,
   announcements: () => <Announcements />,
+  branding: () => <BrandingAdmin />,
   theme: () => <Theme />,
   audit: () => <AuditLog />,
 };

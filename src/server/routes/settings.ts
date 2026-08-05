@@ -52,19 +52,40 @@ settings.get('/site', async (c) => {
   return c.json({ site: row?.value ?? {} });
 });
 
+/**
+ * Accept only a same-origin ("/media/…") or absolute http(s) logo URL; anything
+ * else — javascript:, data:, protocol-relative — becomes empty, so a stored logo
+ * URL can never smuggle a script into the header <img src>.
+ */
+function cleanLogoUrl(v: unknown): string {
+  if (typeof v !== 'string') return '';
+  const t = v.trim();
+  if (!t) return '';
+  if (t.startsWith('/') && !t.startsWith('//')) return t.slice(0, 500);
+  if (/^https?:\/\//i.test(t)) return t.slice(0, 500);
+  return '';
+}
+
 settings.put('/site', requirePermission('settings.manage'), async (c) => {
   const { site } = await c.req.json<{ site: Record<string, unknown> }>();
   const viewer = c.get('viewer')!;
 
+  // Store only the known branding fields, validated — never the raw payload.
+  const size = Math.round(Number((site ?? {}).logoSize));
+  const clean = {
+    logoUrl: cleanLogoUrl((site ?? {}).logoUrl),
+    logoSize: Number.isFinite(size) ? Math.min(200, Math.max(40, size)) : 88,
+  };
+
   await db(c.env)
     .insert(s.settings)
-    .values({ key: 'site', value: site, updatedBy: viewer.id })
+    .values({ key: 'site', value: clean, updatedBy: viewer.id })
     .onConflictDoUpdate({
       target: s.settings.key,
-      set: { value: site, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
     });
 
-  return c.json({ ok: true });
+  return c.json({ ok: true, site: clean });
 });
 
 /* ------------------------------------------------------------------ *

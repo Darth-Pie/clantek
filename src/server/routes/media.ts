@@ -37,6 +37,7 @@ const CATEGORIES: Record<string, { prefix: string; permission?: Permission }> = 
   warrecords: { prefix: 'warrecords', permission: 'warrecords.manage' },
   events: { prefix: 'events', permission: 'events.manage' },
   pages: { prefix: 'pages', permission: 'pages.manage' },
+  branding: { prefix: 'branding', permission: 'settings.manage' },
 };
 
 const media = new Hono<AppContext>();

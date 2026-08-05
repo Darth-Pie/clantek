@@ -56,9 +56,10 @@ type Drag = { rowId: string; colId: string; moduleId: string };
 export default function PagesAdmin() {
   const [pages, setPages] = useState<PageMeta[]>([]);
   const [roles, setRoles] = useState<RoleOpt[]>([]);
-  const [slug, setSlug] = useState(HOME_SLUG);
+  // `null` = the page list (landing view); a slug = editing that page.
+  const [slug, setSlug] = useState<string | null>(null);
   const [layout, setLayout] = useState<PageLayout | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState(false);
@@ -80,8 +81,13 @@ export default function PagesAdmin() {
   }, []);
 
   useEffect(() => {
+    if (!slug) {
+      setLayout(null);
+      return;
+    }
     setLoading(true);
     setDirty(false);
+    setPreview(false);
     api
       .get<{ layout: PageLayout }>(`/pages/${slug}`)
       .then(({ layout }) => setLayout(layout))
@@ -89,7 +95,7 @@ export default function PagesAdmin() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  const current = pages.find((p) => p.slug === slug);
+  const current = slug ? pages.find((p) => p.slug === slug) : undefined;
 
   /* --- page management --- */
   async function createPage() {
@@ -279,7 +285,43 @@ export default function PagesAdmin() {
     }
   }
 
-  const pageTitle = useMemo(() => current?.title ?? slug, [current, slug]);
+  const pageTitle = useMemo(() => current?.title ?? slug ?? '', [current, slug]);
+
+  // Landing view: pick a page to edit (or create one) instead of jumping
+  // straight into the home page.
+  if (!slug) {
+    return (
+      <section className="panel pages-admin">
+        <header className="panel-head pages-admin-head">
+          <div>
+            <h2>Pages</h2>
+            <p className="muted">Choose a page to edit, or build a new one. Columns stack on mobile.</p>
+          </div>
+          <div className="pages-admin-actions">
+            <button type="button" className="primary" onClick={createPage} disabled={saving}>
+              + New page
+            </button>
+          </div>
+        </header>
+
+        {message && <div className="notice">{message}</div>}
+
+        <ul className="pages-list">
+          {pages.map((p) => (
+            <li key={p.slug}>
+              <button type="button" className="pages-list-item" onClick={() => setSlug(p.slug)}>
+                <span className="pages-list-name">{p.isHome ? 'Home page' : p.title ?? p.slug}</span>
+                <span className="pages-list-meta muted small">
+                  {p.isHome ? '/' : `/p/${p.slug}`}
+                  {!p.isHome && p.showInNav ? ' · in menu' : ''}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
 
   if (loading || !layout) return <div className="loading">Loading…</div>;
 
@@ -291,11 +333,13 @@ export default function PagesAdmin() {
           <p className="muted">Arrange modules on the home page, or build custom pages. Columns stack on mobile.</p>
         </div>
         <div className="pages-admin-actions">
+          <button type="button" className="ghost" onClick={() => setSlug(null)} title="Back to all pages">
+            ← All pages
+          </button>
           <select value={slug} onChange={(e) => setSlug(e.target.value)} title="Page to edit">
             {pages.map((p) => (
               <option key={p.slug} value={p.slug}>
                 {p.isHome ? 'Home page' : p.title ?? p.slug}
-                {!p.isHome ? ` (/p/${p.slug})` : ''}
               </option>
             ))}
           </select>

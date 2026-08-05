@@ -72,6 +72,13 @@ export default function PagesAdmin() {
       .then(({ pages }) => setPages(pages))
       .catch(() => setPages([{ slug: HOME_SLUG, title: 'Home page', showInNav: false, navOrder: 0, isHome: true }]));
 
+  // After a create/rename/delete/nav-toggle, refresh our own list and tell the
+  // rest of the app (the top nav loads page names once) that they changed.
+  const refreshPages = async () => {
+    await loadPages();
+    window.dispatchEvent(new Event('ct-pages-changed'));
+  };
+
   useEffect(() => {
     void loadPages();
     api
@@ -108,7 +115,7 @@ export default function PagesAdmin() {
     setMessage(null);
     try {
       const res = await api.post<{ slug: string }>('/pages', { title, slug: chosen });
-      await loadPages();
+      await refreshPages();
       setSlug(res.slug);
       setMessage('Page created. Add some modules and Save.');
     } catch (err) {
@@ -123,13 +130,13 @@ export default function PagesAdmin() {
     const title = window.prompt('Rename this page:', current.title ?? '')?.trim();
     if (!title) return;
     await api.patch(`/pages/${slug}`, { title }).catch(() => {});
-    await loadPages();
+    await refreshPages();
   }
 
   async function toggleNav(next: boolean) {
     if (!current || current.isHome) return;
     await api.patch(`/pages/${slug}`, { showInNav: next }).catch(() => {});
-    await loadPages();
+    await refreshPages();
   }
 
   async function deletePage() {
@@ -138,8 +145,8 @@ export default function PagesAdmin() {
     setSaving(true);
     try {
       await api.del(`/pages/${slug}`);
-      await loadPages();
-      setSlug(HOME_SLUG);
+      await refreshPages();
+      setSlug(null);
       setMessage('Page deleted.');
     } catch {
       setMessage('Could not delete the page.');

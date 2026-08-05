@@ -12,12 +12,15 @@
  */
 
 import { isPermission } from './permissions';
+import { resolveEmbed } from './embeds';
 
 export type ModuleType =
   | 'heading'
   | 'text'
+  | 'html'
   | 'image'
   | 'button'
+  | 'embed'
   | 'divider'
   | 'news'
   | 'roster'
@@ -85,6 +88,18 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     label: 'Rich text',
     description: 'A free-form block of formatted text.',
     defaultConfig: { html: '<p>Write something…</p>' },
+  },
+  {
+    type: 'html',
+    label: 'HTML block',
+    description: 'Hand-written HTML — tags are sanitized when the page renders.',
+    defaultConfig: { html: '' },
+  },
+  {
+    type: 'embed',
+    label: 'Video embed',
+    description: 'Embed a YouTube, Twitch, Vimeo, or Streamable video.',
+    defaultConfig: { url: '', title: '', ratio: '16:9' },
   },
   {
     type: 'image',
@@ -295,6 +310,26 @@ function cleanConfig(
   if (type === 'text') {
     const html = typeof src.html === 'string' ? src.html.slice(0, 20000) : '';
     out.html = sanitizeText ? sanitizeText(html) : html;
+  }
+
+  if (type === 'html') {
+    // Stored verbatim (bounded); the html block is sanitized at render time with
+    // its own wider allowlist (sanitizePageHtml) — the DOM cleaner isn't available
+    // here in the worker, and the renderer is the authoritative, always-run pass.
+    out.html = typeof src.html === 'string' ? src.html.slice(0, 20000) : '';
+  }
+
+  if (type === 'embed') {
+    // Never trust a stored/submitted iframe. Keep the pasted url for the editor,
+    // but (re)derive the canonical, origin-locked embed src from it every time —
+    // resolveEmbed only ever emits an allowlisted origin + a strict id, so `src`
+    // is safe to drop straight into an <iframe> at render.
+    const url = typeof src.url === 'string' ? src.url.slice(0, 500) : '';
+    const resolved = resolveEmbed(url);
+    out.url = url;
+    out.provider = resolved?.provider ?? '';
+    out.src = resolved?.src ?? '';
+    out.ratio = src.ratio === '4:3' ? '4:3' : '16:9';
   }
 
   if (type === 'image') {

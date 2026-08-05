@@ -27,6 +27,7 @@ import {
   type ModuleType,
 } from '../../shared/layout';
 import { PERMISSIONS } from '../../shared/permissions';
+import { resolveEmbed } from '../../shared/embeds';
 
 interface PageMeta {
   slug: string;
@@ -576,6 +577,28 @@ function ModuleEditor(props: {
           />
         )}
 
+        {m.type === 'html' && (
+          <>
+            <textarea
+              className="html-config"
+              rows={8}
+              spellCheck={false}
+              value={typeof cfg.html === 'string' ? cfg.html : ''}
+              placeholder={'<h3>Title</h3>\n<p>Your HTML…</p>'}
+              onChange={(e) => props.onPatchConfig(rowId, colId, m.id, { html: e.target.value })}
+            />
+            <p className="muted small">
+              Headings, lists, tables, images, links and formatting are allowed. Scripts,
+              inline styles, event handlers and iframes are removed when the page renders —
+              use a <strong>Video embed</strong> module for videos.
+            </p>
+          </>
+        )}
+
+        {m.type === 'embed' && (
+          <EmbedConfig config={cfg} onPatch={(patch) => props.onPatchConfig(rowId, colId, m.id, patch)} />
+        )}
+
         {(m.type === 'news' ||
           m.type === 'roster' ||
           m.type === 'events' ||
@@ -638,6 +661,60 @@ function ModuleEditor(props: {
 
         {m.type === 'divider' && <p className="muted small">A horizontal divider — no options.</p>}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Video-embed config: paste any provider URL. We resolve it to a canonical,
+ * origin-locked src on the spot (so the preview works immediately and the stored
+ * value is already safe); the server re-derives it on save regardless.
+ */
+function EmbedConfig({
+  config,
+  onPatch,
+}: {
+  config: Record<string, unknown>;
+  onPatch: (patch: Record<string, unknown>) => void;
+}) {
+  const url = typeof config.url === 'string' ? config.url : '';
+  const resolved = resolveEmbed(url);
+  return (
+    <div className="module-embed-config">
+      <input
+        type="text"
+        value={url}
+        placeholder="Paste a YouTube, Twitch, Vimeo or Streamable link"
+        onChange={(e) => {
+          const next = e.target.value;
+          const r = resolveEmbed(next);
+          onPatch({ url: next, src: r?.src ?? '', provider: r?.provider ?? '' });
+        }}
+      />
+      <input
+        type="text"
+        value={typeof config.title === 'string' ? config.title : ''}
+        placeholder="Caption / accessible title (optional)"
+        onChange={(e) => onPatch({ title: e.target.value })}
+      />
+      <label className="inline-field">
+        Shape
+        <select
+          value={config.ratio === '4:3' ? '4:3' : '16:9'}
+          onChange={(e) => onPatch({ ratio: e.target.value })}
+        >
+          <option value="16:9">Widescreen 16:9</option>
+          <option value="4:3">Classic 4:3</option>
+        </select>
+      </label>
+      {url &&
+        (resolved ? (
+          <p className="muted small">✓ {resolved.provider} embed detected.</p>
+        ) : (
+          <p className="muted small module-image-err">
+            Not a supported link — use YouTube, Twitch, Vimeo or Streamable.
+          </p>
+        ))}
     </div>
   );
 }

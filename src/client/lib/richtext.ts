@@ -32,6 +32,63 @@ export function sanitizeHtml(html: string): string {
   });
 }
 
+/*
+ * The wider allow-list for the "HTML block" module. A page author with
+ * pages.manage may hand-write markup, so this permits layout/table/media tags a
+ * news post never needs — but the security floor is identical to news: DOMPurify
+ * still strips <script>, every on* handler, <iframe>/<object>/<embed>, <form>,
+ * <style>, and (via FORBID_ATTR) inline `style=` attributes. Videos are NOT done
+ * through raw <iframe> here — they go through the separate, origin-allowlisted
+ * Video-embed module. URLs are limited to http(s), mailto, and root-relative
+ * ("/media/…") paths, so no javascript:/data: URI can ride in on href/src.
+ */
+const PAGE_ALLOWED_TAGS = [
+  ...ALLOWED_TAGS,
+  'h4', 'h5', 'h6',
+  'div', 'span', 'section', 'article', 'header', 'footer', 'figure', 'figcaption',
+  'img',
+  'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
+  'dl', 'dt', 'dd',
+  'sub', 'sup', 'small', 'mark', 'ins', 'del', 'abbr', 'kbd', 'samp', 'var', 'time',
+];
+
+const PAGE_ALLOWED_ATTR = [
+  'href', 'target', 'rel',
+  'src', 'alt', 'title', 'width', 'height', 'loading', 'decoding',
+  'class', 'colspan', 'rowspan', 'span', 'datetime',
+];
+
+export function sanitizePageHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: PAGE_ALLOWED_TAGS,
+    ALLOWED_ATTR: PAGE_ALLOWED_ATTR,
+    // http(s), mailto, and root-relative ("/…", but never protocol-relative "//").
+    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|\/(?!\/))/i,
+    // Inline CSS can exfiltrate (background:url()) and enables clickjacking overlays.
+    FORBID_ATTR: ['style'],
+    FORBID_TAGS: ['style'],
+  });
+}
+
+// One-time hardening applied to every sanitize pass: force safe rel on any link
+// that opens a new tab (reverse-tabnabbing), and make author images lazy/low-risk.
+// Runs in the browser only (DOMPurify needs a DOM); harmless for news markup.
+let hooksInstalled = false;
+if (!hooksInstalled && typeof DOMPurify.addHook === 'function') {
+  hooksInstalled = true;
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    const el = node as unknown as Element;
+    if (el.tagName === 'A' && el.getAttribute('target') === '_blank') {
+      el.setAttribute('rel', 'noopener noreferrer');
+    }
+    if (el.tagName === 'IMG') {
+      el.setAttribute('loading', 'lazy');
+      el.setAttribute('decoding', 'async');
+      el.setAttribute('referrerpolicy', 'no-referrer');
+    }
+  });
+}
+
 /**
  * A plain-text snippet for feed cards when a post has no explicit excerpt.
  * Strips all markup and collapses whitespace, then truncates on a word boundary.

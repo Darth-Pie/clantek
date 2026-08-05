@@ -2969,6 +2969,39 @@ button.mini {
   border-color: var(--color-accent);
 }
 
+/* Roster: header toggle + sort bar */
+.roster-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.roster-sort {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 1rem;
+  flex-wrap: wrap;
+}
+.roster-sort .seg {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.roster-sort .seg.active {
+  color: var(--color-accent-text);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.roster-count {
+  margin-left: auto;
+}
+
 /* Org chart (leadership tree) */
 .org-scroll {
   overflow: auto;

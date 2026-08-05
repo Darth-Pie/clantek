@@ -8,7 +8,7 @@
  */
 
 export const PERMISSIONS = {
-  'roster.view': 'View the full member roster',
+  'roster.view': 'See the member list (roster page + home page)',
   'roster.edit': 'Edit member details and profiles',
   'roster.promote': 'Change a member’s rank',
   'roster.remove': 'Remove or retire a member',

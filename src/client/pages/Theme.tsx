@@ -8,7 +8,7 @@
  * The token set here is exactly what styles.css consumes — keep them in sync.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useTheme, DEFAULT_THEME, type ThemeTokens } from '../lib/theme';
 import { useAction, Alerts } from '../lib/action';
 
@@ -110,6 +110,59 @@ function isHex(v: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(v);
 }
 
+/**
+ * A live example of a single token, shown beside its control. Each reads the CSS
+ * variables straight off :root (which `preview` keeps in sync with the draft), so
+ * every example updates the instant you change any setting.
+ */
+function TokenExample({ tokenKey }: { tokenKey: string }) {
+  const surface: CSSProperties = {
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    border: '1px solid var(--color-border)',
+  };
+  switch (tokenKey) {
+    case '--color-bg':
+      return <div className="tex" style={{ background: 'var(--color-bg)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}>Page background</div>;
+    case '--color-surface':
+      return <div className="tex" style={surface}>Panel surface</div>;
+    case '--color-border':
+      return <div className="tex" style={{ background: 'var(--color-surface)', color: 'var(--color-muted)', border: '2px solid var(--color-border)' }}>Bordered</div>;
+    case '--color-text':
+      return <div className="tex" style={surface}>The quick brown fox</div>;
+    case '--color-muted':
+      return <div className="tex" style={{ ...surface, color: 'var(--color-muted)' }}>Secondary text</div>;
+    case '--color-accent':
+    case '--color-accent-text':
+      return (
+        <div className="tex" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <span className="tex-btn" style={{ background: 'var(--color-accent)', color: 'var(--color-accent-text)' }}>Button</span>
+        </div>
+      );
+    case '--font-display':
+      return <div className="tex" style={{ ...surface, fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 700 }}>Heading Aa</div>;
+    case '--font-body':
+      return <div className="tex" style={{ ...surface, fontFamily: 'var(--font-body)' }}>Body text sample Aa</div>;
+    case '--radius':
+      return (
+        <div className="tex" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <span className="tex-radius" style={{ background: 'var(--color-accent)', borderRadius: 'var(--radius)' }} />
+        </div>
+      );
+    case '--nav-justify':
+      return (
+        <div className="tex tex-navbar">
+          <span className="tex-nav-brand" />
+          <div className="tex-nav-links" style={{ justifyContent: 'var(--nav-justify)' }}>
+            <b /><b /><b />
+          </div>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
 export default function Theme() {
   const { tokens, preview, save } = useTheme();
   // Local working copy. Baseline is the last *saved* theme, held in a ref so
@@ -156,48 +209,37 @@ export default function Theme() {
 
       <Alerts error={error} notice={notice} />
 
-      <div className="theme-presets">
-        <span className="mab-label">Start from</span>
-        {PRESETS.map((p) => (
-          <button
-            key={p.name}
-            className="preset"
-            disabled={busy}
-            // A palette shouldn't reset a layout choice, so keep the current menu alignment.
-            onClick={() => applyTokens({ ...p.tokens, '--nav-justify': draft['--nav-justify'] ?? 'flex-start' })}
-          >
-            <span className="preset-swatch" style={{ background: p.tokens['--color-accent'] }} />
-            {p.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="theme-grid">
-        <div className="theme-controls">
+      <div className="theme-layout">
+        <div className="theme-main">
           <fieldset className="theme-group">
             <legend>Colors</legend>
             {COLOR_TOKENS.map(({ key, label }) => (
               <div key={key} className="theme-row">
-                <label className="theme-row-label">
-                  {label}
-                  <code>{key}</code>
-                </label>
-                <div className="theme-row-controls">
-                  <input
-                    type="color"
-                    value={isHex(draft[key] ?? '') ? draft[key]! : '#000000'}
-                    disabled={busy}
-                    onChange={(e) => update(key, e.target.value)}
-                    aria-label={`${label} color`}
-                  />
-                  <input
-                    type="text"
-                    className="theme-hex"
-                    value={draft[key] ?? ''}
-                    disabled={busy}
-                    spellCheck={false}
-                    onChange={(e) => update(key, e.target.value)}
-                  />
+                <div className="theme-row-main">
+                  <label className="theme-row-label">
+                    {label}
+                    <code>{key}</code>
+                  </label>
+                  <div className="theme-row-controls">
+                    <input
+                      type="color"
+                      value={isHex(draft[key] ?? '') ? draft[key]! : '#000000'}
+                      disabled={busy}
+                      onChange={(e) => update(key, e.target.value)}
+                      aria-label={`${label} color`}
+                    />
+                    <input
+                      type="text"
+                      className="theme-hex"
+                      value={draft[key] ?? ''}
+                      disabled={busy}
+                      spellCheck={false}
+                      onChange={(e) => update(key, e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="theme-row-example">
+                  <TokenExample tokenKey={key} />
                 </div>
               </div>
             ))}
@@ -209,32 +251,37 @@ export default function Theme() {
               const known = FONT_STACKS.some((f) => f.value === draft[key]);
               return (
                 <div key={key} className="theme-row">
-                  <label className="theme-row-label">
-                    {label}
-                    <code>{key}</code>
-                  </label>
-                  <div className="theme-row-controls">
-                    <select
-                      value={known ? draft[key] : '__custom'}
-                      disabled={busy}
-                      onChange={(e) => e.target.value !== '__custom' && update(key, e.target.value)}
-                    >
-                      {FONT_STACKS.map((f) => (
-                        <option key={f.value} value={f.value}>
-                          {f.label}
-                        </option>
-                      ))}
-                      <option value="__custom">Custom…</option>
-                    </select>
-                    <input
-                      type="text"
-                      className="theme-font"
-                      value={draft[key] ?? ''}
-                      disabled={busy}
-                      spellCheck={false}
-                      style={{ fontFamily: draft[key] }}
-                      onChange={(e) => update(key, e.target.value)}
-                    />
+                  <div className="theme-row-main">
+                    <label className="theme-row-label">
+                      {label}
+                      <code>{key}</code>
+                    </label>
+                    <div className="theme-row-controls">
+                      <select
+                        value={known ? draft[key] : '__custom'}
+                        disabled={busy}
+                        onChange={(e) => e.target.value !== '__custom' && update(key, e.target.value)}
+                      >
+                        {FONT_STACKS.map((f) => (
+                          <option key={f.value} value={f.value}>
+                            {f.label}
+                          </option>
+                        ))}
+                        <option value="__custom">Custom…</option>
+                      </select>
+                      <input
+                        type="text"
+                        className="theme-font"
+                        value={draft[key] ?? ''}
+                        disabled={busy}
+                        spellCheck={false}
+                        style={{ fontFamily: draft[key] }}
+                        onChange={(e) => update(key, e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="theme-row-example">
+                    <TokenExample tokenKey={key} />
                   </div>
                 </div>
               );
@@ -244,20 +291,25 @@ export default function Theme() {
           <fieldset className="theme-group">
             <legend>Shape</legend>
             <div className="theme-row">
-              <label className="theme-row-label">
-                Corner radius
-                <code>--radius</code>
-              </label>
-              <div className="theme-row-controls">
-                <input
-                  type="range"
-                  min={0}
-                  max={24}
-                  value={radiusPx}
-                  disabled={busy}
-                  onChange={(e) => update('--radius', `${e.target.value}px`)}
-                />
-                <span className="theme-radius-value">{draft['--radius']}</span>
+              <div className="theme-row-main">
+                <label className="theme-row-label">
+                  Corner radius
+                  <code>--radius</code>
+                </label>
+                <div className="theme-row-controls">
+                  <input
+                    type="range"
+                    min={0}
+                    max={24}
+                    value={radiusPx}
+                    disabled={busy}
+                    onChange={(e) => update('--radius', `${e.target.value}px`)}
+                  />
+                  <span className="theme-radius-value">{draft['--radius']}</span>
+                </div>
+              </div>
+              <div className="theme-row-example">
+                <TokenExample tokenKey="--radius" />
               </div>
             </div>
           </fieldset>
@@ -265,22 +317,27 @@ export default function Theme() {
           <fieldset className="theme-group">
             <legend>Header menu</legend>
             <div className="theme-row">
-              <label className="theme-row-label">
-                Menu alignment
-                <code>--nav-justify</code>
-              </label>
-              <div className="theme-row-controls seg-control">
-                {NAV_ALIGN.map((o) => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    className={(draft['--nav-justify'] ?? 'flex-start') === o.value ? 'seg active' : 'seg'}
-                    disabled={busy}
-                    onClick={() => update('--nav-justify', o.value)}
-                  >
-                    {o.label}
-                  </button>
-                ))}
+              <div className="theme-row-main">
+                <label className="theme-row-label">
+                  Menu alignment
+                  <code>--nav-justify</code>
+                </label>
+                <div className="theme-row-controls seg-control">
+                  {NAV_ALIGN.map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      className={(draft['--nav-justify'] ?? 'flex-start') === o.value ? 'seg active' : 'seg'}
+                      disabled={busy}
+                      onClick={() => update('--nav-justify', o.value)}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="theme-row-example">
+                <TokenExample tokenKey="--nav-justify" />
               </div>
             </div>
             <p className="muted small">
@@ -288,42 +345,43 @@ export default function Theme() {
               widest (full-size) footprint so they never overlap.
             </p>
           </fieldset>
+
+          <div className="theme-actions">
+            <button className="primary" disabled={busy || !dirty} onClick={() => void onSave()}>
+              Save theme
+            </button>
+            <button disabled={busy || !dirty} onClick={() => applyTokens(baselineRef.current)}>
+              Discard changes
+            </button>
+            <button
+              className="danger"
+              disabled={busy}
+              onClick={() => applyTokens(DEFAULT_THEME)}
+              title="Load the built-in defaults (then Save to keep them)"
+            >
+              Load defaults
+            </button>
+          </div>
         </div>
 
-        {/* Live sample. It uses the same tokens, so it reflects edits instantly. */}
-        <aside className="theme-preview" aria-label="Live preview">
-          <h3>Preview</h3>
-          <div className="tp-card">
-            <div className="tp-title">Roster</div>
-            <p className="tp-body">Body text sits on the surface color.</p>
-            <p className="tp-muted">Muted secondary text.</p>
-            <div className="tp-actions">
-              <button className="primary" type="button">
-                Primary
+        {/* Presets as a vertical menu on the right. */}
+        <aside className="theme-rail" aria-label="Start from a preset">
+          <div className="theme-rail-title">Start from</div>
+          <div className="theme-presets-vertical">
+            {PRESETS.map((p) => (
+              <button
+                key={p.name}
+                className="preset"
+                disabled={busy}
+                // A palette shouldn't reset a layout choice, so keep the current menu alignment.
+                onClick={() => applyTokens({ ...p.tokens, '--nav-justify': draft['--nav-justify'] ?? 'flex-start' })}
+              >
+                <span className="preset-swatch" style={{ background: p.tokens['--color-accent'] }} />
+                {p.name}
               </button>
-              <button type="button">Default</button>
-              <span className="rank-chip">General</span>
-            </div>
-            <input className="tp-input" defaultValue="An input field" readOnly />
+            ))}
           </div>
         </aside>
-      </div>
-
-      <div className="theme-actions">
-        <button className="primary" disabled={busy || !dirty} onClick={() => void onSave()}>
-          Save theme
-        </button>
-        <button disabled={busy || !dirty} onClick={() => applyTokens(baselineRef.current)}>
-          Discard changes
-        </button>
-        <button
-          className="danger"
-          disabled={busy}
-          onClick={() => applyTokens(DEFAULT_THEME)}
-          title="Load the built-in defaults (then Save to keep them)"
-        >
-          Load defaults
-        </button>
       </div>
     </section>
   );

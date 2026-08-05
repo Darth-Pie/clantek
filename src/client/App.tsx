@@ -3,7 +3,7 @@ import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { useSession } from './lib/session';
 import { useBranding } from './lib/branding';
 import type { Permission } from '../shared/permissions';
-import { ADMIN_SECTIONS } from './lib/adminSections';
+import { canAccessAdmin } from './lib/adminSections';
 import AccountMenu from './components/AccountMenu';
 import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
@@ -70,7 +70,7 @@ export default function App() {
   // Surface an Admin entry in the primary nav (not just the account menu) for
   // anyone who can reach an admin tool, so the controls are prominent for
   // authorized users rather than buried.
-  const showAdmin = !!viewer && ADMIN_SECTIONS.some((s) => can(s.permission));
+  const showAdmin = !!viewer && canAccessAdmin(can);
 
   const hasLogo = !!branding.logoUrl;
   const collapsed = 38; // logo height (px) once docked inside the bar
@@ -122,7 +122,7 @@ export default function App() {
               Home
             </NavLink>
             <NavLink to="/news">News</NavLink>
-            <NavLink to="/roster">Roster</NavLink>
+            {can('roster.view') && <NavLink to="/roster">Roster</NavLink>}
             {can('events.view') && <NavLink to="/events">Events</NavLink>}
             {navPages.map((p) => (
               <NavLink key={p.slug} to={`/p/${p.slug}`}>
@@ -179,7 +179,7 @@ export default function App() {
           <Route
             path="/roster"
             element={
-              <Protected>
+              <Protected permission="roster.view">
                 <Roster />
               </Protected>
             }
@@ -216,7 +216,9 @@ export default function App() {
               </Protected>
             }
           />
-          {/* One shell for every admin tool; the panel itself gates each section. */}
+          {/* One shell for every admin tool; the panel gates each item/tab.
+              /admin/:item is a sidebar entry; /admin/:item/:tab picks a tool
+              within a multi-tool item (e.g. Ranks & Roles). */}
           <Route
             path="/admin"
             element={
@@ -226,7 +228,15 @@ export default function App() {
             }
           />
           <Route
-            path="/admin/:section"
+            path="/admin/:item"
+            element={
+              <Protected>
+                <Admin />
+              </Protected>
+            }
+          />
+          <Route
+            path="/admin/:item/:tab"
             element={
               <Protected>
                 <Admin />

@@ -265,14 +265,20 @@ function RosterModule({ config }: { config: Config }) {
   const title = str(config, 'title', 'Roster');
   const limit = num(config, 'limit', 12);
   const [state, setState] = useState<{ members: RosterMember[]; total: number } | null>(null);
+  const [denied, setDenied] = useState(false);
 
   useEffect(() => {
     api
       .get<{ members: RosterMember[]; total: number }>(`/members?limit=${limit}&offset=0`)
       .then(setState)
-      .catch(() => setState({ members: [], total: 0 }));
+      .catch(() => {
+        // Most commonly a 403 for a viewer without roster.view — hide quietly.
+        setDenied(true);
+        setState({ members: [], total: 0 });
+      });
   }, [limit]);
 
+  if (denied) return null;
   if (state === null) return <ModuleCard title={title}><p className="muted">Loading…</p></ModuleCard>;
 
   return (

@@ -37,7 +37,7 @@ async function jsonBody<T>(c: { req: { json: () => Promise<unknown> } }): Promis
   return (await c.req.json().catch(() => ({}))) as Partial<T>;
 }
 
-members.get('/', requireAuth, async (c) => {
+members.get('/', requirePermission('roster.view'), async (c) => {
   // Paginated so a page load reads one page, not the whole roster — the read
   // cost stays flat as the clan grows. The client appends pages ("load more").
   const limit = Math.min(Math.max(Number(c.req.query('limit')) || 50, 1), 100);
@@ -73,6 +73,12 @@ members.get('/', requireAuth, async (c) => {
 
 members.get('/:id', requireAuth, async (c) => {
   const id = Number(c.req.param('id'));
+  const viewer = c.get('viewer')!;
+  // The roster can be restricted to certain roles (roster.view). A member can
+  // always see their own profile; viewing anyone else needs roster.view.
+  if (id !== viewer.id && !can(viewer, 'roster.view')) {
+    return c.json({ error: 'Forbidden', missing: 'roster.view' }, 403);
+  }
   const database = db(c.env);
 
   const user = await database.query.users.findFirst({ where: eq(s.users.id, id) });

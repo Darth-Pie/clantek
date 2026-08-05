@@ -13,6 +13,7 @@ import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
+import { useRecordRecent } from '../lib/recent';
 
 interface Role {
   id: number;
@@ -138,6 +139,8 @@ export default function MemberDetail() {
       .catch(() => setError('Failed to load member.'))
       .finally(() => setLoading(false));
   }, [load, can, setError]);
+
+  useRecordRecent(member ? { group: 'people', label: memberName(member), to: `/members/${member.id}` } : null);
 
   if (loading) return <div className="loading">Loading member…</div>;
   if (!member) return <div className="empty">Member not found.</div>;

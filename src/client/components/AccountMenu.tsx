@@ -71,9 +71,9 @@ export default function AccountMenu() {
           >
             Edit Profile
           </Link>
-          <button className="menu-item" role="menuitem" disabled title="Coming soon">
+          <Link className="menu-item" role="menuitem" to="/account" onClick={() => setOpen(false)}>
             Settings
-          </button>
+          </Link>
           {showAdmin && (
             <Link className="menu-item" role="menuitem" to="/admin" onClick={() => setOpen(false)}>
               Admin

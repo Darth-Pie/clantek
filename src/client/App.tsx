@@ -7,6 +7,7 @@ import { ADMIN_SECTIONS } from './lib/adminSections';
 import AccountMenu from './components/AccountMenu';
 import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
+import AccountSettings from './pages/AccountSettings';
 import Roster from './pages/Roster';
 import Home from './pages/Home';
 import CustomPage from './pages/CustomPage';
@@ -204,6 +205,14 @@ export default function App() {
             element={
               <Protected>
                 <MemberDetail />
+              </Protected>
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              <Protected>
+                <AccountSettings />
               </Protected>
             }
           />

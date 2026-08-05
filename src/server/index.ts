@@ -51,6 +51,7 @@ import warRecordsRoutes from './routes/warrecords';
 import eventsRoutes from './routes/events';
 import auditRoutes from './routes/audit';
 import pagesRoutes from './routes/pages';
+import tokensRoutes from './routes/tokens';
 
 const app = new Hono<AppContext>();
 
@@ -293,7 +294,16 @@ app.post('/api/auth/logout', async (c) => {
 
 /** What the React app calls on boot to learn who it is talking to. */
 app.get('/api/me', (c) => {
-  return c.json({ viewer: c.get('viewer'), siteName: c.env.SITE_NAME });
+  return c.json({ viewer: c.get('viewer'), siteName: c.env.SITE_NAME, authKind: c.get('authKind') });
+});
+
+/**
+ * API contract version, for the mobile/native client to check compatibility.
+ * Public and unauthenticated. `apiVersion` is the integer contract version;
+ * bump it only on a breaking change to the documented JSON shapes.
+ */
+app.get('/api/version', (c) => {
+  return c.json({ apiVersion: 1, service: 'clantek', siteName: c.env.SITE_NAME });
 });
 
 /* ------------------------------------------------------------------ *
@@ -313,6 +323,7 @@ app.route('/api/warrecords', warRecordsRoutes);
 app.route('/api/events', eventsRoutes);
 app.route('/api/audit', auditRoutes);
 app.route('/api/pages', pagesRoutes);
+app.route('/api/auth/tokens', tokensRoutes);
 
 app.get('/api/health', (c) => c.json({ ok: true, service: 'clantek' }));
 

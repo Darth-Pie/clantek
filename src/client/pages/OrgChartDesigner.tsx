@@ -198,11 +198,13 @@ export default function OrgChartDesigner() {
             setConnectFrom(null);
           }}
         >
-          {connectMode ? 'Connecting…' : 'Connect'}
+          {connectMode ? 'Done connecting' : 'Connect reports'}
         </button>
         {connectMode && (
           <span className="muted small">
-            {connectFrom == null ? 'Click a manager, then their report.' : 'Now click the report.'}
+            {connectFrom == null
+              ? 'Click a manager, then their report. Keep going to add more — click “Done connecting” when finished.'
+              : 'Now click the report. (Click the same box again to cancel.)'}
           </span>
         )}
       </div>

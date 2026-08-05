@@ -8,6 +8,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { ApiError } from '../lib/api';
 import { sanitizeHtml } from '../lib/richtext';
+import { useRecordRecent } from '../lib/recent';
 
 interface Post {
   id: number;
@@ -35,6 +36,8 @@ export default function NewsPost() {
       .catch((e) => setError(e instanceof ApiError && e.status === 404 ? 'Post not found.' : 'Failed to load post.'))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  useRecordRecent(post ? { group: 'content', label: post.title, to: `/news/${post.slug}` } : null);
 
   if (loading) return <div className="loading">Loading…</div>;
   if (error || !post) return <div className="empty">{error ?? 'Post not found.'}</div>;

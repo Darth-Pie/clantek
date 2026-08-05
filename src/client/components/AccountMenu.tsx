@@ -14,7 +14,7 @@ import { ChevronDown, ChevronUp } from 'lucide';
 import { useSession } from '../lib/session';
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
-import { ADMIN_SECTIONS } from '../lib/adminSections';
+import { canAccessAdmin } from '../lib/adminSections';
 
 export default function AccountMenu() {
   const { viewer, can, logout } = useSession();
@@ -40,7 +40,7 @@ export default function AccountMenu() {
 
   if (!viewer) return null;
 
-  const showAdmin = ADMIN_SECTIONS.some((s) => can(s.permission));
+  const showAdmin = canAccessAdmin(can);
 
   return (
     <div className="account-menu" ref={ref}>

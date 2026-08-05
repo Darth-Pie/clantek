@@ -1335,7 +1335,7 @@ button.active {
 
 .admin-shell {
   display: grid;
-  grid-template-columns: minmax(150px, 200px) 1fr;
+  grid-template-columns: minmax(180px, 220px) 1fr;
   gap: 1.25rem;
   align-items: start;
 }
@@ -1358,12 +1358,72 @@ button.active {
   top: 1rem;
 }
 
+.admin-nav-group + .admin-nav-group {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
 .admin-nav-title {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-muted);
   padding: 0.35rem 0.6rem;
+}
+
+/* Recently-viewed records under a group. */
+.admin-recent {
+  margin: 0.2rem 0 0.1rem;
+  padding: 0.25rem 0.6rem 0.1rem;
+}
+.admin-recent-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  opacity: 0.8;
+  margin-bottom: 0.15rem;
+}
+.admin-recent-link {
+  display: block;
+  padding: 0.2rem 0.3rem;
+  border-radius: var(--radius);
+  color: var(--color-muted);
+  text-decoration: none;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.admin-recent-link:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-border) 40%, transparent);
+}
+
+/* Tabs inside a multi-tool admin item (e.g. Ranks & Roles). */
+.admin-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+.admin-tab {
+  padding: 0.5rem 0.9rem;
+  color: var(--color-muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 0.95rem;
+}
+.admin-tab:hover {
+  color: var(--color-text);
+}
+.admin-tab.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: 600;
 }
 
 .admin-nav-link {
@@ -1518,11 +1578,119 @@ button.active {
 }
 
 .theme-row {
+  display: grid;
+  grid-template-columns: 1fr minmax(130px, 210px);
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+/* Control side of a row: label on the left, its input(s) on the right. */
+.theme-row-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.4rem 0;
+  min-width: 0;
+}
+
+/* Live example of just this setting, shown to its right. */
+.theme-row-example {
+  min-width: 0;
+}
+.theme-row-example .tex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.theme-row-example .tex-btn {
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.theme-row-example .tex-radius {
+  display: block;
+  width: 40px;
+  height: 24px;
+}
+/* Mini header mock for the menu-alignment example. */
+.theme-row-example .tex-navbar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+.theme-row-example .tex-nav-brand {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--color-accent);
+  flex: 0 0 auto;
+}
+.theme-row-example .tex-nav-links {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+.theme-row-example .tex-nav-links b {
+  width: 14px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--color-muted);
+}
+
+/* Two-column page: settings on the left, preset rail on the right. */
+.theme-layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(150px, 190px);
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .theme-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.theme-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.theme-rail {
+  position: sticky;
+  top: 1rem;
+}
+.theme-rail-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin-bottom: 0.5rem;
+}
+.theme-presets-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.theme-presets-vertical .preset {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
 }
 
 .theme-row + .theme-row {

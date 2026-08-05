@@ -10,7 +10,6 @@ import MemberDetail from './pages/MemberDetail';
 import AccountSettings from './pages/AccountSettings';
 import Roster from './pages/Roster';
 import Home from './pages/Home';
-import Leadership from './pages/Leadership';
 import CustomPage from './pages/CustomPage';
 import News from './pages/News';
 import NewsPost from './pages/NewsPost';
@@ -123,8 +122,7 @@ export default function App() {
               Home
             </NavLink>
             <NavLink to="/news">News</NavLink>
-            <NavLink to="/leadership">Leadership</NavLink>
-            {can('roster.view') && <NavLink to="/roster">Roster</NavLink>}
+            <NavLink to="/roster">Roster</NavLink>
             {can('events.view') && <NavLink to="/events">Events</NavLink>}
             {navPages.map((p) => (
               <NavLink key={p.slug} to={`/p/${p.slug}`}>
@@ -178,18 +176,12 @@ export default function App() {
               </Protected>
             }
           />
-          <Route
-            path="/leadership"
-            element={
-              <Protected>
-                <Leadership />
-              </Protected>
-            }
-          />
+          {/* Leadership folded into the roster; keep the old path working. */}
+          <Route path="/leadership" element={<Navigate to="/roster" replace />} />
           <Route
             path="/roster"
             element={
-              <Protected permission="roster.view">
+              <Protected>
                 <Roster />
               </Protected>
             }

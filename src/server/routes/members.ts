@@ -44,6 +44,17 @@ members.get('/', requirePermission('roster.view'), async (c) => {
   const offset = Math.max(Number(c.req.query('offset')) || 0, 0);
   const database = db(c.env);
 
+  // Sortable by name or rank. Name sorts on the resolved display name
+  // (display → global → username), matching what the UI shows.
+  const sort = c.req.query('sort') === 'name' ? 'name' : 'rank';
+  const dir = c.req.query('dir') === 'asc' ? 'asc' : c.req.query('dir') === 'desc' ? 'desc' : sort === 'rank' ? 'desc' : 'asc';
+  const nameExpr = sql`coalesce(${s.users.displayName}, ${s.users.globalName}, ${s.users.username})`;
+  const nameOrder = dir === 'asc' ? asc(nameExpr) : desc(nameExpr);
+  const orderBy =
+    sort === 'name'
+      ? [nameOrder]
+      : [dir === 'asc' ? asc(s.ranks.sortOrder) : desc(s.ranks.sortOrder), asc(nameExpr)];
+
   const rows = await database
     .select({
       id: s.users.id,
@@ -61,7 +72,7 @@ members.get('/', requirePermission('roster.view'), async (c) => {
     })
     .from(s.users)
     .leftJoin(s.ranks, eq(s.users.rankId, s.ranks.id))
-    .orderBy(desc(s.ranks.sortOrder), asc(s.users.username))
+    .orderBy(...orderBy)
     .limit(limit)
     .offset(offset);
 

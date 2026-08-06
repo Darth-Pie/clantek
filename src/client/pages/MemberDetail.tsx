@@ -14,6 +14,9 @@ import { useSession } from '../lib/session';
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
 import { useRecordRecent } from '../lib/recent';
+import { useModules } from '../lib/modules';
+import HangarView from '../components/HangarView';
+import HangarImport from '../components/HangarImport';
 
 interface Role {
   id: number;
@@ -84,6 +87,9 @@ export default function MemberDetail() {
   const memberId = Number(id);
   const navigate = useNavigate();
   const { viewer, can } = useSession();
+  const modules = useModules();
+  // Bumped after a self-import so the hangar view below re-fetches.
+  const [hangarKey, setHangarKey] = useState(0);
 
   const [member, setMember] = useState<Member | null>(null);
   const [ranks, setRanks] = useState<Rank[]>([]);
@@ -580,6 +586,16 @@ export default function MemberDetail() {
                 )
               ))}
           </section>
+
+          {modules.starcitizen && (isSelf || can('hangar.view')) && (
+            <section className="block hangar-section">
+              <h3>Star Citizen Hangar</h3>
+              {isSelf && (
+                <HangarImport userId={member.id} onImported={() => setHangarKey((k) => k + 1)} />
+              )}
+              <HangarView userId={member.id} refreshKey={hangarKey} />
+            </section>
+          )}
       </div>
     </section>
   );

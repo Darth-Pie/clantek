@@ -40,6 +40,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     label: 'Content',
     items: [
       { key: 'pages', label: 'Pages', tabs: [{ key: 'pages', label: 'Pages', permission: 'pages.manage' }] },
+      { key: 'navigation', label: 'Navigation', tabs: [{ key: 'navigation', label: 'Navigation', permission: 'pages.manage' }] },
       { key: 'news', label: 'News', tabs: [{ key: 'news', label: 'News', permission: 'news.create' }] },
     ],
   },
@@ -73,12 +74,15 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     items: [
       { key: 'identity', label: 'Identity & Discord', tabs: [{ key: 'identity', label: 'Identity & Discord', permission: 'settings.manage' }] },
       { key: 'bot', label: 'Bot Settings', tabs: [{ key: 'announcements', label: 'Bot Settings', permission: 'settings.manage' }] },
+      { key: 'analytics', label: 'Analytics', tabs: [{ key: 'analytics', label: 'Analytics', permission: 'settings.manage' }] },
+      { key: 'modules', label: 'Modules', tabs: [{ key: 'modules', label: 'Modules', permission: 'settings.manage' }] },
       {
         key: 'appearance',
         label: 'Theme & Branding',
         tabs: [
           { key: 'theme', label: 'Theme', permission: 'theme.manage' },
           { key: 'branding', label: 'Branding', permission: 'settings.manage' },
+          { key: 'seo', label: 'SEO & Sharing', permission: 'settings.manage' },
         ],
       },
       { key: 'logs', label: 'Logs', tabs: [{ key: 'audit', label: 'Logs', permission: 'audit.view' }] },

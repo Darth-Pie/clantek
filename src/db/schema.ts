@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, index, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import type { HangarItem } from '../shared/hangar';
 
 const now = sql`(unixepoch())`;
 
@@ -70,6 +71,24 @@ export const profiles = sqliteTable('profiles', {
   // { "steam": "...", "xbox": "...", "psn": "..." }
   gamertags: text('gamertags', { mode: 'json' }).$type<Record<string, string>>(),
   updatedAt: integer('updated_at').notNull().default(now),
+});
+
+/**
+ * A member's imported Star Citizen hangar (the SC module) — one JSON blob per
+ * member, the normalised item list from the scraper. Replaced wholesale on each
+ * re-import; cascades away with the member. Only used when the Star Citizen
+ * module is enabled in settings.
+ */
+export const scHangars = sqliteTable('sc_hangars', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  items: text('items', { mode: 'json' }).$type<HangarItem[]>().notNull(),
+  itemCount: integer('item_count').notNull().default(0),
+  // Whether the owner has chosen to share this hangar with members who hold the
+  // hangar.view permission. Off by default — sharing is opt-in per member.
+  isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(false),
+  importedAt: integer('imported_at').notNull().default(now),
 });
 
 /* ------------------------------------------------------------------ *

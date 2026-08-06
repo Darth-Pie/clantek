@@ -6,10 +6,30 @@
  * Everything is gated by permission via the tree in lib/adminSections.ts, so the
  * sidebar only shows what the viewer can touch. Under each group we also surface
  * a few recently-viewed records for quick return.
+ *
+ * To keep it from feeling like a separate app, the panel wears the same top bar
+ * as the rest of the site, adds a breadcrumb so you always know where you are,
+ * and the section rail is sticky + icon-led and can be collapsed (a drawer on
+ * mobile, so the tool shows first instead of being pushed below the whole menu).
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Navigate, Link, useParams } from 'react-router-dom';
+import { MorphIcon } from 'morphicons/react';
+import {
+  PanelLeft,
+  FileText,
+  Navigation,
+  Newspaper,
+  Users,
+  Award,
+  Network,
+  Fingerprint,
+  Bot,
+  Gauge,
+  Palette,
+  ScrollText,
+} from 'lucide';
 import { useSession } from '../lib/session';
 import { visibleAdminGroups } from '../lib/adminSections';
 import { getRecent } from '../lib/recent';
@@ -22,15 +42,35 @@ import Games from './Games';
 import WarRecords from './WarRecords';
 import Announcements from './Announcements';
 import IdentityAdmin from './IdentityAdmin';
+import AnalyticsAdmin from './AnalyticsAdmin';
+import ModulesAdmin from './ModulesAdmin';
 import Theme from './Theme';
 import BrandingAdmin from './BrandingAdmin';
+import SeoAdmin from './SeoAdmin';
 import PagesAdmin from './PagesAdmin';
+import NavAdmin from './NavAdmin';
 import OrgChartDesigner from './OrgChartDesigner';
 import AuditLog from './AuditLog';
+
+/** Sidebar item key → an icon, so the rail reads like a real nav rail. */
+const ITEM_ICONS: Record<string, typeof FileText> = {
+  pages: FileText,
+  navigation: Navigation,
+  news: Newspaper,
+  'ranks-roles': Users,
+  'medals-records': Award,
+  'org-chart': Network,
+  identity: Fingerprint,
+  bot: Bot,
+  analytics: Gauge,
+  appearance: Palette,
+  logs: ScrollText,
+};
 
 /** Tab key → its component. Every tab key in adminSections.ts needs an entry. */
 const TAB_RENDERERS: Record<string, () => ReactNode> = {
   pages: () => <PagesAdmin />,
+  navigation: () => <NavAdmin />,
   news: () => <NewsAdmin />,
   ranks: () => <Ranks />,
   roles: () => <Roles />,
@@ -40,14 +80,38 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   orgchart: () => <OrgChartDesigner />,
   announcements: () => <Announcements />,
   identity: () => <IdentityAdmin />,
+  analytics: () => <AnalyticsAdmin />,
+  modules: () => <ModulesAdmin />,
   theme: () => <Theme />,
   branding: () => <BrandingAdmin />,
+  seo: () => <SeoAdmin />,
   audit: () => <AuditLog />,
 };
 
 export default function Admin() {
   const { item: itemParam, tab: tabParam } = useParams();
   const { can } = useSession();
+
+  // Section rail open/closed. Persisted so a chosen state sticks; defaults open
+  // on desktop and closed on mobile (there the rail is a drawer over the tool).
+  const [navOpen, setNavOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const stored = localStorage.getItem('ct-admin-nav');
+    if (stored === '0') return false;
+    if (stored === '1') return true;
+    return window.innerWidth > 720;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('ct-admin-nav', navOpen ? '1' : '0');
+    } catch {
+      /* private mode — the toggle still works for the session */
+    }
+  }, [navOpen]);
+  // On a phone the rail overlays the tool, so pick-a-section should close it.
+  const closeOnMobile = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 720) setNavOpen(false);
+  };
 
   // Re-read recently-viewed when it changes (a tool recorded one, another tab wrote it).
   const [, setTick] = useState(0);
@@ -83,8 +147,50 @@ export default function Admin() {
   return (
     <>
       <UsageBar />
-      <div className="admin-shell">
-        <nav className="admin-nav" aria-label="Admin sections">
+
+      {/* Header: the section toggle + a breadcrumb, so entering admin is an
+          oriented landing rather than an abrupt layout swap. */}
+      <div className="admin-header">
+        <button
+          type="button"
+          className="admin-nav-toggle"
+          aria-expanded={navOpen}
+          aria-controls="admin-sections"
+          onClick={() => setNavOpen((o) => !o)}
+        >
+          <MorphIcon icon={PanelLeft} size={16} aria-hidden />
+          Sections
+        </button>
+        <nav className="admin-crumbs" aria-label="Breadcrumb">
+          <Link to="/admin" className="admin-crumb">
+            Admin
+          </Link>
+          {activeGroup && (
+            <>
+              <span className="admin-crumb-sep" aria-hidden>
+                ›
+              </span>
+              <span className="admin-crumb">{activeGroup.label}</span>
+            </>
+          )}
+          <span className="admin-crumb-sep" aria-hidden>
+            ›
+          </span>
+          <span className="admin-crumb current">
+            <MorphIcon
+              className="admin-crumb-icon"
+              icon={ITEM_ICONS[activeItem.key] ?? FileText}
+              size={15}
+              spring="snappy"
+              aria-hidden
+            />
+            {activeItem.label}
+          </span>
+        </nav>
+      </div>
+
+      <div className={navOpen ? 'admin-shell nav-open' : 'admin-shell'}>
+        <nav id="admin-sections" className="admin-nav" aria-label="Admin sections">
           {groups.map((g) => (
             <div className="admin-nav-group" key={g.key}>
               <div className="admin-nav-title">{g.label}</div>
@@ -92,8 +198,10 @@ export default function Admin() {
                 <NavLink
                   key={i.key}
                   to={`/admin/${i.key}`}
+                  onClick={closeOnMobile}
                   className={i.key === activeItem.key ? 'admin-nav-link active' : 'admin-nav-link'}
                 >
+                  <MorphIcon className="admin-nav-icon" icon={ITEM_ICONS[i.key] ?? FileText} size={16} aria-hidden />
                   {i.label}
                 </NavLink>
               ))}

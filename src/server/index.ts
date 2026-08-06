@@ -51,10 +51,30 @@ import warRecordsRoutes from './routes/warrecords';
 import eventsRoutes from './routes/events';
 import auditRoutes from './routes/audit';
 import pagesRoutes from './routes/pages';
+import navRoutes from './routes/nav';
+import hangarRoutes from './routes/hangar';
+import { loadSeo, renderHead } from './seo';
 import tokensRoutes from './routes/tokens';
 import orgChartRoutes from './routes/orgchart';
 
 const app = new Hono<AppContext>();
+
+/* ------------------------------------------------------------------ *
+ * Canonical host — redirect `www.` to the bare apex, preserving path and
+ * query, so a link to www.<domain> (or a browser that auto-prepends www)
+ * lands on the one host where cookies and OAuth live instead of dead-ending.
+ * Registered first so it runs ahead of every route and auth check. Host-based
+ * (not domain-hardcoded) so it works for any install's own domain.
+ * ------------------------------------------------------------------ */
+
+app.use('*', async (c, next) => {
+  const url = new URL(c.req.url);
+  if (url.hostname.startsWith('www.')) {
+    url.hostname = url.hostname.slice(4);
+    return c.redirect(url.toString(), 301);
+  }
+  return next();
+});
 
 /* ------------------------------------------------------------------ *
  * Discord interactions — must be registered BEFORE withViewer, because
@@ -321,6 +341,8 @@ app.route('/api/warrecords', warRecordsRoutes);
 app.route('/api/events', eventsRoutes);
 app.route('/api/audit', auditRoutes);
 app.route('/api/pages', pagesRoutes);
+app.route('/api/nav', navRoutes);
+app.route('/api/hangar', hangarRoutes);
 app.route('/api/orgchart', orgChartRoutes);
 app.route('/api/auth/tokens', tokensRoutes);
 
@@ -352,7 +374,69 @@ app.get('/media/*', async (c) => {
   return res ?? c.json({ error: 'Not found' }, 404);
 });
 
-app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
+// Everything else is a static asset or an SPA navigation, served by ASSETS.
+// For HTML (the SPA shell) we rewrite <head> from the site's SEO settings so the
+// title and Open Graph tags are correct for the browser tab AND for crawlers /
+// social scrapers (Discord, Google) that never run the React app. Non-HTML
+// assets pass straight through untouched.
+app.all('*', async (c) => {
+  const res = await c.env.ASSETS.fetch(c.req.raw);
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.includes('text/html')) return res;
+
+  let head;
+  try {
+    head = renderHead(await loadSeo(c.env));
+  } catch {
+    return res; // never let a settings hiccup take the whole site down
+  }
+
+  const rewritten = new HTMLRewriter()
+    .on('title', {
+      element(el) {
+        el.setInnerContent(head.title, { html: false });
+      },
+    })
+    .on('meta[name="theme-color"]', {
+      element(el) {
+        if (head.themeColor) el.setAttribute('content', head.themeColor);
+      },
+    })
+    .on('meta[name="apple-mobile-web-app-title"]', {
+      element(el) {
+        el.setAttribute('content', head.title);
+      },
+    })
+    // Swap the default /icon.svg for the operator's uploaded favicon. We rewrite
+    // the existing tags (rather than appending) so no competing icon lingers;
+    // drop the stale `type` so the browser sniffs the uploaded format.
+    .on('link[rel="icon"]', {
+      element(el) {
+        if (head.favicon) {
+          el.setAttribute('href', head.favicon);
+          el.removeAttribute('type');
+        }
+      },
+    })
+    .on('link[rel="apple-touch-icon"]', {
+      element(el) {
+        if (head.favicon) el.setAttribute('href', head.favicon);
+      },
+    })
+    .on('head', {
+      element(el) {
+        el.append(head.tags, { html: true });
+      },
+    })
+    .transform(res);
+
+  // Never edge-cache the shell: it's tiny, references hashed (cached) assets, and
+  // caching it would serve a stale injected <head> (old title/OG). no-store keeps
+  // the injected tags always fresh; a settings change shows on the next load.
+  const out = new Response(rewritten.body, rewritten);
+  out.headers.set('Cache-Control', 'no-store, must-revalidate');
+  return out;
+});
 
 /* ------------------------------------------------------------------ *
  * Scheduled work — two cadences, set in wrangler.jsonc (triggers.crons):

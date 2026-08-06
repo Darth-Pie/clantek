@@ -133,12 +133,6 @@ export default function PagesAdmin() {
     await refreshPages();
   }
 
-  async function toggleNav(next: boolean) {
-    if (!current || current.isHome) return;
-    await api.patch(`/pages/${slug}`, { showInNav: next }).catch(() => {});
-    await refreshPages();
-  }
-
   async function deletePage() {
     if (!current || current.isHome) return;
     if (!window.confirm(`Delete the page “${current.title ?? slug}”? This can’t be undone.`)) return;
@@ -320,7 +314,6 @@ export default function PagesAdmin() {
                 <span className="pages-list-name">{p.isHome ? 'Home page' : p.title ?? p.slug}</span>
                 <span className="pages-list-meta muted small">
                   {p.isHome ? '/' : `/p/${p.slug}`}
-                  {!p.isHome && p.showInNav ? ' · in menu' : ''}
                 </span>
               </button>
             </li>
@@ -370,14 +363,9 @@ export default function PagesAdmin() {
           </button>
         ) : (
           <>
-            <label className="inline-field">
-              <input
-                type="checkbox"
-                checked={!!current?.showInNav}
-                onChange={(e) => void toggleNav(e.target.checked)}
-              />
-              Show in top menu
-            </label>
+            <span className="muted small">
+              Add this page to the menu under <strong>Content → Navigation</strong>.
+            </span>
             <button type="button" className="ghost" onClick={renamePage} disabled={saving}>
               Rename
             </button>
@@ -571,24 +559,40 @@ function ModuleEditor(props: {
   const { rowId, colId, module: m, index, total } = props;
   const spec = moduleSpec(m.type);
   const cfg = m.config;
+  // Only make the card draggable while the ⋮⋮ handle is held. If the whole card
+  // were always `draggable`, a click-drag inside any text field or the rich-text
+  // editor would start an element drag instead of selecting text — the reported
+  // "can't select text after trying to move one" bug.
+  const [grabbing, setGrabbing] = useState(false);
 
   return (
     <div
       className="module-editor"
-      draggable
+      draggable={grabbing}
       onDragStart={(e) => {
         props.onDragStartModule({ rowId, colId, moduleId: m.id });
         e.dataTransfer.effectAllowed = 'move';
       }}
+      onDragEnd={() => setGrabbing(false)}
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         e.preventDefault();
         e.stopPropagation();
+        setGrabbing(false);
         props.onDropModule(rowId, colId, m.id);
       }}
     >
       <div className="module-editor-bar">
-        <span className="module-editor-drag" title="Drag to move">⋮⋮</span>
+        <span
+          className="module-editor-drag"
+          title="Drag to move"
+          // Arm dragging only for a gesture that begins on the handle; disarm if
+          // it was just a click (mouseup with no drag) so text stays selectable.
+          onMouseDown={() => setGrabbing(true)}
+          onMouseUp={() => setGrabbing(false)}
+        >
+          ⋮⋮
+        </span>
         <span className="module-editor-type">{spec?.label ?? m.type}</span>
         <div className="module-editor-tools">
           <button type="button" className="mini" title="Move up" disabled={index === 0} onClick={() => props.onMoveModule(rowId, colId, m.id, -1)}>↑</button>
@@ -661,6 +665,10 @@ function ModuleEditor(props: {
               use a <strong>Video embed</strong> module for videos.
             </p>
           </>
+        )}
+
+        {m.type === 'hero' && (
+          <HeroConfig config={cfg} onPatch={(patch) => props.onPatchConfig(rowId, colId, m.id, patch)} />
         )}
 
         {m.type === 'embed' && (
@@ -852,6 +860,139 @@ function ImageConfig({
         placeholder="Caption (optional)"
         onChange={(e) => onPatch({ caption: e.target.value })}
       />
+    </div>
+  );
+}
+
+interface HeroCardEdit {
+  icon: string;
+  title: string;
+  tag: string;
+  body: string;
+}
+
+/** Hero banner config: headline + CTAs + editable feature chips and value cards. */
+function HeroConfig({
+  config,
+  onPatch,
+}: {
+  config: Record<string, unknown>;
+  onPatch: (patch: Record<string, unknown>) => void;
+}) {
+  const s = (k: string): string => (typeof config[k] === 'string' ? (config[k] as string) : '');
+  const chips: string[] = Array.isArray(config.chips)
+    ? (config.chips as unknown[]).map((c) => (typeof c === 'string' ? c : ''))
+    : [];
+  const cards: HeroCardEdit[] = Array.isArray(config.cards)
+    ? (config.cards as unknown[]).map((c) => {
+        const o = (c && typeof c === 'object' ? c : {}) as Record<string, unknown>;
+        return {
+          icon: typeof o.icon === 'string' ? o.icon : '',
+          title: typeof o.title === 'string' ? o.title : '',
+          tag: typeof o.tag === 'string' ? o.tag : '',
+          body: typeof o.body === 'string' ? o.body : '',
+        };
+      })
+    : [];
+
+  const patchCard = (i: number, patch: Partial<HeroCardEdit>) =>
+    onPatch({ cards: cards.map((c, ci) => (ci === i ? { ...c, ...patch } : c)) });
+  const addCard = () => onPatch({ cards: [...cards, { icon: '', title: '', tag: '', body: '' }] });
+  const removeCard = (i: number) => onPatch({ cards: cards.filter((_, ci) => ci !== i) });
+
+  return (
+    <div className="hero-config">
+      <input
+        type="text"
+        value={s('eyebrow')}
+        placeholder="Eyebrow — small label above the headline"
+        onChange={(e) => onPatch({ eyebrow: e.target.value })}
+      />
+      <input
+        type="text"
+        value={s('headline')}
+        placeholder="Headline"
+        onChange={(e) => onPatch({ headline: e.target.value })}
+      />
+      <textarea
+        rows={3}
+        value={s('subhead')}
+        placeholder="Sub-headline paragraph"
+        onChange={(e) => onPatch({ subhead: e.target.value })}
+      />
+      <div className="hero-config-row">
+        <input
+          type="text"
+          value={s('primaryLabel')}
+          placeholder="Primary button label"
+          onChange={(e) => onPatch({ primaryLabel: e.target.value })}
+        />
+        <input
+          type="text"
+          value={s('primaryHref')}
+          placeholder="Primary link (/api/auth/login, /roster, https://…)"
+          onChange={(e) => onPatch({ primaryHref: e.target.value })}
+        />
+      </div>
+      <div className="hero-config-row">
+        <input
+          type="text"
+          value={s('secondaryLabel')}
+          placeholder="Secondary button label"
+          onChange={(e) => onPatch({ secondaryLabel: e.target.value })}
+        />
+        <input
+          type="text"
+          value={s('secondaryHref')}
+          placeholder="Secondary link (https://discord.com/oauth2/…)"
+          onChange={(e) => onPatch({ secondaryHref: e.target.value })}
+        />
+      </div>
+      <label className="hero-config-label">Feature chips — one per line</label>
+      <textarea
+        rows={4}
+        value={chips.join('\n')}
+        placeholder={'⚡ Real-Time Discord Role Sync\n🎖️ Custom Medals & Service Records'}
+        onChange={(e) => onPatch({ chips: e.target.value.split('\n') })}
+      />
+      <label className="hero-config-label">Value cards</label>
+      {cards.map((c, i) => (
+        <div className="hero-config-card" key={i}>
+          <div className="hero-config-row">
+            <input
+              className="hero-config-icon"
+              type="text"
+              value={c.icon}
+              placeholder="Icon"
+              onChange={(e) => patchCard(i, { icon: e.target.value })}
+            />
+            <input
+              type="text"
+              value={c.title}
+              placeholder="Card title"
+              onChange={(e) => patchCard(i, { title: e.target.value })}
+            />
+            <button type="button" className="mini danger" title="Remove card" onClick={() => removeCard(i)}>
+              ✕
+            </button>
+          </div>
+          <input
+            type="text"
+            value={c.tag}
+            placeholder="Tagline"
+            onChange={(e) => patchCard(i, { tag: e.target.value })}
+          />
+          <textarea
+            rows={2}
+            value={c.body}
+            placeholder="Card description"
+            onChange={(e) => patchCard(i, { body: e.target.value })}
+          />
+        </div>
+      ))}
+      <button type="button" className="mini" onClick={addCard}>
+        + Add card
+      </button>
     </div>
   );
 }

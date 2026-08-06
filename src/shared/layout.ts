@@ -17,6 +17,7 @@ export type ModuleType =
   | 'heading'
   | 'text'
   | 'html'
+  | 'hero'
   | 'image'
   | 'button'
   | 'embed'
@@ -94,6 +95,53 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     label: 'HTML block',
     description: 'Hand-written HTML — tags are sanitized when the page renders.',
     defaultConfig: { html: '' },
+  },
+  {
+    type: 'hero',
+    label: 'Hero banner',
+    description: 'A bold landing headline with call-to-action buttons, feature chips, and a value grid.',
+    defaultConfig: {
+      eyebrow: 'Muster your community',
+      headline: 'Gather Your Fleet. Build Your Legacy.',
+      subhead:
+        'Stop managing your gaming organization with static spreadsheets and disconnected bots. mustr unifies your community with custom rank structures, real-time Discord role synchronization, automated event signups, service medal tracking, and custom web portals — all in one place.',
+      primaryLabel: '🚀 Claim Your Org Space',
+      primaryHref: '/api/auth/login',
+      secondaryLabel: '🤖 Add Discord Bot',
+      secondaryHref: '',
+      chips: [
+        '⚡ Real-Time Discord Role Sync',
+        '🎖️ Custom Medals & Service Records',
+        '📅 Native Discord Event RSVPs',
+        '🎨 Fully Customizable Web Hubs',
+      ],
+      cards: [
+        {
+          icon: '🔄',
+          title: 'Bi-Directional Discord Sync',
+          tag: 'Never hand-assign a Discord role again.',
+          body: 'Promote a member on your web portal, and their Discord roles, nicknames, and channel permissions update instantly in real time.',
+        },
+        {
+          icon: '🎖️',
+          title: 'Custom Ranks & Service Medals',
+          tag: 'Reward loyalty and recognize achievements.',
+          body: 'Build bespoke rank chains, award military-style service medals, and preserve every member’s historical record and service history.',
+        },
+        {
+          icon: '📅',
+          title: 'Seamless Event Operations',
+          tag: 'Schedule once, deploy everywhere.',
+          body: 'Create raids, fleet ops, or meetings on the web. Members RSVP directly from Discord or your web hub with zero friction.',
+        },
+        {
+          icon: '🎨',
+          title: 'Bespoke Community Web Hubs',
+          tag: 'A real online home for your organization.',
+          body: 'Design custom pages, embed videos, tailor your theme, and showcase a public recruitment portal that stands out.',
+        },
+      ],
+    },
   },
   {
     type: 'embed',
@@ -317,6 +365,33 @@ function cleanConfig(
     // its own wider allowlist (sanitizePageHtml) — the DOM cleaner isn't available
     // here in the worker, and the renderer is the authoritative, always-run pass.
     out.html = typeof src.html === 'string' ? src.html.slice(0, 20000) : '';
+  }
+
+  if (type === 'hero') {
+    const s = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
+    out.eyebrow = s(src.eyebrow, 120);
+    out.headline = s(src.headline, 200);
+    out.subhead = s(src.subhead, 600);
+    out.primaryLabel = s(src.primaryLabel, 80);
+    out.primaryHref = cleanUrl(src.primaryHref);
+    out.secondaryLabel = s(src.secondaryLabel, 80);
+    out.secondaryHref = cleanUrl(src.secondaryHref);
+    out.chips = (Array.isArray(src.chips) ? src.chips : [])
+      .slice(0, 8)
+      .map((c) => s(c, 80))
+      .filter(Boolean);
+    out.cards = (Array.isArray(src.cards) ? src.cards : [])
+      .slice(0, 8)
+      .map((c) => {
+        const card = asObject(c);
+        return {
+          icon: s(card.icon, 8),
+          title: s(card.title, 80),
+          tag: s(card.tag, 140),
+          body: s(card.body, 400),
+        };
+      })
+      .filter((c) => c.title || c.body);
   }
 
   if (type === 'embed') {

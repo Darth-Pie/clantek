@@ -15,9 +15,11 @@ import { api } from './api';
 export interface Branding {
   logoUrl: string;
   logoSize: number;
+  /** Uploaded browser-tab icon (favicon). Blank falls back to the default icon. */
+  faviconUrl: string;
 }
 
-export const DEFAULT_BRANDING: Branding = { logoUrl: '', logoSize: 88 };
+export const DEFAULT_BRANDING: Branding = { logoUrl: '', logoSize: 88, faviconUrl: '' };
 
 interface BrandingValue {
   branding: Branding;
@@ -33,6 +35,7 @@ function coerce(raw: Partial<Branding> | undefined): Branding {
   return {
     logoUrl: typeof raw?.logoUrl === 'string' ? raw.logoUrl : '',
     logoSize: Number.isFinite(size) ? Math.min(200, Math.max(40, size)) : DEFAULT_BRANDING.logoSize,
+    faviconUrl: typeof raw?.faviconUrl === 'string' ? raw.faviconUrl : '',
   };
 }
 
@@ -47,6 +50,24 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
         /* Not configured yet — defaults (no logo) are fine. */
       });
   }, []);
+
+  // Keep the live tab icon in sync with the current (previewed or saved) favicon,
+  // so an admin sees the change at once and SPA navigation keeps the right icon.
+  // A blank value restores the default /icon.svg baked into index.html.
+  useEffect(() => {
+    const href = branding.faviconUrl || '/icon.svg';
+    for (const rel of ['icon', 'apple-touch-icon']) {
+      let link = document.head.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = rel;
+        document.head.appendChild(link);
+      }
+      link.href = href;
+      // Let the browser sniff the format of an uploaded icon.
+      if (branding.faviconUrl) link.removeAttribute('type');
+    }
+  }, [branding.faviconUrl]);
 
   const preview = useCallback((next: Branding) => setBranding(coerce(next)), []);
 

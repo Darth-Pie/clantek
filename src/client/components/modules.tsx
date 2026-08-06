@@ -412,6 +412,114 @@ function DividerModule() {
   return <hr className="module module-divider" />;
 }
 
+/**
+ * A hero CTA link. Unlike SmartLink, a root-relative path that targets a *server*
+ * route (/api/…, /media/…) must be a real navigation, not an SPA <Link> — the
+ * router would otherwise try to match it as a page and 404. External links open
+ * in a new tab; everything else internal stays in the SPA.
+ */
+function HeroCta({ href, label, primary }: { href: string; label: string; primary: boolean }) {
+  const cls = primary ? 'hero-btn hero-btn-primary' : 'hero-btn hero-btn-secondary';
+  const external = /^https?:\/\//i.test(href);
+  const serverRoute = href.startsWith('/api/') || href.startsWith('/media/');
+  if (external) {
+    return (
+      <a className={cls} href={href} target="_blank" rel="noopener noreferrer">
+        {label}
+      </a>
+    );
+  }
+  if (serverRoute) {
+    return (
+      <a className={cls} href={href}>
+        {label}
+      </a>
+    );
+  }
+  return (
+    <Link className={cls} to={href}>
+      {label}
+    </Link>
+  );
+}
+
+interface HeroCard {
+  icon: string;
+  title: string;
+  tag: string;
+  body: string;
+}
+
+function HeroModule({ config }: { config: Config }) {
+  const eyebrow = str(config, 'eyebrow');
+  const headline = str(config, 'headline');
+  const subhead = str(config, 'subhead');
+  const primaryLabel = str(config, 'primaryLabel');
+  const primaryHref = str(config, 'primaryHref');
+  const secondaryLabel = str(config, 'secondaryLabel');
+  const secondaryHref = str(config, 'secondaryHref');
+  const chips = (Array.isArray(config.chips) ? config.chips : []).filter(
+    (c): c is string => typeof c === 'string' && c.length > 0,
+  );
+  const cards = (Array.isArray(config.cards) ? config.cards : [])
+    .map((c) => {
+      const o = (c && typeof c === 'object' ? c : {}) as Record<string, unknown>;
+      return {
+        icon: typeof o.icon === 'string' ? o.icon : '',
+        title: typeof o.title === 'string' ? o.title : '',
+        tag: typeof o.tag === 'string' ? o.tag : '',
+        body: typeof o.body === 'string' ? o.body : '',
+      } as HeroCard;
+    })
+    .filter((c) => c.title || c.body);
+
+  return (
+    <div className="module module-hero">
+      <section className="hero-panel">
+        {eyebrow && <span className="hero-eyebrow">{eyebrow}</span>}
+        {headline && <h1 className="hero-headline">{headline}</h1>}
+        {subhead && <p className="hero-subhead">{subhead}</p>}
+        {(primaryLabel && primaryHref) || (secondaryLabel && secondaryHref) ? (
+          <div className="hero-cta">
+            {primaryLabel && primaryHref && (
+              <HeroCta href={primaryHref} label={primaryLabel} primary />
+            )}
+            {secondaryLabel && secondaryHref && (
+              <HeroCta href={secondaryHref} label={secondaryLabel} primary={false} />
+            )}
+          </div>
+        ) : null}
+        {chips.length > 0 && (
+          <div className="hero-chips">
+            {chips.map((c, i) => (
+              <span className="hero-chip" key={i}>
+                {c}
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {cards.length > 0 && (
+        <div className="hero-grid">
+          {cards.map((c, i) => (
+            <div className="hero-card" key={i}>
+              {c.icon && (
+                <span className="hero-card-icon" aria-hidden>
+                  {c.icon}
+                </span>
+              )}
+              {c.title && <h3 className="hero-card-title">{c.title}</h3>}
+              {c.tag && <p className="hero-card-tag">{c.tag}</p>}
+              {c.body && <p className="hero-card-body">{c.body}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MedalsModule({ config }: { config: Config }) {
   return (
     <GalleryModule
@@ -468,6 +576,7 @@ export const MODULE_RENDERERS: Record<ModuleType, (props: { config: Config }) =>
   heading: HeadingModule,
   text: TextModule,
   html: HtmlModule,
+  hero: HeroModule,
   image: ImageModule,
   button: ButtonModule,
   embed: EmbedModule,

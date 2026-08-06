@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { PERMISSIONS, type Permission } from '../../shared/permissions';
+import ReassignDialog from '../components/ReassignDialog';
 
 interface Role {
   id: number;
@@ -47,6 +48,8 @@ export default function Roles() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
   const [loading, setLoading] = useState(true);
+  // A role pending deletion that members still hold — the reassign dialog is open.
+  const [pendingDelete, setPendingDelete] = useState<Role | null>(null);
 
   async function load() {
     const { roles } = await api.get<{ roles: Role[] }>('/roles');
@@ -142,17 +145,49 @@ export default function Roles() {
             onSavePermissions={(permissions) =>
               run(() => api.put(`/roles/${selected.id}/permissions`, { permissions }))
             }
-            onDelete={() =>
-              run(async () => {
+            onDelete={() => {
+              // With members, open the reassign dialog; empty roles delete outright.
+              if (selected.memberCount > 0) {
+                setPendingDelete(selected);
+                return;
+              }
+              if (!window.confirm(`Delete the role “${selected.name}”?`)) return;
+              void run(async () => {
                 await api.del(`/roles/${selected.id}`);
                 setSelectedId(null);
-              })
-            }
+              });
+            }}
           />
         ) : (
           <div className="role-editor empty-editor">Select a role to edit it.</div>
         )}
       </div>
+
+      {pendingDelete && (
+        <ReassignDialog
+          title={`Delete role “${pendingDelete.name}”`}
+          count={pendingDelete.memberCount}
+          options={roles.filter((r) => r.id !== pendingDelete.id).map((r) => ({ value: r.id, label: r.name }))}
+          defaultValue={null}
+          noneLabel="Remove from everyone (no replacement)"
+          busy={busy}
+          onConfirm={(target, reason) =>
+            run(async () => {
+              const name = pendingDelete.name;
+              const memberCount = pendingDelete.memberCount;
+              await api.del(`/roles/${pendingDelete.id}`, { reassignTo: target, reason });
+              setSelectedId(null);
+              setPendingDelete(null);
+              const outcome =
+                target != null
+                  ? `moved ${memberCount} member${memberCount === 1 ? '' : 's'} to “${roles.find((r) => r.id === target)?.name ?? 'another role'}”`
+                  : `removed it from ${memberCount} member${memberCount === 1 ? '' : 's'}`;
+              return `Deleted “${name}” and ${outcome}.`;
+            })
+          }
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </section>
   );
 }

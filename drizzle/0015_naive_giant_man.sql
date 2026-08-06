@@ -1,0 +1,1 @@
+ALTER TABLE `sc_hangars` ADD `is_public` integer DEFAULT false NOT NULL;

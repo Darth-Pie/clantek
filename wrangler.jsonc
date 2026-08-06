@@ -7,9 +7,9 @@
 
   // The site's primary hostname. Declaring it here keeps the custom domain
   // reproducible — a fresh deploy (or the CI pipeline) re-asserts it rather
-  // than depending on a one-off dashboard binding. Requires the 919gaming.com
+  // than depending on a one-off dashboard binding. Requires the mustr.gg
   // zone to be on this Cloudflare account (it is).
-  "routes": [{ "pattern": "clantek.919gaming.com", "custom_domain": true }],
+  "routes": [{ "pattern": "mustr.gg", "custom_domain": true }],
 
   // One canonical URL. With the custom domain above, the *.workers.dev
   // subdomain is intentionally off, so there is a single host for OAuth
@@ -65,7 +65,7 @@
     // Canonical public origin, used to turn stored relative media URLs
     // (/media/events/…) into absolute ones for Discord embeds, which a bot
     // context can't derive from a request. Must match the custom domain above.
-    "SITE_URL": "https://clantek.919gaming.com",
+    "SITE_URL": "https://mustr.gg",
 
     // Application ID — public; it appears in every bot invite URL.
     "DISCORD_CLIENT_ID": "1533902498065023286",

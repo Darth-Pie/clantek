@@ -17,7 +17,8 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { Env } from '../env';
-import { DiscordRest, type Embed } from './rest';
+import { type Embed } from './rest';
+import { discordClient } from '../config';
 
 export type AnnouncementEventKey = 'medalAward' | 'warRecordAward' | 'promotion';
 
@@ -117,12 +118,12 @@ function buildEmbed(event: AnnounceEvent, baseUrl?: string): Embed {
  */
 export async function announce(env: Env, event: AnnounceEvent, baseUrl?: string): Promise<void> {
   try {
-    if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return;
     const db = drizzle(env.DB, { schema: s });
+    const rest = await discordClient(env, db);
+    if (!rest) return;
     const config = await loadAnnouncementConfig(db);
     if (!config.channelId || !config.events[event.type]) return;
 
-    const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
     await rest.createMessage(config.channelId, {
       content: `<@${event.memberDiscordId}>`,
       embeds: [buildEmbed(event, baseUrl)],

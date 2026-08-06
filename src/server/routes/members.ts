@@ -6,17 +6,16 @@ import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { can, outranks } from '../../shared/permissions';
 import { memberName } from '../../shared/names';
 import { discordAvatar } from '../../shared/avatar';
-import { DiscordRest, DiscordError } from '../discord/rest';
+import { DiscordError } from '../discord/rest';
+import { discordClient } from '../config';
 import { grantRole, revokeRole, syncMemberRankRoles, reconcileMember } from '../discord/sync';
 import { announce } from '../discord/announce';
 import { deleteMediaByUrl } from './media';
 
 const members = new Hono<AppContext>();
 
-function rest(env: AppContext['Bindings']): DiscordRest | null {
-  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return null;
-  return new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
-}
+/** Bot client from resolved (DB-over-env) config, or null when unconfigured. */
+const rest = (env: AppContext['Bindings']) => discordClient(env);
 
 const MIN_REASON = 3;
 const MAX_REASON = 500;
@@ -222,7 +221,7 @@ members.patch('/:id/profile', requireAuth, async (c) => {
     if (changed) {
       // Push the new display name as the member's Discord nickname. An empty
       // value clears the nickname, reverting them to their Discord name.
-      const client = rest(c.env);
+      const client = await rest(c.env);
       if (client) {
         try {
           await client.setNickname(
@@ -363,7 +362,7 @@ members.put('/:id/rank', requirePermission('roster.promote'), async (c) => {
   });
 
   // Apply the new rank's roles (and drop the old rank's), cascading to Discord.
-  const rankRoleSync = await syncMemberRankRoles(database, rest(c.env), {
+  const rankRoleSync = await syncMemberRankRoles(database, await rest(c.env), {
     userId: id,
     rankId: newRank?.id ?? null,
     actorId: viewer.id,
@@ -400,7 +399,7 @@ members.post('/:id/roles', requirePermission('roles.assign'), async (c) => {
   const { roleId, reason } = await c.req.json<{ roleId: number; reason?: string }>();
   const viewer = c.get('viewer')!;
 
-  const result = await grantRole(db(c.env), rest(c.env), {
+  const result = await grantRole(db(c.env), await rest(c.env), {
     userId,
     roleId,
     actorId: viewer.id,
@@ -417,7 +416,7 @@ members.post('/:id/roles', requirePermission('roles.assign'), async (c) => {
  */
 members.post('/:id/resync', requirePermission('discord.sync'), async (c) => {
   const id = Number(c.req.param('id'));
-  const client = rest(c.env);
+  const client = await rest(c.env);
   if (!client) {
     return c.json({ ok: false, warning: 'Discord bot is not configured.' });
   }
@@ -636,7 +635,7 @@ members.delete('/:id/roles/:roleId', requirePermission('roles.assign'), async (c
     return c.json({ error: 'A reason is required to revoke a role.' }, 400);
   }
 
-  const result = await revokeRole(db(c.env), rest(c.env), {
+  const result = await revokeRole(db(c.env), await rest(c.env), {
     userId,
     roleId,
     actorId: viewer.id,

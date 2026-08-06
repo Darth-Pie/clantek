@@ -12,14 +12,13 @@ import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { can, isPermission, type Permission } from '../../shared/permissions';
-import { DiscordRest, DiscordError } from '../discord/rest';
+import { DiscordError } from '../discord/rest';
+import { discordClient } from '../config';
 
 const roles = new Hono<AppContext>();
 
-function rest(env: AppContext['Bindings']): DiscordRest | null {
-  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return null;
-  return new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
-}
+/** Bot client from resolved (DB-over-env) config, or null when unconfigured. */
+const rest = (env: AppContext['Bindings']) => discordClient(env);
 
 /** "#c0392b" → 12597931. Null/blank/invalid → 0, which Discord shows as no colour. */
 function hexToInt(hex: string | null): number {
@@ -84,7 +83,7 @@ roles.get('/assignable', requireAuth, async (c) => {
  * configured or lacks access, so the UI can explain rather than just break.
  */
 roles.get('/discord-roles', requirePermission('roles.manage'), async (c) => {
-  const client = rest(c.env);
+  const client = await rest(c.env);
   if (!client) {
     return c.json({ roles: [], warning: 'Discord bot token or guild ID is not configured.' });
   }
@@ -197,7 +196,7 @@ roles.patch('/:id', requirePermission('roles.manage'), async (c) => {
   let discordSync: { synced: boolean; warning?: string } | undefined;
 
   if (updated.discordRoleId && (nameChanged || colorChanged || mappingChanged)) {
-    const client = rest(c.env);
+    const client = await rest(c.env);
     if (!client) {
       discordSync = {
         synced: false,

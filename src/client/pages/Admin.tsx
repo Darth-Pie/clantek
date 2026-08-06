@@ -21,6 +21,7 @@ import Medals from './Medals';
 import Games from './Games';
 import WarRecords from './WarRecords';
 import Announcements from './Announcements';
+import IdentityAdmin from './IdentityAdmin';
 import Theme from './Theme';
 import BrandingAdmin from './BrandingAdmin';
 import PagesAdmin from './PagesAdmin';
@@ -38,6 +39,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   games: () => <Games />,
   orgchart: () => <OrgChartDesigner />,
   announcements: () => <Announcements />,
+  identity: () => <IdentityAdmin />,
   theme: () => <Theme />,
   branding: () => <BrandingAdmin />,
   audit: () => <AuditLog />,

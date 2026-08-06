@@ -9,7 +9,7 @@ export interface Env {
 
   // Public config, committed in wrangler.jsonc
   SITE_NAME: string;
-  // Canonical public origin (e.g. https://clantek.919gaming.com), for building
+  // Canonical public origin (e.g. https://mustr.gg), for building
   // absolute media URLs in Discord embeds. Optional — absent → images omitted.
   SITE_URL?: string;
   DISCORD_CLIENT_ID: string;

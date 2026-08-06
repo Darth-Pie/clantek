@@ -48,7 +48,7 @@ npm install
 At <https://discord.com/developers/applications> → **New Application**.
 
 - **OAuth2** → add redirect URI `http://localhost:8787/api/auth/callback` for
-  local dev, and `https://clantek.919gaming.com/api/auth/callback` for production.
+  local dev, and `https://mustr.gg/api/auth/callback` for production.
 - **Bot** → add a bot, copy the token.
 - **General Information** → copy the Public Key.
 
@@ -126,7 +126,7 @@ npm run deploy
 ```
 
 Then set the **Interactions Endpoint URL** on your Discord application to
-`https://clantek.919gaming.com/api/discord/interactions`. Discord probes it
+`https://mustr.gg/api/discord/interactions`. Discord probes it
 with a deliberately invalid signature on save — rejecting that is what proves
 the endpoint is genuine.
 

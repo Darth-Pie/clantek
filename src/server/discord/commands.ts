@@ -12,7 +12,7 @@ import * as schema from '../../db/schema';
 import * as s from '../../db/schema';
 import { can, outranks, type Viewer, type Permission } from '../../shared/permissions';
 import type { Env } from '../env';
-import { DiscordRest } from './rest';
+import { discordClient } from '../config';
 import { syncMemberRankRoles } from './sync';
 import { announce } from './announce';
 import { memberName } from '../../shared/names';
@@ -174,10 +174,7 @@ async function promote(env: Env, db: DB, viewer: Viewer, i: Interaction, baseUrl
   });
 
   // Apply the new rank's roles and reflect them into Discord.
-  const client =
-    env.DISCORD_BOT_TOKEN && env.DISCORD_GUILD_ID
-      ? new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID)
-      : null;
+  const client = await discordClient(env, db);
   const rankRoleSync = await syncMemberRankRoles(db, client, {
     userId: target.id,
     rankId: nextRank.id,

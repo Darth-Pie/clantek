@@ -17,6 +17,7 @@ import { eq } from 'drizzle-orm';
 import * as schema from '../../db/schema';
 import * as s from '../../db/schema';
 import type { Env } from '../env';
+import { loadConfig } from '../config';
 import { setSignup, removeSignup, loadEventState } from '../events/signups';
 import { buildEventMessage } from './events';
 import { editOriginalMessage, followUpEphemeral, type Interaction } from './interactions';
@@ -60,7 +61,8 @@ export async function handleEventComponent(env: Env, i: Interaction): Promise<vo
   try {
     const state = await loadEventState(db, eventId);
     if (state) {
-      await editOriginalMessage(i.application_id, i.token, buildEventMessage(state, env.SITE_URL));
+      const { siteUrl } = await loadConfig(env, db);
+      await editOriginalMessage(i.application_id, i.token, buildEventMessage(state, siteUrl));
     }
   } catch (err) {
     console.error('Event component message refresh failed', err);

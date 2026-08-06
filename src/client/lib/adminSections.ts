@@ -71,6 +71,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     key: 'settings',
     label: 'Settings',
     items: [
+      { key: 'identity', label: 'Identity & Discord', tabs: [{ key: 'identity', label: 'Identity & Discord', permission: 'settings.manage' }] },
       { key: 'bot', label: 'Bot Settings', tabs: [{ key: 'announcements', label: 'Bot Settings', permission: 'settings.manage' }] },
       {
         key: 'appearance',

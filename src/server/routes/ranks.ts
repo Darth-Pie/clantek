@@ -10,16 +10,14 @@ import { asc, eq, ne, sql } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requirePermission } from '../middleware/auth';
-import { DiscordRest } from '../discord/rest';
+import { discordClient } from '../config';
 import { syncRankHolders } from '../discord/sync';
 import { deleteMediaByUrl } from './media';
 
 const ranks = new Hono<AppContext>();
 
-function rest(env: AppContext['Bindings']): DiscordRest | null {
-  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return null;
-  return new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
-}
+/** Bot client from resolved (DB-over-env) config, or null when unconfigured. */
+const rest = (env: AppContext['Bindings']) => discordClient(env);
 
 /** Public: the ladder is visible to anyone. Includes the roles each rank grants. */
 ranks.get('/', async (c) => {
@@ -86,7 +84,7 @@ ranks.put('/:id/roles', requirePermission('roles.manage'), async (c) => {
   });
 
   // Reconcile current holders so the mapping change takes effect now.
-  const applied = await syncRankHolders(database, rest(c.env), id);
+  const applied = await syncRankHolders(database, await rest(c.env), id);
 
   return c.json({ ok: true, roleIds: unique, applied });
 });

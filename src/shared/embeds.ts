@@ -19,7 +19,7 @@
  * load its player unless the embedder's hostname is declared here, and it allows
  * several. Production + localhost (for dev) cover our cases.
  */
-export const EMBED_PARENTS = ['clantek.919gaming.com', 'localhost'];
+export const EMBED_PARENTS = ['mustr.gg', 'localhost'];
 
 /**
  * Every origin an embed iframe can load from. This list is the single source of

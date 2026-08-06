@@ -34,7 +34,7 @@ import {
 } from './discord/interactions';
 import { handleCommand } from './discord/commands';
 import { handleEventComponent, isEventComponent } from './discord/eventInteractions';
-import { DiscordRest } from './discord/rest';
+import { loadConfig, discordClient } from './config';
 import { syncMemberRankRoles, reconcileBatch } from './discord/sync';
 import { awardTenureMedals } from './medals/tenure';
 import { materializeRecurringEvents } from './events/recurrence';
@@ -65,11 +65,12 @@ const app = new Hono<AppContext>();
 app.post('/api/discord/interactions', async (c) => {
   const raw = await c.req.text();
 
+  const { discord } = await loadConfig(c.env);
   const valid = await verifySignature(
     raw,
     c.req.header('x-signature-ed25519') ?? null,
     c.req.header('x-signature-timestamp') ?? null,
-    c.env.DISCORD_PUBLIC_KEY,
+    discord.publicKey,
   );
   // Discord probes with bad signatures on purpose when you save the endpoint
   // URL; 401 here is what proves the endpoint is genuine.
@@ -141,11 +142,12 @@ app.use('/api/*', async (c, next) => {
 
 app.use('/api/*', withViewer);
 
-app.get('/api/auth/login', (c) => {
+app.get('/api/auth/login', async (c) => {
+  const { discord } = await loadConfig(c.env);
   const state = newState();
   const redirectUri = new URL('/api/auth/callback', c.req.url).toString();
   c.header('Set-Cookie', stateCookie(state));
-  return c.redirect(authorizeUrl(c.env.DISCORD_CLIENT_ID, redirectUri, state));
+  return c.redirect(authorizeUrl(discord.clientId, redirectUri, state));
 });
 
 app.get('/api/auth/callback', async (c) => {
@@ -166,18 +168,14 @@ app.get('/api/auth/callback', async (c) => {
     return c.redirect('/login?error=state');
   }
 
+  const { discord } = await loadConfig(c.env);
   const redirectUri = new URL('/api/auth/callback', c.req.url).toString();
-  const token = await exchangeCode(
-    c.env.DISCORD_CLIENT_ID,
-    c.env.DISCORD_CLIENT_SECRET,
-    code,
-    redirectUri,
-  );
+  const token = await exchangeCode(discord.clientId, discord.clientSecret, code, redirectUri);
 
   const discordUser = await fetchUser(token.access_token);
 
   // Membership in the clan's Discord server is the gate. No invite, no account.
-  const guildMember = await fetchGuildMember(token.access_token, c.env.DISCORD_GUILD_ID);
+  const guildMember = await fetchGuildMember(token.access_token, discord.guildId);
   if (!guildMember) {
     c.header('Set-Cookie', clearedStateCookie);
     return c.redirect('/login?error=not_in_guild');
@@ -249,10 +247,7 @@ app.get('/api/auth/callback', async (c) => {
     // Apply the default rank's roles to the new member. Done in the background
     // so the Discord round-trips don't hold up the login redirect.
     if (defaultRank) {
-      const client =
-        c.env.DISCORD_BOT_TOKEN && c.env.DISCORD_GUILD_ID
-          ? new DiscordRest(c.env.DISCORD_BOT_TOKEN, c.env.DISCORD_GUILD_ID)
-          : null;
+      const client = await discordClient(c.env, database);
       c.executionCtx.waitUntil(
         syncMemberRankRoles(database, client, {
           userId,
@@ -294,8 +289,9 @@ app.post('/api/auth/logout', async (c) => {
 });
 
 /** What the React app calls on boot to learn who it is talking to. */
-app.get('/api/me', (c) => {
-  return c.json({ viewer: c.get('viewer'), siteName: c.env.SITE_NAME, authKind: c.get('authKind') });
+app.get('/api/me', async (c) => {
+  const { siteName } = await loadConfig(c.env);
+  return c.json({ viewer: c.get('viewer'), siteName, authKind: c.get('authKind') });
 });
 
 /**
@@ -303,8 +299,9 @@ app.get('/api/me', (c) => {
  * Public and unauthenticated. `apiVersion` is the integer contract version;
  * bump it only on a breaking change to the documented JSON shapes.
  */
-app.get('/api/version', (c) => {
-  return c.json({ apiVersion: 1, service: 'clantek', siteName: c.env.SITE_NAME });
+app.get('/api/version', async (c) => {
+  const { siteName } = await loadConfig(c.env);
+  return c.json({ apiVersion: 1, service: 'clantek', siteName });
 });
 
 /* ------------------------------------------------------------------ *
@@ -392,8 +389,8 @@ export default {
     }
 
     // The 5-minute reconcile tick needs the bot.
-    if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return;
-    const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
+    const rest = await discordClient(env, database);
+    if (!rest) return;
     ctx.waitUntil(
       reconcileBatch(database, rest)
         .then((r) => console.log('Reconcile batch:', JSON.stringify(r)))

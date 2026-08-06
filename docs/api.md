@@ -2,9 +2,9 @@
 
 The same JSON API that powers the web app also powers native/mobile clients.
 Every endpoint lives under `/api` on the site's origin
-(`https://clantek.919gaming.com`) and returns JSON.
+(`https://mustr.gg`) and returns JSON.
 
-- **Base URL:** `https://clantek.919gaming.com/api`
+- **Base URL:** `https://mustr.gg/api`
 - **Content type:** `application/json`
 - **Contract version:** `GET /api/version` → `{ "apiVersion": 1, ... }`. `apiVersion`
   is bumped only on a breaking change to the shapes documented here.
@@ -29,7 +29,7 @@ its name and a short prefix are visible afterward. A token:
 
 ```http
 GET /api/me HTTP/1.1
-Host: clantek.919gaming.com
+Host: mustr.gg
 Authorization: Bearer clt_ab12cd...your...token
 ```
 

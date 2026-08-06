@@ -15,7 +15,8 @@
 import { drizzle } from 'drizzle-orm/d1';
 import * as s from '../../db/schema';
 import type { Env } from '../env';
-import { DiscordRest, type ActionRow, type Embed } from './rest';
+import { type ActionRow, type Embed } from './rest';
+import { loadConfig, discordRestFromConfig } from '../config';
 import { loadAnnouncementConfig } from './announce';
 import { loadEventState, type EventState } from '../events/signups';
 
@@ -49,7 +50,11 @@ function absoluteMedia(siteUrl: string | undefined, url: string | null): string 
  * any problem just means no cover image. Falls back to fetching the public URL
  * if the media binding isn't available.
  */
-async function eventCoverDataUri(env: Env, imageUrl: string | null): Promise<string | undefined> {
+async function eventCoverDataUri(
+  env: Env,
+  imageUrl: string | null,
+  siteUrl?: string,
+): Promise<string | undefined> {
   if (!imageUrl) return undefined;
   try {
     let bytes: ArrayBuffer;
@@ -61,7 +66,7 @@ async function eventCoverDataUri(env: Env, imageUrl: string | null): Promise<str
       bytes = await obj.arrayBuffer();
       contentType = obj.httpMetadata?.contentType || contentType;
     } else {
-      const abs = absoluteMedia(env.SITE_URL, imageUrl);
+      const abs = absoluteMedia(siteUrl, imageUrl);
       if (!abs) return undefined;
       const res = await fetch(abs);
       if (!res.ok) return undefined;
@@ -182,9 +187,10 @@ export async function syncEventToDiscord(env: Env, eventId: number): Promise<Dis
     discordEventId: state.event.discordEventId,
     discordMessageId: state.event.discordMessageId,
   };
-  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return ids;
+  const cfg = await loadConfig(env, db);
+  const rest = discordRestFromConfig(cfg);
+  if (!rest) return ids;
 
-  const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
   const event = state.event;
 
   const scheduled = {
@@ -195,7 +201,7 @@ export async function syncEventToDiscord(env: Env, eventId: number): Promise<Dis
     privacy_level: 2 as const,
     entity_type: 3 as const,
     entity_metadata: { location: event.location.slice(0, 100) },
-    image: await eventCoverDataUri(env, event.imageUrl),
+    image: await eventCoverDataUri(env, event.imageUrl, cfg.siteUrl),
   };
 
   try {
@@ -211,7 +217,7 @@ export async function syncEventToDiscord(env: Env, eventId: number): Promise<Dis
   try {
     const channelId = (await loadAnnouncementConfig(db)).channelId;
     if (channelId) {
-      const message = buildEventMessage(state, env.SITE_URL);
+      const message = buildEventMessage(state, cfg.siteUrl);
       if (ids.discordMessageId) {
         await rest.editMessage(channelId, ids.discordMessageId, message);
       } else {
@@ -230,16 +236,17 @@ export async function syncEventToDiscord(env: Env, eventId: number): Promise<Dis
  * a sign-up changes on the website. No scheduled-event touch. Never throws.
  */
 export async function refreshEventMessage(env: Env, eventId: number): Promise<void> {
-  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return;
   const db = drizzle(env.DB, { schema: s });
+  const cfg = await loadConfig(env, db);
+  const rest = discordRestFromConfig(cfg);
+  if (!rest) return;
   const state = await loadEventState(db, eventId);
   if (!state || !state.event.discordMessageId) return;
 
-  const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
   try {
     const channelId = (await loadAnnouncementConfig(db)).channelId;
     if (channelId) {
-      await rest.editMessage(channelId, state.event.discordMessageId, buildEventMessage(state, env.SITE_URL));
+      await rest.editMessage(channelId, state.event.discordMessageId, buildEventMessage(state, cfg.siteUrl));
     }
   } catch (err) {
     console.error('Event message refresh failed', err);
@@ -248,8 +255,8 @@ export async function refreshEventMessage(env: Env, eventId: number): Promise<vo
 
 /** Remove an event's Discord scheduled event and announcement message. Never throws. */
 export async function removeEventFromDiscord(env: Env, event: EventRow): Promise<void> {
-  if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return;
-  const rest = new DiscordRest(env.DISCORD_BOT_TOKEN, env.DISCORD_GUILD_ID);
+  const rest = discordRestFromConfig(await loadConfig(env));
+  if (!rest) return;
 
   if (event.discordEventId) {
     try {

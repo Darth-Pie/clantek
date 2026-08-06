@@ -99,6 +99,20 @@
       "when": 1785936034850,
       "tag": "0013_nice_slapstick",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1786046626092,
+      "tag": "0014_complex_titanium_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1786049672727,
+      "tag": "0015_naive_giant_man",
+      "breakpoints": true
     }
   ]
 }

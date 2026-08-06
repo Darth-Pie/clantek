@@ -1,10 +1,13 @@
 import { lazy, Suspense, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { MorphIcon } from 'morphicons/react';
+import { Menu, X } from 'lucide';
 import { useSession } from './lib/session';
 import { useBranding } from './lib/branding';
 import type { Permission } from '../shared/permissions';
-import { canAccessAdmin } from './lib/adminSections';
 import AccountMenu from './components/AccountMenu';
+import SiteNav from './components/SiteNav';
+import type { NavItem } from '../shared/nav';
 import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
 import AccountSettings from './pages/AccountSettings';
@@ -30,20 +33,21 @@ function Protected({ permission, children }: { permission?: Permission; children
   return <>{children}</>;
 }
 
-interface NavPage {
-  slug: string;
-  title: string | null;
-}
-
 export default function App() {
-  const { viewer, siteName, loading, can } = useSession();
+  const { viewer, siteName, loading } = useSession();
   const { branding } = useBranding();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [navPages, setNavPages] = useState<NavPage[]>([]);
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [scrolled, setScrolled] = useState(false);
   // Logo aspect ratio (width/height), measured on load, so the header can
   // reserve exactly the collapsed logo's width and the nav never jumps.
   const [logoAspect, setLogoAspect] = useState(1);
+
+  // Keep the browser-tab title in sync with the configured site name (the served
+  // HTML title is set server-side; this covers client-side navigation + updates).
+  useEffect(() => {
+    if (siteName) document.title = siteName;
+  }, [siteName]);
 
   // Shrink the header (and its logo) once the page scrolls past the top.
   useEffect(() => {
@@ -53,30 +57,29 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Custom pages that opted into the top nav. Loaded once the viewer is known,
-  // and refreshed live when an admin renames/creates/deletes a page (PagesAdmin
-  // fires `ct-pages-changed`) so the menu never shows a stale name.
+  // The admin-arranged menu tree. Loaded once the viewer is known, and refreshed
+  // live when the Navigation builder saves (`ct-nav-changed`) or a page is
+  // created/deleted (`ct-pages-changed` — the server prunes deleted pages).
   useEffect(() => {
     if (!viewer) {
-      setNavPages([]);
+      setNavItems([]);
       return;
     }
     const loadNav = () =>
       api
-        .get<{ pages: NavPage[] }>('/pages/nav')
-        .then((d) => setNavPages(d.pages))
-        .catch(() => setNavPages([]));
+        .get<{ nav: { items: NavItem[] } }>('/nav')
+        .then((d) => setNavItems(d.nav.items))
+        .catch(() => setNavItems([]));
     void loadNav();
+    window.addEventListener('ct-nav-changed', loadNav);
     window.addEventListener('ct-pages-changed', loadNav);
-    return () => window.removeEventListener('ct-pages-changed', loadNav);
+    return () => {
+      window.removeEventListener('ct-nav-changed', loadNav);
+      window.removeEventListener('ct-pages-changed', loadNav);
+    };
   }, [viewer]);
 
   if (loading) return <div className="loading">Loading…</div>;
-
-  // Surface an Admin entry in the primary nav (not just the account menu) for
-  // anyone who can reach an admin tool, so the controls are prominent for
-  // authorized users rather than buried.
-  const showAdmin = !!viewer && canAccessAdmin(can);
 
   const hasLogo = !!branding.logoUrl;
   const collapsed = 38; // logo height (px) once docked inside the bar
@@ -103,7 +106,7 @@ export default function App() {
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
           >
-            ☰
+            <MorphIcon icon={menuOpen ? X : Menu} size={22} spring="snappy" aria-hidden />
           </button>
         )}
         <Link to="/" className="brand" aria-label={siteName}>
@@ -123,23 +126,8 @@ export default function App() {
         </Link>
 
         {viewer && (
-          <nav className={menuOpen ? 'nav open' : 'nav'} onClick={() => setMenuOpen(false)}>
-            <NavLink to="/" end>
-              Home
-            </NavLink>
-            <NavLink to="/news">News</NavLink>
-            <NavLink to="/roster">Roster</NavLink>
-            {can('events.view') && <NavLink to="/events">Events</NavLink>}
-            {navPages.map((p) => (
-              <NavLink key={p.slug} to={`/p/${p.slug}`}>
-                {p.title ?? p.slug}
-              </NavLink>
-            ))}
-            {showAdmin && (
-              <NavLink to="/admin" className="nav-admin">
-                Admin
-              </NavLink>
-            )}
+          <nav className={menuOpen ? 'nav open' : 'nav'}>
+            <SiteNav items={navItems} onNavigate={() => setMenuOpen(false)} />
           </nav>
         )}
 

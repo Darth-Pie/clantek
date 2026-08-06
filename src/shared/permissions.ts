@@ -39,6 +39,8 @@ export const PERMISSIONS = {
   'pages.manage': 'Arrange page layouts and modules',
   'settings.manage': 'Edit site settings',
 
+  'hangar.view': 'View other members’ Star Citizen hangars (when they’ve shared them)',
+
   'audit.view': 'View the audit log',
   'discord.sync': 'Trigger Discord role synchronization',
 } as const;

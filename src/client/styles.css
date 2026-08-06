@@ -1334,29 +1334,102 @@ button.active {
  * Admin panel shell (left sidebar + content)
  * ------------------------------------------------------------------ */
 
+/* Admin header: section toggle + breadcrumb, so the panel reads as a place
+   within the site rather than a separate app you dropped into. */
+.admin-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.admin-nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+}
+.admin-nav-toggle:hover {
+  border-color: var(--color-accent);
+}
+
+.admin-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+.admin-crumb {
+  color: var(--color-muted);
+  text-decoration: none;
+}
+a.admin-crumb:hover {
+  color: var(--color-text);
+}
+.admin-crumb-sep {
+  opacity: 0.6;
+}
+.admin-crumb.current {
+  color: var(--color-text);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.admin-crumb-icon {
+  color: var(--color-accent, currentColor);
+}
+
 .admin-shell {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) 1fr;
+  grid-template-columns: 1fr;
   gap: 1.25rem;
   align-items: start;
 }
 
+/* The rail is only a column when open; otherwise the tool takes full width. */
+.admin-shell.nav-open {
+  grid-template-columns: minmax(190px, 230px) 1fr;
+}
+
 @media (max-width: 720px) {
-  .admin-shell {
+  .admin-shell.nav-open {
     grid-template-columns: 1fr;
   }
 }
 
 .admin-nav {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 0.15rem;
   padding: 0.5rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  /* Stay in view while a long tool scrolls; clear the sticky top bar. */
   position: sticky;
-  top: 1rem;
+  top: 4.5rem;
+  max-height: calc(100vh - 5.5rem);
+  overflow: auto;
+}
+.admin-shell.nav-open .admin-nav {
+  display: flex;
+}
+@media (max-width: 720px) {
+  .admin-nav {
+    position: static;
+    max-height: none;
+  }
 }
 
 /* Each group stacks its items vertically. */
@@ -1439,11 +1512,19 @@ button.active {
 }
 
 .admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   padding: 0.5rem 0.6rem;
   border-radius: var(--radius);
   color: var(--color-text);
   text-decoration: none;
   font-size: 0.95rem;
+}
+
+.admin-nav-icon {
+  flex: 0 0 auto;
+  color: var(--color-muted);
 }
 
 .admin-nav-link:hover {
@@ -1452,6 +1533,10 @@ button.active {
 
 .admin-nav-link.active {
   background: var(--color-accent);
+  color: #fff;
+}
+
+.admin-nav-link.active .admin-nav-icon {
   color: #fff;
 }
 
@@ -2907,6 +2992,187 @@ button.mini {
   margin: 0.5rem 0;
 }
 
+/* Hero banner module. The panel is intentionally dark regardless of theme so it
+   reads as a landing hero; the accent pulls from the active theme. */
+.module-hero {
+  --hero-accent: var(--color-accent, #5b8cff);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: clamp(2.5rem, 6vw, 4.5rem) clamp(1.5rem, 5vw, 4rem);
+  text-align: center;
+  color: #f5f7fb;
+  background:
+    radial-gradient(1200px 500px at 80% -10%, color-mix(in srgb, var(--hero-accent) 28%, transparent), transparent 60%),
+    radial-gradient(900px 400px at 0% 110%, color-mix(in srgb, var(--hero-accent) 16%, transparent), transparent 55%),
+    linear-gradient(160deg, #0c1020 0%, #0a0d18 60%, #080a12 100%);
+}
+.hero-eyebrow {
+  display: inline-block;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--hero-accent);
+  margin-bottom: 1rem;
+}
+.hero-headline {
+  margin: 0 auto 0.9rem;
+  max-width: 16ch;
+  font-weight: 800;
+  line-height: 1.05;
+  font-size: clamp(2.1rem, 5.5vw, 3.6rem);
+  color: #ffffff;
+}
+.hero-subhead {
+  margin: 0 auto;
+  max-width: 60ch;
+  color: #aeb7c8;
+  font-size: clamp(1rem, 2.2vw, 1.18rem);
+  line-height: 1.6;
+}
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  justify-content: center;
+  margin: 2rem 0 1.4rem;
+}
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1.6rem;
+  border-radius: 12px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.hero-btn:hover {
+  transform: translateY(-2px);
+}
+.hero-btn-primary {
+  background: var(--hero-accent);
+  color: #0a0d18;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--hero-accent) 45%, transparent);
+}
+.hero-btn-primary:hover {
+  box-shadow: 0 14px 38px color-mix(in srgb, var(--hero-accent) 60%, transparent);
+}
+.hero-btn-secondary {
+  background: transparent;
+  color: #f5f7fb;
+  border: 1.5px solid color-mix(in srgb, #fff 28%, transparent);
+}
+.hero-btn-secondary:hover {
+  border-color: var(--hero-accent);
+  color: #fff;
+}
+.hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: center;
+}
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #dfe6f5;
+  background: color-mix(in srgb, #fff 6%, transparent);
+  border: 1px solid color-mix(in srgb, #fff 12%, transparent);
+}
+.hero-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+.hero-card {
+  text-align: left;
+  padding: 1.4rem 1.5rem;
+  border-radius: 16px;
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 5%, transparent), color-mix(in srgb, #fff 2%, transparent));
+  border: 1px solid color-mix(in srgb, #fff 10%, transparent);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.hero-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--hero-accent) 55%, transparent);
+}
+.hero-card-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+  display: block;
+  margin-bottom: 0.7rem;
+}
+.hero-card-title {
+  margin: 0 0 0.15rem;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #f5f7fb;
+}
+.hero-card-tag {
+  margin: 0 0 0.55rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--hero-accent);
+}
+.hero-card-body {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #c2cadb;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-btn:hover,
+  .hero-card:hover {
+    transform: none;
+  }
+}
+
+/* Hero module editor form */
+.hero-config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.hero-config-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.hero-config-row > input {
+  flex: 1;
+  min-width: 0;
+}
+.hero-config-icon {
+  flex: 0 0 4rem;
+}
+.hero-config-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #888);
+  margin-top: 0.4rem;
+}
+.hero-config-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
 /* Medals / war-records / games galleries */
 .module-gallery {
   list-style: none;
@@ -3277,6 +3543,34 @@ a.org-box:hover {
 .branding-hint li {
   margin: 0.3rem 0;
 }
+.branding-favicon {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.branding-favicon-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.branding-favicon-preview {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  object-fit: contain;
+  background: var(--color-surface-2, rgba(127, 127, 127, 0.12));
+  border: 1px solid var(--color-border);
+}
+.branding-favicon-preview.placeholder {
+  display: inline-block;
+}
+.branding-favicon-head p {
+  margin: 0.15rem 0 0;
+}
 
 /* HTML block module */
 .module-html .page-html img {
@@ -3389,4 +3683,468 @@ a.org-box:hover {
 
 .module-audience select {
   max-width: 14rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Top-nav categories (dropdowns) — see components/SiteNav.tsx
+ * ------------------------------------------------------------------ */
+
+.nav-cat {
+  position: relative;
+  display: inline-flex;
+}
+
+.nav-cat-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius);
+}
+
+.nav-cat-trigger:hover,
+.nav-cat.open .nav-cat-trigger {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.nav-cat-caret {
+  font-size: 0.7em;
+  transition: transform 0.15s ease;
+}
+
+.nav-cat.open .nav-cat-caret {
+  transform: rotate(180deg);
+}
+
+.nav-cat-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  min-width: 180px;
+  z-index: 60;
+  display: none;
+  flex-direction: column;
+  padding: 0.35rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.nav-cat.open .nav-cat-menu {
+  display: flex;
+}
+
+.nav-cat-menu a {
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  /* Inside the hamburger column the dropdown becomes an inline, full-width
+     sub-list rather than a floating popover. */
+  .nav-cat {
+    display: block;
+    width: 100%;
+  }
+  .nav-cat-menu {
+    position: static;
+    box-shadow: none;
+    border: none;
+    padding: 0 0 0 0.75rem;
+    min-width: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Navigation builder — see pages/NavAdmin.tsx
+ * ------------------------------------------------------------------ */
+
+.nav-admin-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.nav-tree,
+.nav-tree-children {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.nav-tree-children {
+  margin: 0.4rem 0 0 1.25rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--color-border);
+}
+
+.nav-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.nav-row-group {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.nav-row-kind {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  min-width: 6.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-row-label {
+  flex: 1 1 8rem;
+  min-width: 5rem;
+}
+
+.nav-role {
+  flex: 0 0 auto;
+  max-width: 9rem;
+}
+
+.nav-row-tools {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nav-into {
+  max-width: 6.5rem;
+}
+
+.nav-child-empty {
+  padding: 0.3rem 0.1rem;
+}
+
+.nav-add {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.nav-add-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.nav-add-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.nav-add-url-input {
+  flex: 1 1 16rem;
+  min-width: 12rem;
+}
+
+@media (max-width: 640px) {
+  .nav-row {
+    flex-wrap: wrap;
+  }
+  .nav-row-label {
+    flex-basis: 100%;
+    order: 3;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Reassign-on-delete dialog — see components/ReassignDialog.tsx
+ * ------------------------------------------------------------------ */
+
+.reassign-dialog {
+  margin-top: 1rem;
+  border-color: var(--color-accent);
+}
+.reassign-dialog h3 {
+  margin: 0 0 0.25rem;
+}
+.reassign-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.6rem 0;
+  max-width: 26rem;
+}
+.reassign-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Modules admin — see pages/ModulesAdmin.tsx
+ * ------------------------------------------------------------------ */
+
+.modules-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.module-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+}
+.module-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.module-name {
+  font-weight: 600;
+}
+.module-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ *
+ * Star Citizen hangar — see components/HangarView.tsx + HangarImport.tsx
+ * ------------------------------------------------------------------ */
+
+.hangar-section .hangar-import {
+  margin-bottom: 1rem;
+}
+.hangar-setup {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+}
+.hangar-setup summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.hangar-setup-steps {
+  margin: 0.6rem 0 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+.hangar-bookmarklet,
+.hangar-json {
+  width: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+  font-family: monospace;
+  font-size: 0.78rem;
+  margin: 0.35rem 0;
+  resize: vertical;
+}
+.hangar-import-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+.hangar-import-row .hangar-json {
+  flex: 1;
+  margin: 0;
+}
+.hangar-import-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
+.hangar-share {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.hangar-share input {
+  margin-top: 0.15rem;
+  flex: 0 0 auto;
+}
+.hangar-share > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.hangar-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.hangar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.hangar-chip {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+}
+.hangar-chip.active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+}
+.hangar-chip .n {
+  opacity: 0.7;
+  margin-left: 0.3rem;
+  font-size: 0.85em;
+}
+.hangar-search {
+  flex: 1;
+  min-width: 160px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+}
+.hangar-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.4rem;
+  margin: 0.2rem 0 0.35rem;
+}
+.hangar-stat {
+  font-size: 0.9rem;
+  color: var(--color-text-dim, var(--color-muted, inherit));
+}
+.hangar-stat strong {
+  font-size: 1.15rem;
+  color: var(--color-text, inherit);
+  margin-right: 0.15rem;
+}
+.hangar-count {
+  margin-bottom: 0.4rem;
+}
+.hangar-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.hangar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.hangar-table th,
+.hangar-table td {
+  text-align: left;
+  padding: 0.4rem 0.55rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.hangar-table th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+.hangar-table tr:hover td {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+.hangar-name {
+  white-space: normal;
+  font-weight: 600;
+  min-width: 12rem;
+}
+.hangar-thumb {
+  width: 56px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #000;
+  border: 1px solid var(--color-border);
+}
+.hangar-type {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+}
+.hangar-empty {
+  padding: 0.75rem;
+}
+
+/* SEO & Sharing — og image preview (see pages/SeoAdmin.tsx) */
+.seo-og {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.25rem 0;
+}
+.seo-og-preview {
+  width: 160px;
+  max-width: 100%;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: #000;
 }

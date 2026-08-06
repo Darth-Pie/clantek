@@ -275,9 +275,18 @@ roles.put('/:id/permissions', requirePermission('roles.manage'), async (c) => {
   return c.json({ ok: true, permissions: unique });
 });
 
+/**
+ * Delete a role. When members hold it, the caller passes a `reason` and, if they
+ * want the members to keep an equivalent capability, a `reassignTo` role id —
+ * holders are granted that role (as an explicit/manual grant) before this one
+ * cascades away. Omitting `reassignTo` (or null) just removes the role from
+ * everyone, the old behaviour. The move is set-based so it scales, and holders
+ * are pushed to the front of the reconcile sweep so Discord follows.
+ */
 roles.delete('/:id', requirePermission('roles.manage'), async (c) => {
   const id = Number(c.req.param('id'));
   const database = db(c.env);
+  const actorId = c.get('viewer')!.id;
 
   const role = await database.query.roles.findFirst({ where: eq(s.roles.id, id) });
   if (!role) return c.json({ error: 'No such role' }, 404);
@@ -285,20 +294,62 @@ roles.delete('/:id', requirePermission('roles.manage'), async (c) => {
     return c.json({ error: `“${role.name}” is a system role and cannot be deleted.` }, 403);
   }
 
-  // user_roles and role_permissions cascade on delete (see schema), so members
-  // simply lose this role. The Discord side is left alone — reconciliation or a
-  // manual sync handles removing the mapped Discord role if desired.
+  const body = await c.req
+    .json<{ reassignTo?: number | null; reason?: string }>()
+    .catch(() => ({}) as { reassignTo?: number | null; reason?: string });
+
+  const holders = await database
+    .select({ n: sql<number>`count(*)` })
+    .from(s.userRoles)
+    .where(eq(s.userRoles.roleId, id));
+  const memberCount = Number(holders[0]?.n ?? 0);
+
+  let target: typeof s.roles.$inferSelect | null = null;
+  if (memberCount > 0) {
+    if (!body.reason?.trim()) {
+      return c.json({ error: 'A reason is required to delete a role that has members.' }, 400);
+    }
+    if (body.reassignTo != null) {
+      if (Number(body.reassignTo) === id) {
+        return c.json({ error: 'Cannot reassign members to the role being deleted.' }, 400);
+      }
+      target =
+        (await database.query.roles.findFirst({ where: eq(s.roles.id, Number(body.reassignTo)) })) ??
+        null;
+      if (!target) return c.json({ error: 'The role to move members to does not exist.' }, 400);
+    }
+
+    // Front-of-queue holders so the reconcile sweep updates Discord soon.
+    await database.run(
+      sql`update users set last_reconciled_at = 0 where id in (select user_id from user_roles where role_id = ${id})`,
+    );
+
+    // Move holders onto the replacement (explicit grant) before the old role —
+    // and its memberships — cascade away on delete.
+    if (target) {
+      await database.run(
+        sql`insert into user_roles (user_id, role_id, source, granted_by)
+            select user_id, ${target.id}, 'manual', ${actorId} from user_roles where role_id = ${id}
+            on conflict(user_id, role_id) do nothing`,
+      );
+    }
+  }
+
+  // user_roles and role_permissions cascade on delete (see schema). The Discord
+  // side is left to the reconcile sweep — it removes the old mapped role and
+  // adds the replacement's, from the memberships we just wrote.
   await database.delete(s.roles).where(eq(s.roles.id, id));
 
   await database.insert(s.auditLog).values({
-    actorId: c.get('viewer')!.id,
+    actorId,
     action: 'role.delete',
     targetType: 'role',
     targetId: String(id),
-    meta: { name: role.name },
+    reason: body.reason?.trim() || null,
+    meta: { name: role.name, memberCount, reassignedTo: target?.id ?? null },
   });
 
-  return c.json({ ok: true });
+  return c.json({ ok: true, memberCount, reassignedTo: target?.id ?? null });
 });
 
 export default roles;

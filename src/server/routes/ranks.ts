@@ -184,41 +184,132 @@ ranks.put('/order', requirePermission('ranks.manage'), async (c) => {
   return c.json({ ok: true });
 });
 
+/**
+ * Delete a rank. When members still hold it, the caller must say where they go
+ * via `reassignTo` (another rank id, or null for "unranked") plus a `reason`.
+ *
+ * The move is set-based and keyed on the rank being deleted — no per-member
+ * loop or inline Discord call — so it scales to any roster size. Rank-derived
+ * roles are reconciled to the target (manual grants are left alone), affected
+ * members are pushed to the front of the reconcile sweep so Discord catches up
+ * shortly after, and the default-rank flag is handed off if this was it.
+ */
 ranks.delete('/:id', requirePermission('ranks.manage'), async (c) => {
   const id = Number(c.req.param('id'));
   const database = db(c.env);
+  const actorId = c.get('viewer')!.id;
 
   const rank = await database.query.ranks.findFirst({ where: eq(s.ranks.id, id) });
   if (!rank) return c.json({ error: 'No such rank' }, 404);
+
+  const body = await c.req
+    .json<{ reassignTo?: number | null; reason?: string }>()
+    .catch(() => ({}) as { reassignTo?: number | null; reason?: string });
 
   const holders = await database
     .select({ n: sql<number>`count(*)` })
     .from(s.users)
     .where(eq(s.users.rankId, id));
-
-  // Deleting a rank out from under members would silently strip their standing.
   const memberCount = Number(holders[0]?.n ?? 0);
+
+  let target: typeof s.ranks.$inferSelect | null = null;
   if (memberCount > 0) {
-    return c.json(
-      {
-        error: `${memberCount} member(s) currently hold this rank. Reassign them first.`,
-        memberCount,
-      },
-      409,
-    );
+    if (!Object.prototype.hasOwnProperty.call(body, 'reassignTo')) {
+      return c.json(
+        { error: `${memberCount} member(s) hold this rank. Choose where to move them.`, memberCount },
+        409,
+      );
+    }
+    if (!body.reason?.trim()) {
+      return c.json({ error: 'A reason is required to delete a rank that has members.' }, 400);
+    }
+    if (body.reassignTo != null) {
+      if (Number(body.reassignTo) === id) {
+        return c.json({ error: 'Cannot reassign members to the rank being deleted.' }, 400);
+      }
+      target =
+        (await database.query.ranks.findFirst({ where: eq(s.ranks.id, Number(body.reassignTo)) })) ??
+        null;
+      if (!target) return c.json({ error: 'The rank to move members to does not exist.' }, 400);
+    }
+
+    // Reconcile rank-derived roles while the members still carry the old rank,
+    // so the same code path serves "move to a rank" and "make unranked".
+    const oldRoleIds = (
+      await database.select({ roleId: s.rankRoles.roleId }).from(s.rankRoles).where(eq(s.rankRoles.rankId, id))
+    ).map((r) => r.roleId);
+    const newRoleIds = target
+      ? (
+          await database
+            .select({ roleId: s.rankRoles.roleId })
+            .from(s.rankRoles)
+            .where(eq(s.rankRoles.rankId, target.id))
+        ).map((r) => r.roleId)
+      : [];
+    const staleRoleIds = oldRoleIds.filter((r) => !newRoleIds.includes(r));
+
+    // Front-of-queue the affected members so the reconcile sweep pushes their
+    // Discord role changes soon.
+    await database.update(s.users).set({ lastReconciledAt: 0 }).where(eq(s.users.rankId, id));
+
+    // Drop old rank-granted roles the new rank doesn't grant (source='manual'
+    // grants are never matched, so an admin's explicit grant survives).
+    if (staleRoleIds.length) {
+      await database.run(
+        sql`delete from user_roles where source = 'rank'
+            and role_id in (${sql.join(
+              staleRoleIds.map((r) => sql`${r}`),
+              sql`, `,
+            )})
+            and user_id in (select id from users where rank_id = ${id})`,
+      );
+    }
+    // Add the target rank's roles (skips any the member already holds).
+    for (const roleId of newRoleIds) {
+      await database.run(
+        sql`insert into user_roles (user_id, role_id, source, granted_by)
+            select id, ${roleId}, 'rank', ${actorId} from users where rank_id = ${id}
+            on conflict(user_id, role_id) do nothing`,
+      );
+    }
+
+    // Finally move the members off the rank we're about to delete.
+    await database.update(s.users).set({ rankId: target ? target.id : null }).where(eq(s.users.rankId, id));
+  }
+
+  // Never leave the roster without a default rank for new recruits.
+  if (rank.isDefault) {
+    const fallback =
+      target?.id ??
+      (
+        await database
+          .select({ id: s.ranks.id })
+          .from(s.ranks)
+          .where(ne(s.ranks.id, id))
+          .orderBy(asc(s.ranks.sortOrder))
+          .limit(1)
+      )[0]?.id;
+    if (fallback) await database.update(s.ranks).set({ isDefault: true }).where(eq(s.ranks.id, fallback));
   }
 
   await database.delete(s.ranks).where(eq(s.ranks.id, id));
   c.executionCtx.waitUntil(deleteMediaByUrl(c.env, rank.imageUrl));
+
   await database.insert(s.auditLog).values({
-    actorId: c.get('viewer')!.id,
+    actorId,
     action: 'rank.delete',
     targetType: 'rank',
     targetId: String(id),
-    meta: { name: rank.name },
+    reason: body.reason?.trim() || null,
+    meta: {
+      name: rank.name,
+      memberCount,
+      reassignedTo: target?.id ?? null,
+      unranked: memberCount > 0 && !target,
+    },
   });
 
-  return c.json({ ok: true });
+  return c.json({ ok: true, memberCount, reassignedTo: target?.id ?? null });
 });
 
 export default ranks;

@@ -2,15 +2,22 @@ import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext, Env } from '../env';
-import { db, requirePermission } from '../middleware/auth';
+import { db, requireAuth, requirePermission } from '../middleware/auth';
+import { loadModules, cleanModuleFlags, MODULES_KEY } from '../modules';
+import { mergeSeo, SEO_KEY, type StoredSeo } from '../seo';
 import {
   loadConfig,
+  loadAnalytics,
   discordClient,
   mergeStoredIdentity,
+  mergeStoredAnalytics,
   ConfigValidationError,
   IDENTITY_KEY,
+  ANALYTICS_KEY,
   type StoredIdentity,
   type StoredIdentityInput,
+  type StoredAnalytics,
+  type StoredAnalyticsInput,
 } from '../config';
 import {
   loadAnnouncementConfig,
@@ -18,6 +25,7 @@ import {
   type AnnouncementConfig,
   type AnnouncementEventKey,
 } from '../discord/announce';
+import { fetchRates } from './usage';
 
 const settings = new Hono<AppContext>();
 
@@ -38,6 +46,59 @@ function identityView(cfg: Awaited<ReturnType<typeof loadConfig>>) {
     },
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * Game modules — which optional features (Star Citizen, …) are enabled.
+ * Any signed-in member may read the flags (to show/hide module UI); only
+ * settings.manage may change them.
+ * ------------------------------------------------------------------ */
+
+settings.get('/modules', requireAuth, async (c) => {
+  return c.json({ modules: await loadModules(c.env, db(c.env)) });
+});
+
+settings.put('/modules', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ modules?: unknown }>();
+  const clean = cleanModuleFlags(body.modules);
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: MODULES_KEY, value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  return c.json({ ok: true, modules: clean });
+});
+
+/* ------------------------------------------------------------------ *
+ * SEO & sharing — the settings-driven <head> the Worker injects (title,
+ * description, Open Graph, Twitter, robots, verification, JSON-LD). The site
+ * name/URL themselves live in Identity & Discord; shown here for reference.
+ * ------------------------------------------------------------------ */
+
+settings.get('/seo', requirePermission('settings.manage'), async (c) => {
+  const row = await db(c.env).query.settings.findFirst({ where: eq(s.settings.key, SEO_KEY) });
+  const cfg = await loadConfig(c.env, db(c.env));
+  return c.json({
+    seo: (row?.value as StoredSeo | undefined) ?? {},
+    site: { name: cfg.siteName, url: cfg.siteUrl },
+  });
+});
+
+settings.put('/seo', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ seo?: unknown }>();
+  const clean = mergeSeo(body.seo);
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: SEO_KEY, value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  return c.json({ ok: true, seo: clean });
+});
 
 /** Public — the theme has to load before anyone signs in. */
 settings.get('/theme', async (c) => {
@@ -96,6 +157,7 @@ settings.put('/site', requirePermission('settings.manage'), async (c) => {
   const clean = {
     logoUrl: cleanLogoUrl((site ?? {}).logoUrl),
     logoSize: Number.isFinite(size) ? Math.min(200, Math.max(40, size)) : 88,
+    faviconUrl: cleanLogoUrl((site ?? {}).faviconUrl),
   };
 
   await db(c.env)
@@ -235,6 +297,65 @@ settings.post('/identity/test', requirePermission('settings.manage'), async (c) 
   } catch (err) {
     return c.json({ ok: false, error: `Discord rejected the bot: ${(err as Error).message}` }, 502);
   }
+});
+
+/* ------------------------------------------------------------------ *
+ * Analytics — the Cloudflare account/token/script/db the usage dashboard
+ * queries for live request & query rates. DB-over-env like identity; the API
+ * token is write-only (returned as a presence boolean, never its value).
+ * ------------------------------------------------------------------ */
+
+/** Effective analytics config for the admin UI — the token becomes presence only. */
+function analyticsView(cfg: Awaited<ReturnType<typeof loadAnalytics>>) {
+  return {
+    accountId: cfg.accountId,
+    scriptName: cfg.scriptName,
+    d1DatabaseId: cfg.d1DatabaseId,
+    apiTokenSet: cfg.apiToken !== '',
+  };
+}
+
+settings.get('/analytics', requirePermission('settings.manage'), async (c) => {
+  return c.json({ analytics: analyticsView(await loadAnalytics(c.env, db(c.env))) });
+});
+
+settings.put('/analytics', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ analytics?: StoredAnalyticsInput }>();
+
+  const existingRow = await db(c.env).query.settings.findFirst({
+    where: eq(s.settings.key, ANALYTICS_KEY),
+  });
+  const existing = (existingRow?.value as StoredAnalytics | undefined) ?? {};
+
+  let clean: StoredAnalytics;
+  try {
+    clean = mergeStoredAnalytics(existing, body.analytics ?? {});
+  } catch (err) {
+    if (err instanceof ConfigValidationError) return c.json({ error: err.message }, 400);
+    throw err;
+  }
+
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: ANALYTICS_KEY, value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+
+  return c.json({ ok: true, analytics: analyticsView(await loadAnalytics(c.env, db(c.env))) });
+});
+
+/** Actually query the Analytics API so the operator sees whether their token works. */
+settings.post('/analytics/test', requirePermission('settings.manage'), async (c) => {
+  const cfg = await loadAnalytics(c.env, db(c.env));
+  if (!cfg.apiToken || !cfg.accountId) {
+    return c.json({ ok: false, error: 'Set the Account ID and API token first.' }, 400);
+  }
+  const { rates, error } = await fetchRates(cfg);
+  if (error) return c.json({ ok: false, error }, 502);
+  return c.json({ ok: true, requests: rates?.workersRequests.used ?? 0 });
 });
 
 export default settings;

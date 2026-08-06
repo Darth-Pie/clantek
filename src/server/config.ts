@@ -172,3 +172,94 @@ export function mergeStoredIdentity(
     },
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * Analytics — the Cloudflare account/token/script/db the usage dashboard
+ * queries for live request & query rates. Same DB-over-env pattern as
+ * identity, so an operator can wire up (or fix) their own analytics from the
+ * admin panel instead of `wrangler secret put` + redeploy.
+ * ------------------------------------------------------------------ */
+
+/** settings key under which the analytics blob is stored. */
+export const ANALYTICS_KEY = 'analytics';
+
+// Fallback defaults for this install — the worker name and D1 database id from
+// wrangler.jsonc. Another group's deploy overrides these in the Analytics panel.
+const DEFAULT_SCRIPT_NAME = 'clantek';
+const DEFAULT_D1_DATABASE_ID = '19d7ebe6-e379-411b-8597-17b630cb8394';
+
+export interface AnalyticsConfig {
+  /** Cloudflare account id (not secret — appears in dashboard URLs). */
+  accountId: string;
+  /** Read-only "Account Analytics: Read" API token (secret). */
+  apiToken: string;
+  /** Worker script name whose invocations are counted. */
+  scriptName: string;
+  /** D1 database id whose rows-read/written are counted. */
+  d1DatabaseId: string;
+}
+
+/** Persisted shape in settings['analytics']. Blank/missing → env or default. */
+export interface StoredAnalytics {
+  accountId?: string;
+  apiToken?: string;
+  scriptName?: string;
+  d1DatabaseId?: string;
+}
+
+/** Resolve analytics config: DB overrides first, then env vars, then defaults. */
+export async function loadAnalytics(env: Env, database?: DB): Promise<AnalyticsConfig> {
+  const dbi = database ?? drizzle(env.DB, { schema });
+  let stored: StoredAnalytics = {};
+  try {
+    const row = await dbi.query.settings.findFirst({ where: eq(s.settings.key, ANALYTICS_KEY) });
+    if (row?.value && typeof row.value === 'object') stored = row.value as StoredAnalytics;
+  } catch {
+    // No settings row/table yet → env/defaults only.
+  }
+  return {
+    accountId: firstNonEmpty(stored.accountId, env.CLOUDFLARE_ACCOUNT_ID),
+    apiToken: firstNonEmpty(stored.apiToken, env.CLOUDFLARE_API_TOKEN),
+    scriptName: firstNonEmpty(stored.scriptName, DEFAULT_SCRIPT_NAME),
+    d1DatabaseId: firstNonEmpty(stored.d1DatabaseId, DEFAULT_D1_DATABASE_ID),
+  };
+}
+
+/** Raw client payload for an analytics save — every field untrusted. */
+export interface StoredAnalyticsInput {
+  accountId?: unknown;
+  apiToken?: unknown;
+  scriptName?: unknown;
+  d1DatabaseId?: unknown;
+}
+
+/**
+ * Validate and merge an analytics update. Non-secret fields store as given
+ * (blank clears the override); the apiToken is write-only (blank keeps existing).
+ */
+export function mergeStoredAnalytics(
+  existing: StoredAnalytics,
+  incoming: StoredAnalyticsInput,
+): StoredAnalytics {
+  const accountId = trimmed(incoming.accountId, 40);
+  const scriptName = trimmed(incoming.scriptName, 64);
+  const d1DatabaseId = trimmed(incoming.d1DatabaseId, 64);
+  const apiTokenIn = trimmed(incoming.apiToken, 200);
+
+  if (accountId && !/^[0-9a-fA-F]{32}$/.test(accountId)) {
+    throw new ConfigValidationError('Cloudflare Account ID must be 32 hexadecimal characters.');
+  }
+  if (scriptName && !/^[a-zA-Z0-9_-]{1,64}$/.test(scriptName)) {
+    throw new ConfigValidationError('Worker name may only contain letters, numbers, hyphens and underscores.');
+  }
+  if (d1DatabaseId && !/^[0-9a-fA-F-]{36}$/.test(d1DatabaseId)) {
+    throw new ConfigValidationError('D1 Database ID must be a 36-character UUID.');
+  }
+
+  return {
+    accountId,
+    scriptName,
+    d1DatabaseId,
+    apiToken: apiTokenIn || existing.apiToken || '',
+  };
+}

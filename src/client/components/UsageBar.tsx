@@ -134,8 +134,8 @@ export default function UsageBar() {
             <ol className="small muted">
               <li>Create a Cloudflare API token with <strong>Account Analytics: Read</strong>.</li>
               <li>
-                Set <code>CLOUDFLARE_ACCOUNT_ID</code> in <code>wrangler.jsonc</code>, then run{' '}
-                <code>npx wrangler secret put CLOUDFLARE_API_TOKEN</code> and redeploy.
+                Paste it, with your Account ID, under{' '}
+                <a href="/admin/analytics">Settings → Analytics</a> — no redeploy needed.
               </li>
             </ol>
           </details>

@@ -77,7 +77,7 @@ export default function BrandingAdmin() {
               {uploading ? 'Uploading…' : draft.logoUrl ? 'Change logo' : 'Upload logo'}
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+                accept="image/png,image/jpeg,image/gif,image/webp"
                 hidden
                 disabled={uploading}
                 onChange={async (e) => {
@@ -127,12 +127,65 @@ export default function BrandingAdmin() {
           {!draft.logoUrl && (
             <p className="muted small">With no logo uploaded, the header shows the site name as text.</p>
           )}
+
+          <div className="branding-favicon">
+            <div className="branding-favicon-head">
+              {draft.faviconUrl ? (
+                <img className="branding-favicon-preview" src={draft.faviconUrl} alt="Favicon preview" />
+              ) : (
+                <span className="branding-favicon-preview placeholder" aria-hidden />
+              )}
+              <div>
+                <strong>Browser tab icon</strong>
+                <p className="muted small">
+                  The little icon shown in the browser tab and bookmarks (the favicon). A square
+                  PNG works best — 512×512 with a transparent background.
+                </p>
+              </div>
+            </div>
+            <div className="avatar-controls">
+              <label className="upload-btn">
+                {uploading ? 'Uploading…' : draft.faviconUrl ? 'Change icon' : 'Upload icon'}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  hidden
+                  disabled={uploading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!file) return;
+                    setErr(null);
+                    setUploading(true);
+                    try {
+                      const res = await api.upload<{ url: string }>('/media/branding', file);
+                      edit({ faviconUrl: res.url });
+                    } catch (e2) {
+                      setErr(e2 instanceof Error ? e2.message : 'Upload failed.');
+                    } finally {
+                      setUploading(false);
+                    }
+                  }}
+                />
+              </label>
+              {draft.faviconUrl && (
+                <button
+                  type="button"
+                  className="ghost"
+                  disabled={uploading}
+                  onClick={() => edit({ faviconUrl: '' })}
+                >
+                  Remove icon
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="branding-hint muted small">
           <p><strong>Tips</strong></p>
           <ul>
-            <li>A transparent PNG or SVG looks best — the header background shows through.</li>
+            <li>A transparent PNG looks best — the header background shows through.</li>
             <li>A wide wordmark or a compact emblem both work; the size slider sets its height.</li>
             <li>Scroll the page after saving to see it dock into the bar.</li>
           </ul>

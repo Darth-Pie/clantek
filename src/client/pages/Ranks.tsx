@@ -12,6 +12,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
+import ReassignDialog from '../components/ReassignDialog';
 
 interface Rank {
   id: number;
@@ -32,6 +33,17 @@ interface Role {
   color: string | null;
 }
 
+/** The rank just below `rank` on the ladder (fallback: just above, else none). */
+function nextLowerRankId(ranks: Rank[], rank: Rank): number | null {
+  const lower = ranks
+    .filter((r) => r.id !== rank.id && r.sortOrder < rank.sortOrder)
+    .sort((a, b) => b.sortOrder - a.sortOrder)[0];
+  const higher = ranks
+    .filter((r) => r.id !== rank.id && r.sortOrder > rank.sortOrder)
+    .sort((a, b) => a.sortOrder - b.sortOrder)[0];
+  return lower?.id ?? higher?.id ?? null;
+}
+
 export default function Ranks() {
   const { can } = useSession();
   const canManageRoles = can('roles.manage');
@@ -40,6 +52,8 @@ export default function Ranks() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedRankId, setSelectedRankId] = useState<number | null>(null);
   const [newName, setNewName] = useState('');
+  // A rank pending deletion that still has members — the reassign dialog is open.
+  const [pendingDelete, setPendingDelete] = useState<Rank | null>(null);
 
   async function load() {
     const { ranks } = await api.get<{ ranks: Rank[] }>('/ranks');
@@ -69,7 +83,28 @@ export default function Ranks() {
   const setDefault = (id: number) => run(() => api.patch(`/ranks/${id}`, { isDefault: true }));
   const setImage = (id: number, imageUrl: string | null) =>
     run(() => api.patch(`/ranks/${id}`, { imageUrl }));
-  const remove = (id: number) => run(() => api.del(`/ranks/${id}`));
+
+  // Member-less ranks delete with a plain confirm; ones with members open the
+  // reassign dialog so the admin says where those members go.
+  const remove = (rank: Rank) => {
+    if (rank.memberCount > 0) {
+      setPendingDelete(rank);
+      return;
+    }
+    if (!window.confirm(`Delete the rank “${rank.name}”?`)) return;
+    void run(() => api.del(`/ranks/${rank.id}`));
+  };
+
+  const confirmReassignDelete = (target: number | null, reason: string) => {
+    const rank = pendingDelete;
+    if (!rank) return;
+    void run(async () => {
+      await api.del(`/ranks/${rank.id}`, { reassignTo: target, reason });
+      setPendingDelete(null);
+      const where = target != null ? `“${ranks.find((r) => r.id === target)?.name ?? 'another rank'}”` : 'no rank';
+      return `Deleted “${rank.name}” and moved ${rank.memberCount} member${rank.memberCount === 1 ? '' : 's'} to ${where}.`;
+    });
+  };
 
   const move = (index: number, direction: -1 | 1) =>
     run(() => {
@@ -185,11 +220,11 @@ export default function Ranks() {
               <td>
                 <button
                   className="danger"
-                  onClick={() => void remove(rank.id)}
-                  disabled={busy || rank.memberCount > 0}
+                  onClick={() => remove(rank)}
+                  disabled={busy}
                   title={
                     rank.memberCount > 0
-                      ? 'Reassign the members holding this rank first'
+                      ? 'Delete this rank and move its members elsewhere'
                       : 'Delete this rank'
                   }
                 >
@@ -200,6 +235,19 @@ export default function Ranks() {
           ))}
         </tbody>
       </table>
+
+      {pendingDelete && (
+        <ReassignDialog
+          title={`Delete rank “${pendingDelete.name}”`}
+          count={pendingDelete.memberCount}
+          options={ranks.filter((r) => r.id !== pendingDelete.id).map((r) => ({ value: r.id, label: r.name }))}
+          defaultValue={nextLowerRankId(ranks, pendingDelete)}
+          noneLabel="No rank (unranked)"
+          busy={busy}
+          onConfirm={confirmReassignDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
 
       {canManageRoles && selectedRank && (
         <RankRolesEditor

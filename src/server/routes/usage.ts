@@ -14,8 +14,9 @@
  */
 
 import { Hono } from 'hono';
-import type { AppContext, Env } from '../env';
-import { requireAuth } from '../middleware/auth';
+import type { AppContext } from '../env';
+import { db, requireAuth } from '../middleware/auth';
+import { loadAnalytics, type AnalyticsConfig } from '../config';
 
 const usage = new Hono<AppContext>();
 
@@ -25,10 +26,6 @@ const D1_STORAGE_LIMIT = 5 * GB;
 const WORKERS_REQUESTS_PER_DAY = 100_000;
 const D1_ROWS_READ_PER_DAY = 5_000_000;
 const D1_ROWS_WRITTEN_PER_DAY = 100_000;
-
-// Must match wrangler.jsonc (worker name + d1 database_id).
-const SCRIPT_NAME = 'clantek';
-const D1_DATABASE_ID = '19d7ebe6-e379-411b-8597-17b630cb8394';
 
 /** Sum every object's size in the media bucket. Clan-scale buckets are small; cap the paging to stay cheap. */
 async function measureR2(bucket: R2Bucket): Promise<{ bytes: number; objects: number; truncated: boolean }> {
@@ -62,8 +59,8 @@ interface Rates {
 }
 
 /** Query the GraphQL Analytics API for the last 24h. Returns null + a reason on any problem. */
-async function fetchRates(env: Env): Promise<{ rates: Rates | null; error: string | null }> {
-  if (!env.CLOUDFLARE_API_TOKEN || !env.CLOUDFLARE_ACCOUNT_ID) {
+export async function fetchRates(cfg: AnalyticsConfig): Promise<{ rates: Rates | null; error: string | null }> {
+  if (!cfg.apiToken || !cfg.accountId) {
     return { rates: null, error: null }; // not configured — not an error
   }
 
@@ -89,14 +86,14 @@ async function fetchRates(env: Env): Promise<{ rates: Rates | null; error: strin
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+        authorization: `Bearer ${cfg.apiToken}`,
       },
       body: JSON.stringify({
         query,
         variables: {
-          account: env.CLOUDFLARE_ACCOUNT_ID,
-          script: SCRIPT_NAME,
-          db: D1_DATABASE_ID,
+          account: cfg.accountId,
+          script: cfg.scriptName,
+          db: cfg.d1DatabaseId,
           since: since.toISOString(),
           until: until.toISOString(),
         },
@@ -133,10 +130,11 @@ async function fetchRates(env: Env): Promise<{ rates: Rates | null; error: strin
 }
 
 usage.get('/', requireAuth, async (c) => {
+  const analytics = await loadAnalytics(c.env, db(c.env));
   const [r2, d1Bytes, rateResult] = await Promise.all([
     c.env.MEDIA ? measureR2(c.env.MEDIA) : Promise.resolve(null),
     measureD1(c.env.DB),
-    fetchRates(c.env),
+    fetchRates(analytics),
   ]);
 
   return c.json({
@@ -146,7 +144,7 @@ usage.get('/', requireAuth, async (c) => {
       d1: { bytes: d1Bytes, limitBytes: D1_STORAGE_LIMIT },
     },
     rates: rateResult.rates,
-    ratesConfigured: Boolean(c.env.CLOUDFLARE_API_TOKEN && c.env.CLOUDFLARE_ACCOUNT_ID),
+    ratesConfigured: Boolean(analytics.apiToken && analytics.accountId),
     ratesError: rateResult.error,
   });
 });

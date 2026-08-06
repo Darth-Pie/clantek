@@ -9,7 +9,17 @@
   // reproducible — a fresh deploy (or the CI pipeline) re-asserts it rather
   // than depending on a one-off dashboard binding. Requires the mustr.gg
   // zone to be on this Cloudflare account (it is).
-  "routes": [{ "pattern": "mustr.gg", "custom_domain": true }],
+  // The apex is canonical. `www` is bound here purely so custom_domain
+  // auto-provisions its DNS record + TLS cert; the actual www→apex 301 is a
+  // Cloudflare *Redirect Rule* (edge phase), because a worker-level redirect is
+  // bypassed for page loads — the static-assets layer answers navigations before
+  // the Worker runs (see run_worker_first below). The redirect in
+  // src/server/index.ts still covers any /api or /media path requested on www.
+  // Cookies and OAuth stay on the single apex host; nobody actually browses www.
+  "routes": [
+    { "pattern": "mustr.gg", "custom_domain": true },
+    { "pattern": "www.mustr.gg", "custom_domain": true }
+  ],
 
   // One canonical URL. With the custom domain above, the *.workers.dev
   // subdomain is intentionally off, so there is a single host for OAuth
@@ -30,11 +40,18 @@
   // run_worker_first or the assets layer would answer those paths with the SPA
   // fallback (index.html) before the Worker ever sees them — the same trap the
   // /api/* scoping avoids for the API.
+  // run_worker_first: true routes every request through the Worker first. The
+  // Worker serves API + /media itself and hands everything else to ASSETS — but
+  // for the HTML shell it rewrites <head> from the site's SEO settings (title,
+  // Open Graph, etc.) so crawlers and social scrapers see the right tags. The
+  // Worker's `app.all('*')` fallback preserves SPA not_found_handling by proxying
+  // to ASSETS. (Was scoped to /api|/media, which left navigations to the assets
+  // layer and made server-side <head> injection impossible.)
   "assets": {
     "directory": "./dist/client",
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*", "/media/*"]
+    "run_worker_first": true
   },
 
   "d1_databases": [

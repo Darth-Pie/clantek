@@ -37,12 +37,11 @@ function useVisibility(publicSlugs?: Set<string>) {
     if (item.kind === 'builtin' && item.target) {
       const b = BUILTIN_TARGETS[item.target];
       if (!b) return false;
+      // A logged-out visitor sees a built-in only when its destination is public
+      // (publicSlugs carries the built-in keys — 'home', 'news', … — that opted in).
+      if (anon) return !!publicSlugs?.has(item.target);
       if (b.admin) return canAccessAdmin(can);
       if (b.permission) return can(b.permission);
-      // A permission-less built-in (Home, News, Roster). For a signed-in member
-      // all are reachable; for a logged-out visitor only Home can be public —
-      // News and Roster always require signing in.
-      if (anon) return item.target === 'home' && !!publicSlugs?.has('home');
       return true;
     }
     if (item.kind === 'page' && item.target) {

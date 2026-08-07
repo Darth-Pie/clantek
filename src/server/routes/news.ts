@@ -13,7 +13,8 @@ import { Hono } from 'hono';
 import { and, desc, eq, ne } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
-import { db, requireAuth, requirePermission } from '../middleware/auth';
+import { db, requirePermission } from '../middleware/auth';
+import { loadPageAccess } from '../pageAccess';
 import { can } from '../../shared/permissions';
 import { memberName } from '../../shared/names';
 
@@ -70,8 +71,15 @@ function withAuthor<T extends { authorName: string | null; authorGlobalName: str
   };
 }
 
-/** The public feed: published posts only, pinned first, newest next. */
-news.get('/', requireAuth, async (c) => {
+/**
+ * The feed: published posts only, pinned first, newest next. Requires signing in
+ * unless the News page has been made public (settings 'page_access'), in which
+ * case a logged-out visitor gets the same published-only feed.
+ */
+news.get('/', async (c) => {
+  if (c.get('viewer') == null && (await loadPageAccess(c.env, db(c.env))).news !== 'public') {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
   const rows = await db(c.env)
     .select({
       id: s.news.id,
@@ -112,7 +120,10 @@ news.get('/manage', requirePermission('news.create'), async (c) => {
 });
 
 /** A single post by slug. Non-published posts are only visible to writers. */
-news.get('/:slug', requireAuth, async (c) => {
+news.get('/:slug', async (c) => {
+  if (c.get('viewer') == null && (await loadPageAccess(c.env, db(c.env))).news !== 'public') {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
   const slug = c.req.param('slug');
   const rows = await db(c.env)
     .select({

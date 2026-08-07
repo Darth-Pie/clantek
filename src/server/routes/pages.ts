@@ -18,6 +18,7 @@ import { eq, asc } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requirePermission } from '../middleware/auth';
+import { loadPageAccess } from '../pageAccess';
 import {
   defaultLayout,
   sanitizeLayout,
@@ -80,12 +81,17 @@ pages.get('/nav', async (c) => {
  * just be bounced to /login. Two-segment path so it can't collide with /:slug.
  */
 pages.get('/public/list', async (c) => {
-  const rows = await db(c.env)
-    .select({ slug: s.pageLayouts.slug, isPublic: s.pageLayouts.isPublic })
-    .from(s.pageLayouts);
+  const [rows, access] = await Promise.all([
+    db(c.env).select({ slug: s.pageLayouts.slug, isPublic: s.pageLayouts.isPublic }).from(s.pageLayouts),
+    loadPageAccess(c.env, db(c.env)),
+  ]);
   const slugs = rows.filter((r) => r.isPublic).map((r) => r.slug);
   // A fresh install has no 'home' row yet; home defaults to public in that case.
   if (!rows.some((r) => r.slug === HOME_SLUG)) slugs.push(HOME_SLUG);
+  // Built-in content pages (News/Roster/Events) opted into 'public' — their keys
+  // double as nav/route targets, and 'news' etc. are reserved so never collide
+  // with a custom page slug.
+  for (const [key, audience] of Object.entries(access)) if (audience === 'public') slugs.push(key);
   return c.json({ slugs });
 });
 

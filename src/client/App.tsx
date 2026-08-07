@@ -35,6 +35,29 @@ function Protected({ permission, children }: { permission?: Permission; children
   return <>{children}</>;
 }
 
+/**
+ * A route that renders for signed-in members always, and for logged-out visitors
+ * only when its built-in page (`pageKey`) is public — otherwise it sends them to
+ * /login. Waits for `ready` (the public list) before deciding, so an anonymous
+ * visitor to a public page is never briefly bounced.
+ */
+function PublicOr({
+  pageKey,
+  publicSlugs,
+  ready,
+  children,
+}: {
+  pageKey: string;
+  publicSlugs: Set<string>;
+  ready: boolean;
+  children: ReactNode;
+}) {
+  const { viewer, loading } = useSession();
+  if (loading || (!viewer && !ready)) return <div className="loading">Loading…</div>;
+  if (viewer) return <>{children}</>;
+  return publicSlugs.has(pageKey) ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
 export default function App() {
   const { viewer, siteName, loading } = useSession();
   const { branding } = useBranding();
@@ -44,6 +67,9 @@ export default function App() {
   // page is public). Passed to SiteNav so it can hide menu links that would just
   // bounce an anonymous visitor to /login.
   const [publicSlugs, setPublicSlugs] = useState<Set<string>>(new Set());
+  // True once the public list has loaded at least once, so a public-capable route
+  // can wait for it before deciding to bounce an anonymous visitor to /login.
+  const [accessReady, setAccessReady] = useState(false);
   const [footer, setFooter] = useState<FooterConfig | null>(null);
   const [scrolled, setScrolled] = useState(false);
   // Logo aspect ratio (width/height), measured on load, so the header can
@@ -73,7 +99,8 @@ export default function App() {
       api
         .get<{ slugs: string[] }>('/pages/public/list')
         .then((d) => setPublicSlugs(new Set(d.slugs)))
-        .catch(() => setPublicSlugs(new Set()));
+        .catch(() => setPublicSlugs(new Set()))
+        .finally(() => setAccessReady(true));
     void loadPublic();
     window.addEventListener('ct-pages-changed', loadPublic);
     return () => window.removeEventListener('ct-pages-changed', loadPublic);
@@ -179,17 +206,17 @@ export default function App() {
           <Route
             path="/news"
             element={
-              <Protected>
+              <PublicOr pageKey="news" publicSlugs={publicSlugs} ready={accessReady}>
                 <News />
-              </Protected>
+              </PublicOr>
             }
           />
           <Route
             path="/news/:slug"
             element={
-              <Protected>
+              <PublicOr pageKey="news" publicSlugs={publicSlugs} ready={accessReady}>
                 <NewsPost />
-              </Protected>
+              </PublicOr>
             }
           />
           {/* Leadership folded into the roster; keep the old path working. */}

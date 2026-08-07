@@ -6,6 +6,8 @@ import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { loadModules, cleanModuleFlags, MODULES_KEY, loadScConfig, cleanScConfig, SC_KEY } from '../modules';
 import { loadFooter, FOOTER_KEY } from '../footer';
 import { cleanFooter } from '../../shared/footer';
+import { loadPageAccess, PAGE_ACCESS_KEY } from '../pageAccess';
+import { cleanPageAccess } from '../../shared/pageAccess';
 import { mergeSeo, SEO_KEY, type StoredSeo } from '../seo';
 import {
   loadConfig,
@@ -117,6 +119,38 @@ settings.put('/footer', requirePermission('settings.manage'), async (c) => {
       set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
     });
   return c.json({ ok: true, footer: clean });
+});
+
+/* ------------------------------------------------------------------ *
+ * Built-in content-page visibility (News/Roster/Events). Public/Members per
+ * page — the parallel to a layout page's isPublic flag. Read by any signed-in
+ * member (the Pages editor shows the toggles); changed by whoever arranges pages
+ * (pages.manage), consistent with the home-page public toggle.
+ * ------------------------------------------------------------------ */
+
+settings.get('/page-access', requireAuth, async (c) => {
+  return c.json({ pageAccess: await loadPageAccess(c.env, db(c.env)) });
+});
+
+settings.put('/page-access', requirePermission('pages.manage'), async (c) => {
+  const body = await c.req.json<{ pageAccess?: unknown }>();
+  const clean = cleanPageAccess(body.pageAccess);
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: PAGE_ACCESS_KEY, value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  await db(c.env).insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'settings.page_access',
+    targetType: 'settings',
+    targetId: PAGE_ACCESS_KEY,
+    meta: clean,
+  });
+  return c.json({ ok: true, pageAccess: clean });
 });
 
 /* ------------------------------------------------------------------ *

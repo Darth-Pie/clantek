@@ -171,11 +171,10 @@ scripts/
 
 ## About the 2003 original
 
-The original PHP source is archived separately, outside this repo, at
-`E:\Google Drive\Work\Development\ClanTek Unlocked`. It is deliberately not
-copied here: `dump.php` contains live MySQL credentials and `ctbd.php` contains
-a hardcoded password, and neither should gain a second copy on disk. If you do
-pull it in for reference, `.gitignore` already blocks it.
+The original PHP source is archived separately, outside this repo. It is
+deliberately not copied here: `dump.php` contains live MySQL credentials and
+`ctbd.php` contains a hardcoded password, and neither should gain a second copy
+on disk.
 
 What carried forward: the rank ladder with time and win requirements, medals
 awarded per game, match records, and the audit log. What did not: the

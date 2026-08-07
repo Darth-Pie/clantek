@@ -1924,6 +1924,17 @@ a.admin-crumb:hover {
   text-decoration: underline;
 }
 
+/* Inline external help links (e.g. "where to get this" links in admin panels).
+   Themed to the accent so they read as links even inside muted helper text. */
+.ext-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.ext-link:hover {
+  text-decoration: underline;
+}
+
 .tag.pin {
   background: color-mix(in srgb, var(--color-accent) 18%, transparent);
   color: var(--color-accent);
@@ -4075,6 +4086,98 @@ a.org-box:hover {
 }
 .hangar-count {
   margin-bottom: 0.4rem;
+}
+.hangar-selfreport {
+  margin: 0 0 0.6rem;
+  opacity: 0.75;
+}
+
+/* Star Citizen account verification */
+.sc-verify {
+  margin: 0 0 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sc-verify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  width: fit-content;
+  border: 1px solid var(--color-border);
+}
+.sc-verify-badge.verified {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.sc-verify-badge.unverified {
+  color: var(--color-text-dim, var(--color-muted, inherit));
+}
+.sc-verify-check {
+  color: var(--color-accent);
+  font-weight: 800;
+}
+.sc-verify-org {
+  font-size: 0.85rem;
+}
+.sc-verify-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.sc-verify-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+.sc-verify-code {
+  display: inline-block;
+  width: fit-content;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  cursor: pointer;
+  user-select: all;
+}
+.sc-verify-start {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.sc-verify-start input {
+  flex: 1;
+  min-width: 12rem;
+}
+
+/* Modules admin — per-module config block (e.g. SC org SID) */
+.module-config {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+.module-config h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+.module-config-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.25rem 0;
+}
+.module-config-row input {
+  max-width: 12rem;
 }
 .hangar-table-wrap {
   overflow-x: auto;

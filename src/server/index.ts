@@ -53,6 +53,7 @@ import auditRoutes from './routes/audit';
 import pagesRoutes from './routes/pages';
 import navRoutes from './routes/nav';
 import hangarRoutes from './routes/hangar';
+import scVerifyRoutes from './routes/scVerify';
 import { loadSeo, renderHead } from './seo';
 import tokensRoutes from './routes/tokens';
 import orgChartRoutes from './routes/orgchart';
@@ -343,6 +344,7 @@ app.route('/api/audit', auditRoutes);
 app.route('/api/pages', pagesRoutes);
 app.route('/api/nav', navRoutes);
 app.route('/api/hangar', hangarRoutes);
+app.route('/api/sc', scVerifyRoutes);
 app.route('/api/orgchart', orgChartRoutes);
 app.route('/api/auth/tokens', tokensRoutes);
 

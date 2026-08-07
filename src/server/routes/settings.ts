@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext, Env } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
-import { loadModules, cleanModuleFlags, MODULES_KEY } from '../modules';
+import { loadModules, cleanModuleFlags, MODULES_KEY, loadScConfig, cleanScConfig, SC_KEY } from '../modules';
 import { mergeSeo, SEO_KEY, type StoredSeo } from '../seo';
 import {
   loadConfig,
@@ -69,6 +69,29 @@ settings.put('/modules', requirePermission('settings.manage'), async (c) => {
       set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
     });
   return c.json({ ok: true, modules: clean });
+});
+
+/* ------------------------------------------------------------------ *
+ * Star Citizen module config (org SID for account verification). Readable by
+ * any signed-in member; only settings.manage may change it.
+ * ------------------------------------------------------------------ */
+
+settings.get('/sc', requireAuth, async (c) => {
+  return c.json({ sc: await loadScConfig(c.env, db(c.env)) });
+});
+
+settings.put('/sc', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ sc?: unknown }>();
+  const clean = cleanScConfig(body.sc);
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: SC_KEY, value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  return c.json({ ok: true, sc: clean });
 });
 
 /* ------------------------------------------------------------------ *

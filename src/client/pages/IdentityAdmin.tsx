@@ -30,6 +30,15 @@ interface Urls {
   interactionsUrl: string;
 }
 
+/** A plain external link that opens safely in a new tab. */
+function Ext({ href, children }: { href: string; children: string }) {
+  return (
+    <a className="ext-link" href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
+}
+
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -125,6 +134,12 @@ export default function IdentityAdmin() {
 
   if (loading) return <div className="loading">Loading…</div>;
 
+  // Deep-link straight to this app's pages once the Client ID is known; otherwise
+  // send them to the applications list to pick (or create) the app.
+  const appBase = clientId
+    ? `https://discord.com/developers/applications/${clientId}`
+    : 'https://discord.com/developers/applications';
+
   return (
     <section className="panel identity-admin">
       <header className="panel-head">
@@ -159,19 +174,37 @@ export default function IdentityAdmin() {
 
       <fieldset>
         <legend>Discord application</legend>
+        <p className="muted small">
+          All four values come from{' '}
+          <Ext href="https://discord.com/developers/applications">the Discord Developer Portal</Ext>.
+          Create an application there (or open your existing one), then copy each value from the page
+          noted below. {clientId && <>Quick links open <em>your</em> app.</>}
+        </p>
         <label>
           Client ID
           <input value={clientId} onChange={(e) => setClientId(e.target.value)} disabled={busy} inputMode="numeric" />
+          <span className="muted small">
+            Your app → <strong>General Information</strong> → “Application ID”.{' '}
+            <Ext href={clientId ? `${appBase}/information` : appBase}>Open ↗</Ext>
+          </span>
         </label>
         <label>
           Server (Guild) ID
           <input value={guildId} onChange={(e) => setGuildId(e.target.value)} disabled={busy} inputMode="numeric" />
-          <span className="muted small">Login is gated on membership in this Discord server.</span>
+          <span className="muted small">
+            Login is gated on membership in this Discord server. In Discord, enable{' '}
+            <strong>Settings → Advanced → Developer Mode</strong>, then right-click your server icon →
+            “Copy Server ID”.{' '}
+            <Ext href="https://support.discord.com/hc/en-us/articles/206346498">How ↗</Ext>
+          </span>
         </label>
         <label>
           Public Key
           <input value={publicKey} onChange={(e) => setPublicKey(e.target.value)} disabled={busy} />
-          <span className="muted small">64 hex characters, from the app's General Information page.</span>
+          <span className="muted small">
+            64 hex characters. Your app → <strong>General Information</strong> → “Public Key”.{' '}
+            <Ext href={clientId ? `${appBase}/information` : appBase}>Open ↗</Ext>
+          </span>
         </label>
         <label>
           Client Secret
@@ -183,6 +216,10 @@ export default function IdentityAdmin() {
             disabled={busy}
             autoComplete="new-password"
           />
+          <span className="muted small">
+            Your app → <strong>OAuth2</strong> → “Reset Secret” (shown once). Powers Discord login.{' '}
+            <Ext href={clientId ? `${appBase}/oauth2` : appBase}>Open ↗</Ext>
+          </span>
         </label>
         <label>
           Bot Token
@@ -195,7 +232,9 @@ export default function IdentityAdmin() {
             autoComplete="new-password"
           />
           <span className="muted small">
-            Powers announcements and role sync. Stored in this site's database — see the note below.
+            Your app → <strong>Bot</strong> → “Reset Token” (shown once). Powers announcements and role
+            sync. Stored in this site's database — see the note below.{' '}
+            <Ext href={clientId ? `${appBase}/bot` : appBase}>Open ↗</Ext>
           </span>
         </label>
       </fieldset>

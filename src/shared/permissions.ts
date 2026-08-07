@@ -40,6 +40,7 @@ export const PERMISSIONS = {
   'settings.manage': 'Edit site settings',
 
   'hangar.view': 'View other members’ Star Citizen hangars (when they’ve shared them)',
+  'hangar.value': 'See the monetary value of members’ hangars (hidden from others)',
 
   'audit.view': 'View the audit log',
   'discord.sync': 'Trigger Discord role synchronization',

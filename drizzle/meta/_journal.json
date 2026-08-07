@@ -113,6 +113,13 @@
       "when": 1786049672727,
       "tag": "0015_naive_giant_man",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1786110395616,
+      "tag": "0016_volatile_red_hulk",
+      "breakpoints": true
     }
   ]
 }

@@ -44,7 +44,7 @@ export default function NewsPost() {
 
   return (
     <section className="panel news-post">
-      <Link className="back" to="/">
+      <Link className="back" to="/news">
         ← News
       </Link>
 

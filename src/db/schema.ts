@@ -329,6 +329,11 @@ export const pageLayouts = sqliteTable('page_layouts', {
   // is never listed here. nav_order sorts the extra links.
   showInNav: integer('show_in_nav', { mode: 'boolean' }).notNull().default(false),
   navOrder: integer('nav_order').notNull().default(0),
+  // Whether logged-out visitors may view this page at all. Off by default so a
+  // page never leaks by accident; the home page is seeded on (migration 0018) so
+  // a fresh install has a public landing page. Even on a public page, module-level
+  // visibility still applies — only modules marked "public" show to anonymous.
+  isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(false),
   updatedBy: integer('updated_by').references(() => users.id, { onDelete: 'set null' }),
   updatedAt: integer('updated_at').notNull().default(now),
 });

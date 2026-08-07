@@ -1,11 +1,20 @@
 /**
  * Renders the admin-arranged top menu (see shared/nav.ts).
  *
- * Two gates decide what shows, both applied here so the stored tree can stay
- * complete: a built-in's own permission (Events/Admin), which a menu entry can
- * never bypass, and the optional per-entry role the admin set. Categories become
- * click-to-open dropdowns on desktop and expand inline inside the mobile
- * hamburger. Empty categories (nothing the viewer may see) hide themselves.
+ * Gates decide what shows, all applied here so the stored tree can stay complete
+ * and the same menu can serve everyone:
+ *  - a built-in's own permission (Events/Admin), which a menu entry can never
+ *    bypass;
+ *  - the optional per-entry role the admin set;
+ *  - and, for a LOGGED-OUT visitor, whether the destination is actually reachable
+ *    without signing in. A menu entry only ever *shows a door the viewer may open*,
+ *    so an anonymous visitor sees Home (when it's public) and any public page, but
+ *    not News/Roster (login-only) or Events/Admin (permissioned) — no dead links
+ *    that would just bounce them to /login.
+ *
+ * Which pages count as public is passed in as `publicSlugs` ('home' included when
+ * the home page is public). Categories become click-to-open dropdowns on desktop
+ * and expand inline in the mobile hamburger; empty categories hide themselves.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -15,10 +24,11 @@ import { canAccessAdmin } from '../lib/adminSections';
 import { BUILTIN_TARGETS, navItemHref, navItemLabel, type NavItem } from '../../shared/nav';
 
 /** Close the mobile menu after a real navigation (not a category toggle). */
-type NavProps = { items: NavItem[]; onNavigate: () => void };
+type NavProps = { items: NavItem[]; onNavigate: () => void; publicSlugs?: Set<string> };
 
-function useVisibility() {
+function useVisibility(publicSlugs?: Set<string>) {
   const { viewer, can } = useSession();
+  const anon = !viewer;
 
   const roleOk = (roleId?: number): boolean =>
     roleId == null || (!!viewer && (viewer.isGod || viewer.roles.some((r) => r.id === roleId)));
@@ -29,7 +39,17 @@ function useVisibility() {
       if (!b) return false;
       if (b.admin) return canAccessAdmin(can);
       if (b.permission) return can(b.permission);
+      // A permission-less built-in (Home, News, Roster). For a signed-in member
+      // all are reachable; for a logged-out visitor only Home can be public —
+      // News and Roster always require signing in.
+      if (anon) return item.target === 'home' && !!publicSlugs?.has('home');
+      return true;
     }
+    if (item.kind === 'page' && item.target) {
+      // Any signed-in member may open a page; a logged-out visitor only a public one.
+      return anon ? !!publicSlugs?.has(item.target) : true;
+    }
+    // A plain URL link carries no auth requirement.
     return true;
   };
 
@@ -60,11 +80,13 @@ function Leaf({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
 function Category({
   group,
   onNavigate,
+  publicSlugs,
 }: {
   group: NavItem;
   onNavigate: () => void;
+  publicSlugs?: Set<string>;
 }) {
-  const { linkVisible } = useVisibility();
+  const { linkVisible } = useVisibility(publicSlugs);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -118,15 +140,15 @@ function Category({
   );
 }
 
-export default function SiteNav({ items, onNavigate }: NavProps) {
-  const { linkVisible, roleOk } = useVisibility();
+export default function SiteNav({ items, onNavigate, publicSlugs }: NavProps) {
+  const { linkVisible, roleOk } = useVisibility(publicSlugs);
 
   return (
     <>
       {items.map((item) => {
         if (item.type === 'group') {
           if (!roleOk(item.visibleToRole)) return null;
-          return <Category key={item.id} group={item} onNavigate={onNavigate} />;
+          return <Category key={item.id} group={item} onNavigate={onNavigate} publicSlugs={publicSlugs} />;
         }
         if (!linkVisible(item)) return null;
         return <Leaf key={item.id} item={item} onNavigate={onNavigate} />;

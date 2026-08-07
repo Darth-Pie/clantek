@@ -38,9 +38,19 @@ export interface LayoutModule {
   /**
    * Optional audience gate: when set to a role id, the module renders only for
    * viewers who hold that role (e.g. a leadership-only callout). God bypasses it.
-   * Absent = everyone. Referenced by id so renaming the role never breaks a page.
+   * Referenced by id so renaming the role never breaks a page.
+   *
+   * The three audiences (mutually exclusive):
+   *   visibleToRole set → that role only.
+   *   public === true   → everyone, including logged-out visitors (only meaningful
+   *                       on a page whose isPublic flag is on).
+   *   neither           → any signed-in member. This is the safe default and the
+   *                       historical meaning of a role-less module, so existing
+   *                       "Everyone" modules never leak when a page is made public.
    */
   visibleToRole?: number;
+  /** See visibleToRole — marks a role-less module as visible to anonymous visitors. */
+  public?: boolean;
 }
 
 export interface LayoutColumn {
@@ -447,11 +457,15 @@ export function sanitizeLayout(raw: unknown, sanitizeText?: (html: string) => st
           type,
           config: cleanConfig(type, mod.config, sanitizeText),
         };
-        // Only a positive integer role id becomes an audience gate; anything else
-        // is dropped (so a stale/invalid gate fails open to "everyone", not hidden).
+        // Audience is at most one of: a role gate, or public. A positive integer
+        // role id wins; anything else is dropped (a stale/invalid gate fails to
+        // "members", not hidden and not public). `public` only stands alone —
+        // never alongside a role — so a role-gated module can't also be public.
         const roleId = Number(mod.visibleToRole);
         if (Number.isInteger(roleId) && roleId > 0) {
           cleaned.visibleToRole = roleId;
+        } else if (mod.public === true) {
+          cleaned.public = true;
         }
         modules.push(cleaned);
       }

@@ -1,19 +1,23 @@
 /**
  * Site navigation — the composable top menu (see shared/nav.ts for the model).
  *
- * Stored as one JSON blob in settings['nav']. GET is available to any signed-in
- * member (the bar renders for them); the returned tree is always sanitised, and
- * page links whose page has since been deleted are pruned. When nothing is
- * stored yet, the classic menu is synthesised from the built-ins + the pages
- * that had the old "show in nav" flag, so upgrading loses nothing. PUT is gated
- * on `pages.manage` — whoever arranges pages arranges the menu that reaches them.
+ * Stored as one JSON blob in settings['nav']. GET is PUBLIC — a logged-out
+ * visitor needs the menu too (to reach public pages like Home), and the tree is
+ * just structure + labels, never a capability: the renderer (SiteNav) gates every
+ * entry by the viewer's permissions and by which pages are public, so a menu
+ * entry can only ever *show a door the viewer may already open*. The returned
+ * tree is always sanitised, and page links whose page has since been deleted are
+ * pruned. When nothing is stored yet, the classic menu is synthesised from the
+ * built-ins + the pages that had the old "show in nav" flag, so upgrading loses
+ * nothing. PUT is gated on `pages.manage` — whoever arranges pages arranges the
+ * menu that reaches them.
  */
 
 import { Hono } from 'hono';
 import { eq, asc } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
-import { db, requireAuth, requirePermission } from '../middleware/auth';
+import { db, requirePermission } from '../middleware/auth';
 import { sanitizeNav, defaultNavConfig, BUILTIN_TARGETS, type NavConfig } from '../../shared/nav';
 import { HOME_SLUG } from '../../shared/layout';
 
@@ -43,8 +47,8 @@ async function loadNav(database: ReturnType<typeof db>): Promise<NavConfig> {
   return defaultNavConfig(navPages.filter((p) => p.slug !== HOME_SLUG));
 }
 
-/** The rendered menu, for the top bar. */
-nav.get('/', requireAuth, async (c) => {
+/** The rendered menu, for the top bar. Public — SiteNav gates each entry per viewer. */
+nav.get('/', async (c) => {
   return c.json({ nav: await loadNav(db(c.env)) });
 });
 

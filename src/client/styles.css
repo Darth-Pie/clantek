@@ -3696,6 +3696,28 @@ a.org-box:hover {
   max-width: 14rem;
 }
 
+/* Editor-preview audience badges: public reads "open" (green), members neutral,
+   role keeps the accent. Only the tint changes; layout matches .module-gated-badge. */
+.audience-public .module-gated-badge {
+  background: color-mix(in srgb, #22c55e 16%, transparent);
+  border-color: color-mix(in srgb, #22c55e 42%, transparent);
+}
+.audience-members .module-gated-badge {
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-text) 26%, transparent);
+}
+
+/* The per-page "Public" toggle sits ahead of the other page controls. */
+.pages-public-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+.pages-public-toggle input {
+  cursor: pointer;
+}
+
 /* ------------------------------------------------------------------ *
  * Top-nav categories (dropdowns) — see components/SiteNav.tsx
  * ------------------------------------------------------------------ */

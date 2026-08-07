@@ -20,3 +20,6 @@ legacy/
 mustr.gg/
 public_html/
 secure/
+
+# One-time generated copyright deposit (scripts removed; kept locally, not tracked)
+exports/

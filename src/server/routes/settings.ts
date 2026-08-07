@@ -4,6 +4,8 @@ import * as s from '../../db/schema';
 import type { AppContext, Env } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { loadModules, cleanModuleFlags, MODULES_KEY, loadScConfig, cleanScConfig, SC_KEY } from '../modules';
+import { loadFooter, FOOTER_KEY } from '../footer';
+import { cleanFooter } from '../../shared/footer';
 import { mergeSeo, SEO_KEY, type StoredSeo } from '../seo';
 import {
   loadConfig,
@@ -92,6 +94,29 @@ settings.put('/sc', requirePermission('settings.manage'), async (c) => {
       set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
     });
   return c.json({ ok: true, sc: clean });
+});
+
+/* ------------------------------------------------------------------ *
+ * Site footer — shown on every page. GET is public (the footer renders on the
+ * logged-out login page too); only settings.manage may change it.
+ * ------------------------------------------------------------------ */
+
+settings.get('/footer', async (c) => {
+  return c.json({ footer: await loadFooter(c.env, db(c.env)) });
+});
+
+settings.put('/footer', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ footer?: unknown }>();
+  const clean = cleanFooter(body.footer);
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: FOOTER_KEY, value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  return c.json({ ok: true, footer: clean });
 });
 
 /* ------------------------------------------------------------------ *

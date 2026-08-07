@@ -1,0 +1,1 @@
+ALTER TABLE `sc_verifications` ADD `last_check_at` integer;

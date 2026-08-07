@@ -83,6 +83,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
           { key: 'theme', label: 'Theme', permission: 'theme.manage' },
           { key: 'branding', label: 'Branding', permission: 'settings.manage' },
           { key: 'seo', label: 'SEO & Sharing', permission: 'settings.manage' },
+          { key: 'footer', label: 'Footer', permission: 'settings.manage' },
         ],
       },
       { key: 'logs', label: 'Logs', tabs: [{ key: 'audit', label: 'Logs', permission: 'audit.view' }] },

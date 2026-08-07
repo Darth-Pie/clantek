@@ -14,7 +14,7 @@ import { useSession } from '../lib/session';
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
 import { useRecordRecent } from '../lib/recent';
-import { useModules } from '../lib/modules';
+import { useModules, useScConfig } from '../lib/modules';
 import HangarView from '../components/HangarView';
 import HangarImport from '../components/HangarImport';
 import ScVerify from '../components/ScVerify';
@@ -89,6 +89,7 @@ export default function MemberDetail() {
   const navigate = useNavigate();
   const { viewer, can } = useSession();
   const modules = useModules();
+  const sc = useScConfig();
   // Bumped after a self-import so the hangar view below re-fetches.
   const [hangarKey, setHangarKey] = useState(0);
 
@@ -588,14 +589,20 @@ export default function MemberDetail() {
               ))}
           </section>
 
-          {modules.starcitizen && (isSelf || can('hangar.view')) && (
+          {modules.starcitizen && (sc.hangarEnabled || sc.verifyEnabled) && (isSelf || can('hangar.view')) && (
             <section className="block hangar-section">
-              <h3>Star Citizen Hangar</h3>
-              <ScVerify userId={member.id} isSelf={isSelf} />
-              {isSelf && (
+              <h3>Star Citizen</h3>
+              {sc.verifyEnabled && <ScVerify userId={member.id} isSelf={isSelf} />}
+              {sc.hangarEnabled && isSelf && (
                 <HangarImport userId={member.id} onImported={() => setHangarKey((k) => k + 1)} />
               )}
-              <HangarView userId={member.id} refreshKey={hangarKey} />
+              {sc.hangarEnabled && <HangarView userId={member.id} refreshKey={hangarKey} />}
+              <p className="sc-disclaimer muted small">
+                Star Citizen®, Squadron 42®, Roberts Space Industries®, and Cloud Imperium® are
+                trademarks of Cloud Imperium Rights LLC. mustr is an unofficial community tool and is
+                not affiliated with, endorsed, sponsored, or approved by Cloud Imperium Games or
+                Roberts Space Industries.
+              </p>
             </section>
           )}
       </div>

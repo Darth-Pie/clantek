@@ -20,8 +20,14 @@ import { fetchCitizen, parseCitizen, isValidHandle } from '../sc/rsi';
 
 const scVerify = new Hono<AppContext>();
 
+/**
+ * Verification available? The SC module must be on AND the verification feature
+ * not killed (its own kill switch — this is the RSI-fetching path, so it can be
+ * turned off independently of the client-side hangar import).
+ */
 async function scEnabled(env: AppContext['Bindings']): Promise<boolean> {
-  return (await loadModules(env, db(env))).starcitizen;
+  const [mods, cfg] = await Promise.all([loadModules(env, db(env)), loadScConfig(env, db(env))]);
+  return mods.starcitizen && cfg.verifyEnabled;
 }
 
 /** A one-time bio challenge code, e.g. mustr-verify-9f3a2c1b. */
@@ -88,6 +94,20 @@ scVerify.post('/verify/confirm', requireAuth, async (c) => {
   if (!row?.pendingCode || !row.pendingHandle) {
     return c.json({ ok: false, error: 'Start a verification first.' }, 400);
   }
+
+  // Light rate-limit: at most one RSI fetch per member per cooldown, to be a
+  // polite citizen (the check button can't hammer RSI). Stamp it BEFORE fetching
+  // so rapid retries are throttled even while a fetch is in flight.
+  const COOLDOWN_SECONDS = 15;
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (row.lastCheckAt && nowSec - row.lastCheckAt < COOLDOWN_SECONDS) {
+    const wait = COOLDOWN_SECONDS - (nowSec - row.lastCheckAt);
+    return c.json({ ok: false, error: `Please wait ${wait}s before checking again.` });
+  }
+  await db(c.env)
+    .update(s.scVerifications)
+    .set({ lastCheckAt: nowSec })
+    .where(eq(s.scVerifications.userId, viewer.id));
 
   let html: string;
   try {

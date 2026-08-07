@@ -52,6 +52,15 @@ export const SC_KEY = 'sc';
 export interface ScConfig {
   /** This org's RSI Spectrum Identification (SID), e.g. "F919". Case-insensitive. */
   orgSid: string;
+  /**
+   * Per-feature kill switches for the two things that touch RSI. Both default
+   * ON; an admin can turn either off instantly (e.g. if CIG/RSI ever asks) —
+   * `hangarEnabled` gates the member's own hangar import + display, and
+   * `verifyEnabled` gates the account-verification profile fetch. The whole SC
+   * module toggle remains the master switch above these.
+   */
+  hangarEnabled: boolean;
+  verifyEnabled: boolean;
 }
 
 export async function loadScConfig(env: Env, database?: DB): Promise<ScConfig> {
@@ -61,12 +70,21 @@ export async function loadScConfig(env: Env, database?: DB): Promise<ScConfig> {
     const row = await dbi.query.settings.findFirst({ where: eq(s.settings.key, SC_KEY) });
     if (row?.value && typeof row.value === 'object') stored = row.value as Record<string, unknown>;
   } catch {
-    // No settings row/table yet → no org configured.
+    // No settings row/table yet → no org, features default on.
   }
-  return { orgSid: typeof stored.orgSid === 'string' ? stored.orgSid : '' };
+  return {
+    orgSid: typeof stored.orgSid === 'string' ? stored.orgSid : '',
+    // Absent (older config) or true ⇒ on; only an explicit false disables.
+    hangarEnabled: stored.hangarEnabled !== false,
+    verifyEnabled: stored.verifyEnabled !== false,
+  };
 }
 
 export function cleanScConfig(raw: unknown): ScConfig {
   const o = (raw ?? {}) as Record<string, unknown>;
-  return { orgSid: (typeof o.orgSid === 'string' ? o.orgSid : '').trim().slice(0, 20) };
+  return {
+    orgSid: (typeof o.orgSid === 'string' ? o.orgSid : '').trim().slice(0, 20),
+    hangarEnabled: o.hangarEnabled !== false,
+    verifyEnabled: o.verifyEnabled !== false,
+  };
 }

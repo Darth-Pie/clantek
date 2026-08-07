@@ -35,14 +35,21 @@ export function isValidHandle(h: string): boolean {
   return HANDLE_RE.test(h);
 }
 
+/**
+ * An honest, self-identifying User-Agent (the standard polite-bot convention:
+ * a Mozilla token for compatibility, our name + version, and a contact URL).
+ * We do NOT masquerade as a browser — our verification traffic says who it is,
+ * so RSI can identify (or block) it, which is the good-faith posture we want.
+ */
+export const SC_USER_AGENT = 'Mozilla/5.0 (compatible; mustr.gg-verification/1.0; +https://mustr.gg)';
+
 /** Fetch a public citizen profile. `ok` is a clean 200; `html` is the body. */
 export async function fetchCitizen(
   handle: string,
 ): Promise<{ ok: boolean; status: number; html: string }> {
   const res = await fetch(`${RSI_ORIGIN}/citizens/${handle}`, {
     headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'User-Agent': SC_USER_AGENT,
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
     },

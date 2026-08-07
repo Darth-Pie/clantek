@@ -381,6 +381,67 @@ app.get('/media/*', async (c) => {
 // title and Open Graph tags are correct for the browser tab AND for crawlers /
 // social scrapers (Discord, Google) that never run the React app. Non-HTML
 // assets pass straight through untouched.
+// Public, server-rendered version of the 'legal' custom page. The rest of the
+// SPA is auth-gated, so this gives the footer's Legal link (and rights holders
+// like RSI) a URL they can read WITHOUT an account — and crawlers can index it.
+// Reads the same page_layouts row members see; renders heading + text modules.
+app.get('/legal', async (c) => {
+  const esc = (v: string) =>
+    v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  // Admin-authored page HTML is already script-free, but strip anything
+  // executable as defense in depth before serving it publicly.
+  const clean = (html: string) =>
+    html
+      .replace(/<\s*(script|style|iframe|object|embed)[\s\S]*?<\/\s*\1\s*>/gi, '')
+      .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*')/gi, '')
+      .replace(/javascript:/gi, '');
+
+  let title = 'Legal';
+  let body = '';
+  try {
+    const row = await db(c.env).query.pageLayouts.findFirst({
+      where: eq(s.pageLayouts.slug, 'legal'),
+    });
+    if (!row) return c.notFound();
+    title = row.title || 'Legal';
+    const layout = (row.layout ?? {}) as {
+      rows?: { columns?: { modules?: { type?: string; config?: Record<string, unknown> }[] }[] }[];
+    };
+    for (const r of layout.rows ?? []) {
+      for (const col of r.columns ?? []) {
+        for (const m of col.modules ?? []) {
+          const cfg = m.config ?? {};
+          if (m.type === 'heading') {
+            const lvl = Number(cfg.level) === 1 ? 1 : Number(cfg.level) === 3 ? 3 : 2;
+            body += `<h${lvl}>${esc(String(cfg.text ?? ''))}</h${lvl}>`;
+          } else if (m.type === 'text' || m.type === 'html') {
+            body += clean(String(cfg.html ?? ''));
+          }
+        }
+      }
+    }
+  } catch {
+    return c.notFound();
+  }
+
+  const { siteName } = await loadConfig(c.env);
+  const site = siteName || 'mustr';
+  const page =
+    `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+    `<title>${esc(title)} — ${esc(site)}</title><meta name="robots" content="index,follow"><style>` +
+    `:root{color-scheme:light dark}` +
+    `body{margin:0;font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#0b0d12;color:#e7ebf3}` +
+    `.wrap{max-width:760px;margin:0 auto;padding:3rem 1.25rem 4rem}` +
+    `a{color:#5b8cff}h1{font-size:1.9rem;margin:0 0 1rem}h2{font-size:1.25rem;margin:2rem 0 .5rem}` +
+    `p,li{color:#c2cadb}hr{border:none;border-top:1px solid #232a39;margin:2rem 0}` +
+    `.home{display:inline-block;margin-top:1rem;font-size:.9rem}` +
+    `@media(prefers-color-scheme:light){body{background:#fff;color:#1a1f2b}p,li{color:#3a4353}hr{border-top-color:#e3e7ee}}` +
+    `</style></head><body><div class="wrap">${body}<hr><a class="home" href="/">← ${esc(site)}</a></div></body></html>`;
+
+  return c.html(page, 200, { 'Cache-Control': 'public, max-age=300' });
+});
+
 app.all('*', async (c) => {
   const res = await c.env.ASSETS.fetch(c.req.raw);
   const contentType = res.headers.get('content-type') ?? '';

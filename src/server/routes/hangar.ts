@@ -13,15 +13,19 @@ import { eq } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requireAuth } from '../middleware/auth';
-import { loadModules } from '../modules';
+import { loadModules, loadScConfig } from '../modules';
 import { sanitizeHangar } from '../../shared/hangar';
 import { can } from '../../shared/permissions';
 
 const hangar = new Hono<AppContext>();
 
-/** Star Citizen module enabled for this install? */
+/**
+ * Hangar available for this install? The SC module must be on AND the hangar
+ * feature not killed (its own kill switch, independent of verification).
+ */
 async function scEnabled(env: AppContext['Bindings']): Promise<boolean> {
-  return (await loadModules(env, db(env))).starcitizen;
+  const [mods, cfg] = await Promise.all([loadModules(env, db(env)), loadScConfig(env, db(env))]);
+  return mods.starcitizen && cfg.hangarEnabled;
 }
 
 /**

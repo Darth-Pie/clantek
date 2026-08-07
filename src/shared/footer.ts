@@ -29,7 +29,10 @@ export const DEFAULT_FOOTER: FooterConfig = {
   text:
     'Star Citizen®, Roberts Space Industries®, and Cloud Imperium® are trademarks of Cloud Imperium Rights LLC. ' +
     'This site is an unofficial community tool and is not affiliated with, endorsed, or sponsored by Cloud Imperium Games or Roberts Space Industries.',
-  links: [{ label: 'Legal', href: '/legal' }],
+  links: [
+    { label: 'Legal', href: '/legal' },
+    { label: 'Open-Source Licenses', href: '/third-party-notices.txt' },
+  ],
   copyright: '',
 };
 

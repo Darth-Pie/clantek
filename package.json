@@ -18,6 +18,7 @@
     "db:studio": "drizzle-kit studio",
     "discord:register": "tsx scripts/register-commands.ts",
     "doctor": "tsx scripts/doctor.ts",
+    "licenses": "node scripts/generate-licenses.mjs",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {

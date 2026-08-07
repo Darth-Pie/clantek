@@ -20,6 +20,15 @@ interface Analytics {
   apiTokenSet: boolean;
 }
 
+/** A plain external link that opens safely in a new tab. */
+function Ext({ href, children }: { href: string; children: string }) {
+  return (
+    <a className="ext-link" href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
+}
+
 export default function AnalyticsAdmin() {
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState<Analytics | null>(null);
@@ -89,6 +98,11 @@ export default function AnalyticsAdmin() {
 
       <fieldset>
         <legend>Cloudflare Analytics</legend>
+        <p className="muted small">
+          These come from your{' '}
+          <Ext href="https://dash.cloudflare.com/">Cloudflare dashboard</Ext>. If you deployed this
+          site yourself, the Worker name and D1 ID are already in your <code>wrangler.jsonc</code>.
+        </p>
         <label>
           Account ID
           <input
@@ -97,7 +111,11 @@ export default function AnalyticsAdmin() {
             disabled={busy}
             placeholder="32 hex characters"
           />
-          <span className="muted small">Not secret — it appears in your Cloudflare dashboard URLs.</span>
+          <span className="muted small">
+            Not secret. Dashboard → <strong>Workers &amp; Pages</strong> → the Account ID is in the
+            right-hand sidebar (and in your dashboard URL).{' '}
+            <Ext href="https://dash.cloudflare.com/?to=/:account/workers-and-pages">Open ↗</Ext>
+          </span>
         </label>
         <label>
           API Token
@@ -110,8 +128,9 @@ export default function AnalyticsAdmin() {
             autoComplete="new-password"
           />
           <span className="muted small">
-            Create a token with the <strong>Account Analytics → Read</strong> permission. Stored in
-            this site's database — see the note below.
+            <Ext href="https://dash.cloudflare.com/profile/api-tokens">Create a token ↗</Ext> →
+            “Create Custom Token” → add the <strong>Account · Account Analytics · Read</strong>{' '}
+            permission. Stored in this site's database — see the note below.
           </span>
         </label>
         <label>
@@ -123,7 +142,8 @@ export default function AnalyticsAdmin() {
             placeholder="e.g. clantek"
           />
           <span className="muted small">
-            The <code>name</code> in your <code>wrangler.jsonc</code> — its requests are counted.
+            The <code>name</code> in your <code>wrangler.jsonc</code> — its requests are counted. Also
+            shown under Dashboard → <strong>Workers &amp; Pages</strong>.
           </span>
         </label>
         <label>
@@ -136,7 +156,8 @@ export default function AnalyticsAdmin() {
           />
           <span className="muted small">
             The <code>database_id</code> in your <code>wrangler.jsonc</code> — its rows read/written
-            are counted.
+            are counted. Also under Dashboard → <strong>Storage &amp; Databases → D1</strong> → your
+            database.
           </span>
         </label>
       </fieldset>

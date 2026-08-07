@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
+import { useSession } from '../lib/session';
 import {
   HANGAR_CATEGORIES,
   hangarImageUrl,
@@ -22,6 +23,7 @@ interface HangarResponse {
 }
 
 export default function HangarView({ userId, refreshKey = 0 }: { userId: number; refreshKey?: number }) {
+  const { can } = useSession();
   const [items, setItems] = useState<HangarItem[] | null>(null);
   const [importedAt, setImportedAt] = useState<number | null>(null);
   const [meta, setMeta] = useState<{ self: boolean; canView: boolean; isPublic: boolean }>({
@@ -81,6 +83,11 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
   const shipCount = items.filter((i) => i.type === 'ship').length;
   const totalValue = items.reduce((sum, i) => sum + Math.max(0, hangarValueNum(i)), 0);
 
+  // Monetary value is the main incentive to inflate a self-reported hangar, so it
+  // is hidden from the roster at large: owners always see their own; everyone else
+  // needs the `hangar.value` permission (officer-only by default).
+  const showValue = meta.self || can('hangar.value');
+
   return (
     <div className="hangar-view">
       <div className="hangar-toolbar">
@@ -112,7 +119,7 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
         <span className="hangar-stat">
           <strong>{shipCount}</strong> ships
         </span>
-        {totalValue > 0 && (
+        {showValue && totalValue > 0 && (
           <span className="hangar-stat">
             <strong>${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong> value
           </span>
@@ -124,6 +131,10 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
         {importedAt ? ` · imported ${new Date(importedAt * 1000).toLocaleDateString()}` : ''}
       </div>
 
+      <p className="hangar-selfreport muted small" title="Imported by the member from their RSI hangar; mustr does not verify its contents.">
+        ⓘ Self-reported — imported by the member, not verified.
+      </p>
+
       <div className="hangar-table-wrap">
         <table className="hangar-table">
           <thead>
@@ -131,7 +142,7 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
               <th>Preview</th>
               <th onClick={() => sortBy('name')}>Name{arrow('name')}</th>
               <th onClick={() => sortBy('type')}>Type{arrow('type')}</th>
-              <th onClick={() => sortBy('valueNum')}>Value{arrow('valueNum')}</th>
+              {showValue && <th onClick={() => sortBy('valueNum')}>Value{arrow('valueNum')}</th>}
               <th onClick={() => sortBy('availability')}>Availability{arrow('availability')}</th>
             </tr>
           </thead>
@@ -145,7 +156,7 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
                   <td>
                     <span className="hangar-type">{i.type}</span>
                   </td>
-                  <td>{i.value}</td>
+                  {showValue && <td>{i.value}</td>}
                   <td className="muted small">{i.availability}</td>
                 </tr>
               );

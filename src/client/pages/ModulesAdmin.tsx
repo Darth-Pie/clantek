@@ -27,6 +27,8 @@ const MODULES: ModuleDef[] = [
 
 export default function ModulesAdmin() {
   const [flags, setFlags] = useState<ModuleFlags | null>(null);
+  const [orgSid, setOrgSid] = useState('');
+  const [orgSidSaved, setOrgSidSaved] = useState('');
   const { run, busy, error, notice, warning } = useAction();
 
   useEffect(() => {
@@ -34,7 +36,22 @@ export default function ModulesAdmin() {
       .get<{ modules: ModuleFlags }>('/settings/modules')
       .then(({ modules }) => setFlags(modules))
       .catch(() => setFlags({ starcitizen: false }));
+    api
+      .get<{ sc: { orgSid: string } }>('/settings/sc')
+      .then(({ sc }) => {
+        setOrgSid(sc.orgSid);
+        setOrgSidSaved(sc.orgSid);
+      })
+      .catch(() => {});
   }, []);
+
+  const saveOrgSid = () =>
+    run(async () => {
+      const { sc } = await api.put<{ sc: { orgSid: string } }>('/settings/sc', { sc: { orgSid: orgSid.trim() } });
+      setOrgSid(sc.orgSid);
+      setOrgSidSaved(sc.orgSid);
+      return 'Saved.';
+    });
 
   const toggle = (key: keyof ModuleFlags, value: boolean) =>
     run(async () => {
@@ -75,6 +92,38 @@ export default function ModulesAdmin() {
           </li>
         ))}
       </ul>
+
+      {flags.starcitizen && (
+        <div className="module-config">
+          <h3>Star Citizen settings</h3>
+          <label>
+            Org SID
+            <div className="module-config-row">
+              <input
+                type="text"
+                value={orgSid}
+                placeholder="e.g. F919"
+                maxLength={20}
+                disabled={busy}
+                onChange={(e) => setOrgSid(e.target.value)}
+              />
+              <button
+                type="button"
+                className="primary small"
+                disabled={busy || orgSid.trim() === orgSidSaved}
+                onClick={() => void saveOrgSid()}
+              >
+                Save
+              </button>
+            </div>
+            <span className="muted small">
+              Your org’s RSI Spectrum Identification (the tag in your org URL
+              <code>/orgs/&lt;SID&gt;</code>). Used to confirm a member’s verified RSI account
+              actually lists your org.
+            </span>
+          </label>
+        </div>
+      )}
     </section>
   );
 }

@@ -17,6 +17,7 @@ import { useRecordRecent } from '../lib/recent';
 import { useModules } from '../lib/modules';
 import HangarView from '../components/HangarView';
 import HangarImport from '../components/HangarImport';
+import ScVerify from '../components/ScVerify';
 
 interface Role {
   id: number;
@@ -590,6 +591,7 @@ export default function MemberDetail() {
           {modules.starcitizen && (isSelf || can('hangar.view')) && (
             <section className="block hangar-section">
               <h3>Star Citizen Hangar</h3>
+              <ScVerify userId={member.id} isSelf={isSelf} />
               {isSelf && (
                 <HangarImport userId={member.id} onImported={() => setHangarKey((k) => k + 1)} />
               )}

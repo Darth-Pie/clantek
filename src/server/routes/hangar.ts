@@ -44,8 +44,21 @@ hangar.get('/:userId', requireAuth, async (c) => {
   const row = await db(c.env).query.scHangars.findFirst({ where: eq(s.scHangars.userId, userId) });
   const isPublic = !!row?.isPublic;
   const allowed = self || isPublic; // permission already confirmed above
+
+  // Monetary value is the main incentive to inflate a self-reported hangar, so it
+  // is withheld from the response unless the viewer owns the hangar or holds
+  // `hangar.value` — the client can't read it off the network even though the
+  // roster also hides it visually.
+  const canValue = self || can(viewer, 'hangar.value');
+  const items =
+    allowed && row
+      ? canValue
+        ? row.items
+        : row.items.map((i) => ({ ...i, value: '' }))
+      : null;
+
   return c.json({
-    hangar: allowed && row ? { items: row.items, itemCount: row.itemCount, importedAt: row.importedAt } : null,
+    hangar: items ? { items, itemCount: row!.itemCount, importedAt: row!.importedAt } : null,
     self,
     canView: allowed,
     isPublic,

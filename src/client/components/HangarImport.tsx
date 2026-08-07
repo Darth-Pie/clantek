@@ -100,7 +100,7 @@ export default function HangarImport({ userId, onImported }: { userId: number; o
             </button>
           </li>
           <li>
-            Open your <a href="https://robertsspaceindustries.com/en/account/pledges" target="_blank" rel="noopener noreferrer">RSI hangar</a>,
+            Open your <a className="ext-link" href="https://robertsspaceindustries.com/en/account/pledges" target="_blank" rel="noopener noreferrer">RSI hangar</a>,
             let it finish loading, and <strong>click the bookmark</strong>. It copies your hangar to the clipboard (nothing is uploaded from your browser to anyone but this site).
           </li>
           <li>Paste it in the box below and press <strong>Import</strong>.</li>

@@ -91,6 +91,34 @@ export const scHangars = sqliteTable('sc_hangars', {
   importedAt: integer('imported_at').notNull().default(now),
 });
 
+/**
+ * RSI account verification (the SC module's anti-poser track). A member proves
+ * control of an RSI account by placing a one-time code in their public citizen
+ * bio; the Worker fetches the profile, confirms the code, and records the parsed
+ * org membership. `rsiHandle` is unique so two members can't claim one account
+ * (multiple NULLs are allowed for the unverified). The pending_* columns hold an
+ * in-flight challenge before it's confirmed. Cascades away with the member.
+ */
+export const scVerifications = sqliteTable('sc_verifications', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  // In-flight challenge: the code the member must place in their RSI bio and the
+  // handle they claimed. Cleared once verified (or replaced on a new attempt).
+  pendingCode: text('pending_code'),
+  pendingHandle: text('pending_handle'),
+  pendingAt: integer('pending_at'),
+  // The verified result — NULL until a confirm succeeds.
+  rsiHandle: text('rsi_handle').unique(),
+  verifiedAt: integer('verified_at'),
+  orgSid: text('org_sid'),
+  orgRank: text('org_rank'),
+  // Whether the profile's org block was public (vs redacted), and whether the
+  // parsed org SID matched this install's configured org.
+  orgVisible: integer('org_visible', { mode: 'boolean' }),
+  inOrg: integer('in_org', { mode: 'boolean' }),
+});
+
 /* ------------------------------------------------------------------ *
  * Hierarchy
  *

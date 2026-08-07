@@ -275,7 +275,7 @@ settings.post('/announcements/test', requirePermission('settings.manage'), async
       embeds: [
         {
           color: 0x5865f2,
-          title: '✅ ClanTek announcements are working',
+          title: '✅ mustr announcements are working',
           description: 'This is a test message. Award a medal or promote someone to see the real thing.',
         },
       ],

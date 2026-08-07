@@ -139,7 +139,7 @@ export default function AnalyticsAdmin() {
             value={scriptName}
             onChange={(e) => setScriptName(e.target.value)}
             disabled={busy}
-            placeholder="e.g. clantek"
+            placeholder="e.g. mustr"
           />
           <span className="muted small">
             The <code>name</code> in your <code>wrangler.jsonc</code> — its requests are counted. Also

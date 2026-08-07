@@ -1,6 +1,6 @@
 /**
  * Branding admin — upload a header logo and set how big it sits at the top of
- * the page. The logo replaces the "ClanTek" wordmark in the header: oversized and
+ * the page. The logo replaces the "mustr" wordmark in the header: oversized and
  * overhanging the bar at the top of a page, shrinking to fit inside the bar once
  * the visitor scrolls. Saving updates the live header immediately (shared
  * BrandingProvider), and clearing it falls back to the site-name text.

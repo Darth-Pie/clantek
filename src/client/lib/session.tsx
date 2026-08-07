@@ -16,7 +16,7 @@ const SessionContext = createContext<SessionValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [viewer, setViewer] = useState<Viewer | null>(null);
-  const [siteName, setSiteName] = useState('ClanTek');
+  const [siteName, setSiteName] = useState('mustr');
   const [loading, setLoading] = useState(true);
 
   async function refresh() {

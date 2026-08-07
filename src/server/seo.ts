@@ -71,7 +71,7 @@ export async function loadSeo(env: Env, database?: DB): Promise<ResolvedSeo> {
   } catch {
     // no branding row yet
   }
-  return { ...stored, siteName: cfg.siteName || 'ClanTek', siteUrl: cfg.siteUrl || '', favicon };
+  return { ...stored, siteName: cfg.siteName || 'mustr', siteUrl: cfg.siteUrl || '', favicon };
 }
 
 /* --------------------------- validation --------------------------- */

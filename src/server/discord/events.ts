@@ -1,5 +1,5 @@
 /**
- * Mirrors a ClanTek event into Discord: a native guild scheduled event (so
+ * Mirrors a mustr event into Discord: a native guild scheduled event (so
  * members get reminders) AND an announcement message that doubles as the
  * sign-up sheet — an embed with live per-role counts plus a row of buttons
  * (one per role, "Attending", "Withdraw"). Clicking a button is a

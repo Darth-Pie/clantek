@@ -207,7 +207,7 @@ roles.patch('/:id', requirePermission('roles.manage'), async (c) => {
         await client.updateRole(
           updated.discordRoleId,
           { name: updated.name, color: hexToInt(updated.color) },
-          `ClanTek: synced by ${c.get('viewer')!.username}`,
+          `mustr: synced by ${c.get('viewer')!.username}`,
         );
         discordSync = { synced: true };
       } catch (err) {

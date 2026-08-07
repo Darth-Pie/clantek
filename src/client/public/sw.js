@@ -1,5 +1,5 @@
 /**
- * ClanTek service worker — a deliberately conservative first pass.
+ * mustr service worker — a deliberately conservative first pass.
  *
  * Goals: make the app installable and give it a usable offline shell without
  * ever risking a stale or broken UI.
@@ -12,7 +12,7 @@
  * Bump CACHE to invalidate everything on the next activate.
  */
 
-const CACHE = 'clantek-v1';
+const CACHE = 'mustr-v1';
 const SHELL = '/index.html';
 
 self.addEventListener('install', (event) => {

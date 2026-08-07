@@ -322,7 +322,7 @@ app.get('/api/me', async (c) => {
  */
 app.get('/api/version', async (c) => {
   const { siteName } = await loadConfig(c.env);
-  return c.json({ apiVersion: 1, service: 'clantek', siteName });
+  return c.json({ apiVersion: 1, service: 'mustr', siteName });
 });
 
 /* ------------------------------------------------------------------ *
@@ -348,7 +348,7 @@ app.route('/api/sc', scVerifyRoutes);
 app.route('/api/orgchart', orgChartRoutes);
 app.route('/api/auth/tokens', tokensRoutes);
 
-app.get('/api/health', (c) => c.json({ ok: true, service: 'clantek' }));
+app.get('/api/health', (c) => c.json({ ok: true, service: 'mustr' }));
 
 app.onError((err, c) => {
   console.error(err);

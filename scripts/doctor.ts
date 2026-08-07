@@ -1,5 +1,5 @@
 /**
- * Checks the Discord side of a ClanTek install and says what is wrong.
+ * Checks the Discord side of a mustr install and says what is wrong.
  *
  *   npm run doctor
  *

@@ -108,6 +108,9 @@ export const scVerifications = sqliteTable('sc_verifications', {
   pendingCode: text('pending_code'),
   pendingHandle: text('pending_handle'),
   pendingAt: integer('pending_at'),
+  // Last time we fetched RSI for this member — a light rate-limit so the confirm
+  // button can't hammer RSI (politeness, set before each fetch).
+  lastCheckAt: integer('last_check_at'),
   // The verified result — NULL until a confirm succeeds.
   rsiHandle: text('rsi_handle').unique(),
   verifiedAt: integer('verified_at'),

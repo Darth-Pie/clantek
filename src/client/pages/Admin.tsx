@@ -47,6 +47,7 @@ import ModulesAdmin from './ModulesAdmin';
 import Theme from './Theme';
 import BrandingAdmin from './BrandingAdmin';
 import SeoAdmin from './SeoAdmin';
+import FooterAdmin from './FooterAdmin';
 import PagesAdmin from './PagesAdmin';
 import NavAdmin from './NavAdmin';
 import OrgChartDesigner from './OrgChartDesigner';
@@ -85,6 +86,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   theme: () => <Theme />,
   branding: () => <BrandingAdmin />,
   seo: () => <SeoAdmin />,
+  footer: () => <FooterAdmin />,
   audit: () => <AuditLog />,
 };
 

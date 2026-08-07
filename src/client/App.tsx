@@ -18,6 +18,8 @@ import News from './pages/News';
 import NewsPost from './pages/NewsPost';
 import Events from './pages/Events';
 import { api } from './lib/api';
+import { sanitizeHtml } from './lib/richtext';
+import type { FooterConfig } from '../shared/footer';
 
 // The admin panel pulls in the WYSIWYG editor (TipTap/ProseMirror), which is
 // large and admin-only — load it on demand so the feed and roster stay light.
@@ -38,6 +40,7 @@ export default function App() {
   const { branding } = useBranding();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navItems, setNavItems] = useState<NavItem[]>([]);
+  const [footer, setFooter] = useState<FooterConfig | null>(null);
   const [scrolled, setScrolled] = useState(false);
   // Logo aspect ratio (width/height), measured on load, so the header can
   // reserve exactly the collapsed logo's width and the nav never jumps.
@@ -48,6 +51,15 @@ export default function App() {
   useEffect(() => {
     if (siteName) document.title = siteName;
   }, [siteName]);
+
+  // The site footer is public (shows on the login page too) and rarely changes,
+  // so load it once on mount regardless of auth.
+  useEffect(() => {
+    api
+      .get<{ footer: FooterConfig }>('/settings/footer')
+      .then((d) => setFooter(d.footer))
+      .catch(() => setFooter(null));
+  }, []);
 
   // Shrink the header (and its logo) once the page scrolls past the top.
   useEffect(() => {
@@ -243,6 +255,38 @@ export default function App() {
           </Routes>
         </Suspense>
       </main>
+
+      {footer && (footer.text || footer.links.length > 0 || footer.copyright) && (
+        <footer className="site-footer">
+          {footer.text && (
+            <div
+              className="site-footer-text"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(footer.text) }}
+            />
+          )}
+          {footer.links.length > 0 && (
+            <nav className="site-footer-links" aria-label="Footer">
+              {/* Plain anchors (full navigation): footer links may point at
+                  server routes like /legal that aren't SPA routes, so a client
+                  <Link> would 404. External links open in a new tab. */}
+              {footer.links.map((l, i) =>
+                /^https?:\/\//i.test(l.href) ? (
+                  <a key={i} href={l.href} target="_blank" rel="noopener noreferrer">
+                    {l.label}
+                  </a>
+                ) : (
+                  <a key={i} href={l.href}>
+                    {l.label}
+                  </a>
+                ),
+              )}
+            </nav>
+          )}
+          <div className="site-footer-copy">
+            {footer.copyright || `© ${new Date().getFullYear()} ${siteName}`}
+          </div>
+        </footer>
+      )}
     </div>
   );
 }

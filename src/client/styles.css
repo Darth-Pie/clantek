@@ -4160,6 +4160,87 @@ a.org-box:hover {
   min-width: 12rem;
 }
 
+/* Site-wide footer */
+.site-footer {
+  margin-top: auto;
+  padding: 1.5rem 1.25rem 2rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  color: var(--color-text-dim, var(--color-muted, inherit));
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.site-footer-text {
+  max-width: 70ch;
+}
+.site-footer-text a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.site-footer-text a:hover {
+  text-decoration: underline;
+}
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+.site-footer-links a {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.site-footer-links a:hover {
+  text-decoration: underline;
+}
+.site-footer-copy {
+  opacity: 0.8;
+}
+
+/* Footer admin — link rows */
+.footer-link-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.footer-link-row input:first-of-type {
+  flex: 0 0 10rem;
+}
+.footer-link-row input:last-of-type {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Non-affiliation disclaimer under the Star Citizen section */
+.sc-disclaimer {
+  margin: 1rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--color-border);
+  opacity: 0.7;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* Modules admin — per-feature kill switches */
+.module-killswitch {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.module-killswitch-title {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
 /* Modules admin — per-module config block (e.g. SC org SID) */
 .module-config {
   margin-top: 1.25rem;

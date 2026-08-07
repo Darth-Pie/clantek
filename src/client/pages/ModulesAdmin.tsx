@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
-import { clearModulesCache, type ModuleFlags } from '../lib/modules';
+import { clearModulesCache, clearScConfigCache, type ModuleFlags, type ScConfig } from '../lib/modules';
 
 interface ModuleDef {
   key: keyof ModuleFlags;
@@ -27,8 +27,8 @@ const MODULES: ModuleDef[] = [
 
 export default function ModulesAdmin() {
   const [flags, setFlags] = useState<ModuleFlags | null>(null);
-  const [orgSid, setOrgSid] = useState('');
-  const [orgSidSaved, setOrgSidSaved] = useState('');
+  const [sc, setSc] = useState<ScConfig | null>(null);
+  const [orgSidDraft, setOrgSidDraft] = useState('');
   const { run, busy, error, notice, warning } = useAction();
 
   useEffect(() => {
@@ -37,20 +37,23 @@ export default function ModulesAdmin() {
       .then(({ modules }) => setFlags(modules))
       .catch(() => setFlags({ starcitizen: false }));
     api
-      .get<{ sc: { orgSid: string } }>('/settings/sc')
+      .get<{ sc: ScConfig }>('/settings/sc')
       .then(({ sc }) => {
-        setOrgSid(sc.orgSid);
-        setOrgSidSaved(sc.orgSid);
+        setSc(sc);
+        setOrgSidDraft(sc.orgSid);
       })
       .catch(() => {});
   }, []);
 
-  const saveOrgSid = () =>
+  // Every save sends the FULL SC config (the server replaces the blob), so
+  // toggling a kill switch preserves the org SID and vice-versa.
+  const saveSc = (next: ScConfig, okMsg = 'Saved.') =>
     run(async () => {
-      const { sc } = await api.put<{ sc: { orgSid: string } }>('/settings/sc', { sc: { orgSid: orgSid.trim() } });
-      setOrgSid(sc.orgSid);
-      setOrgSidSaved(sc.orgSid);
-      return 'Saved.';
+      const { sc: saved } = await api.put<{ sc: ScConfig }>('/settings/sc', { sc: next });
+      setSc(saved);
+      setOrgSidDraft(saved.orgSid);
+      clearScConfigCache(); // profiles pick up a kill switch without a reload
+      return okMsg;
     });
 
   const toggle = (key: keyof ModuleFlags, value: boolean) =>
@@ -93,7 +96,7 @@ export default function ModulesAdmin() {
         ))}
       </ul>
 
-      {flags.starcitizen && (
+      {flags.starcitizen && sc && (
         <div className="module-config">
           <h3>Star Citizen settings</h3>
           <label>
@@ -101,27 +104,70 @@ export default function ModulesAdmin() {
             <div className="module-config-row">
               <input
                 type="text"
-                value={orgSid}
+                value={orgSidDraft}
                 placeholder="e.g. F919"
                 maxLength={20}
                 disabled={busy}
-                onChange={(e) => setOrgSid(e.target.value)}
+                onChange={(e) => setOrgSidDraft(e.target.value)}
               />
               <button
                 type="button"
                 className="primary small"
-                disabled={busy || orgSid.trim() === orgSidSaved}
-                onClick={() => void saveOrgSid()}
+                disabled={busy || orgSidDraft.trim() === sc.orgSid}
+                onClick={() => void saveSc({ ...sc, orgSid: orgSidDraft.trim() })}
               >
                 Save
               </button>
             </div>
             <span className="muted small">
-              Your org’s RSI Spectrum Identification (the tag in your org URL
+              Your org’s RSI Spectrum Identification (the tag in your org URL{' '}
               <code>/orgs/&lt;SID&gt;</code>). Used to confirm a member’s verified RSI account
               actually lists your org.
             </span>
           </label>
+
+          <div className="module-killswitch">
+            <span className="module-killswitch-title muted small">
+              Feature kill switches — turn either off instantly (e.g. if RSI / Cloud Imperium
+              requests it). Turning the whole module off above disables both.
+            </span>
+            <div className="module-row">
+              <div className="module-info">
+                <span className="module-name">Hangar import &amp; display</span>
+                <span className="muted small">
+                  Members export their own hangar (client-side bookmarklet) and it shows on profiles.
+                  No server-side access to RSI.
+                </span>
+              </div>
+              <label className="module-toggle">
+                <input
+                  type="checkbox"
+                  checked={sc.hangarEnabled}
+                  disabled={busy}
+                  onChange={(e) => void saveSc({ ...sc, hangarEnabled: e.target.checked })}
+                />
+                <span>{sc.hangarEnabled ? 'On' : 'Off'}</span>
+              </label>
+            </div>
+            <div className="module-row">
+              <div className="module-info">
+                <span className="module-name">RSI account verification</span>
+                <span className="muted small">
+                  Reads a member’s public RSI profile to confirm account ownership + org membership.
+                  This is the only feature that fetches RSI server-side.
+                </span>
+              </div>
+              <label className="module-toggle">
+                <input
+                  type="checkbox"
+                  checked={sc.verifyEnabled}
+                  disabled={busy}
+                  onChange={(e) => void saveSc({ ...sc, verifyEnabled: e.target.checked })}
+                />
+                <span>{sc.verifyEnabled ? 'On' : 'Off'}</span>
+              </label>
+            </div>
+          </div>
         </div>
       )}
     </section>

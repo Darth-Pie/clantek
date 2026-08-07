@@ -44,3 +44,50 @@ export function clearModulesCache() {
   cache = null;
   inflight = null;
 }
+
+/* ------------------------------------------------------------------ *
+ * Star Citizen module config — org SID + the per-feature kill switches. Cached
+ * the same way; profiles read it to hide a killed feature without a reload.
+ * ------------------------------------------------------------------ */
+
+export interface ScConfig {
+  orgSid: string;
+  hangarEnabled: boolean;
+  verifyEnabled: boolean;
+}
+
+// Defaults are ON so the UI shows while loading; the server is the authority
+// (killed routes 404 regardless of what the client briefly renders).
+const SC_DEFAULT: ScConfig = { orgSid: '', hangarEnabled: true, verifyEnabled: true };
+
+let scCache: ScConfig | null = null;
+let scInflight: Promise<ScConfig> | null = null;
+
+function fetchScConfig(): Promise<ScConfig> {
+  if (scCache) return Promise.resolve(scCache);
+  if (!scInflight) {
+    scInflight = api
+      .get<{ sc: ScConfig }>('/settings/sc')
+      .then((r) => (scCache = r.sc))
+      .catch(() => SC_DEFAULT);
+  }
+  return scInflight;
+}
+
+export function useScConfig(): ScConfig {
+  const [cfg, setCfg] = useState<ScConfig>(scCache ?? SC_DEFAULT);
+  useEffect(() => {
+    let live = true;
+    void fetchScConfig().then((v) => live && setCfg(v));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return cfg;
+}
+
+/** Drop the SC-config cache after an admin edits it (e.g. flips a kill switch). */
+export function clearScConfigCache() {
+  scCache = null;
+  scInflight = null;
+}

@@ -74,7 +74,7 @@ export async function loadConfig(env: Env, database?: DB): Promise<AppConfig> {
   }
   const d = stored.discord ?? {};
   return {
-    siteName: firstNonEmpty(stored.siteName, env.SITE_NAME, 'ClanTek'),
+    siteName: firstNonEmpty(stored.siteName, env.SITE_NAME, 'mustr'),
     siteUrl: firstNonEmpty(stored.siteUrl, env.SITE_URL),
     discord: {
       clientId: firstNonEmpty(d.clientId, env.DISCORD_CLIENT_ID),

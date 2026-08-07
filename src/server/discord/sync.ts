@@ -92,7 +92,7 @@ async function pushToDiscord(
 ): Promise<SyncResult> {
   if (!rest || !discordRoleId) return { discordSynced: false };
 
-  const auditReason = reason ?? 'ClanTek admin portal';
+  const auditReason = reason ?? 'mustr admin portal';
   try {
     if (op === 'add') await rest.addRole(discordUserId, discordRoleId, auditReason);
     else await rest.removeRole(discordUserId, discordRoleId, auditReason);
@@ -148,14 +148,14 @@ export async function reconcileMember(
 
   for (const roleId of shouldHave) {
     if (!currentlyHas.includes(roleId)) {
-      await rest.addRole(user.discordId, roleId, 'ClanTek reconciliation');
+      await rest.addRole(user.discordId, roleId, 'mustr reconciliation');
       added.push(roleId);
     }
   }
-  // Only touch roles ClanTek manages; leave unmapped Discord roles alone.
+  // Only touch roles mustr manages; leave unmapped Discord roles alone.
   for (const roleId of currentlyHas) {
     if (byDiscordId.has(roleId) && !shouldHave.has(roleId)) {
-      await rest.removeRole(user.discordId, roleId, 'ClanTek reconciliation');
+      await rest.removeRole(user.discordId, roleId, 'mustr reconciliation');
       removed.push(roleId);
     }
   }
@@ -230,7 +230,7 @@ export async function syncMemberRankRoles(
       .values({ userId: opts.userId, roleId, source: 'rank', grantedBy: opts.actorId })
       .onConflictDoNothing();
     result.added.push(role.name);
-    const push = await pushToDiscord(rest, 'add', user.discordId, role.discordRoleId, 'ClanTek rank role');
+    const push = await pushToDiscord(rest, 'add', user.discordId, role.discordRoleId, 'mustr rank role');
     if (push.warning) result.warnings.push(push.warning);
   }
 
@@ -241,7 +241,7 @@ export async function syncMemberRankRoles(
       .delete(s.userRoles)
       .where(and(eq(s.userRoles.userId, opts.userId), eq(s.userRoles.roleId, roleId)));
     result.removed.push(role.name);
-    const push = await pushToDiscord(rest, 'remove', user.discordId, role.discordRoleId, 'ClanTek rank role');
+    const push = await pushToDiscord(rest, 'remove', user.discordId, role.discordRoleId, 'mustr rank role');
     if (push.warning) result.warnings.push(push.warning);
   }
 

@@ -1,9 +1,9 @@
-# ClanTek
+# mustr
 
 Clan management for gaming communities — rosters, ranks, medals, match records,
 and news, with Discord as both the login and the control surface.
 
-A ground-up rewrite of the original 2003 PHP/MySQL ClanTek. No MySQL server, no
+A ground-up rewrite of the original 2003 PHP/MySQL clan-management site. No MySQL server, no
 license checks, no HTML pasted into a textarea.
 
 ## Stack

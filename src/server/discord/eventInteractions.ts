@@ -43,7 +43,7 @@ export async function handleEventComponent(env: Env, i: Interaction): Promise<vo
 
   let note: string;
   if (!user) {
-    note = 'You need a ClanTek account first — sign in on the website once, then try again.';
+    note = 'You need a mustr account first — sign in on the website once, then try again.';
   } else if (user.status === 'banned') {
     note = 'Your account is not active.';
   } else if (kind === 'withdraw') {

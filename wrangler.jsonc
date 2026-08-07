@@ -77,7 +77,7 @@
   "vars": {
     // Non-secret config only. Real secrets (client secret, bot token, session
     // secret) go in .dev.vars locally and `wrangler secret put` in production.
-    "SITE_NAME": "ClanTek",
+    "SITE_NAME": "mustr",
 
     // Canonical public origin, used to turn stored relative media URLs
     // (/media/events/…) into absolute ones for Discord embeds, which a bot

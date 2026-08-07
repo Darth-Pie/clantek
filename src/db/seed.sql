@@ -1,4 +1,4 @@
--- ClanTek initial data.
+-- mustr initial data.
 -- Safe to re-run: every statement is INSERT OR IGNORE / idempotent.
 --
 --   npm run db:seed:local     (local dev)
@@ -86,7 +86,7 @@ SELECT id, 1 FROM users WHERE discord_id = '161833822307090432';
  * ------------------------------------------------------------------ */
 
 INSERT OR IGNORE INTO settings (key, value) VALUES
-  ('site', json('{"name":"ClanTek","tagline":"","description":"","copyright":""}')),
+  ('site', json('{"name":"mustr","tagline":"","description":"","copyright":""}')),
   ('theme', json('{
     "--color-bg": "#0f1115",
     "--color-surface": "#171a21",

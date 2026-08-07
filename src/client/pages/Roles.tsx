@@ -3,7 +3,7 @@
  *
  * Roles carry permissions and, when mapped to a Discord role, drive Discord
  * membership too. This is the browser side of the integration the original
- * ClanTek never had — the 2003 version gated everything on a single rank
+ * the original never had — the 2003 version gated everything on a single rank
  * threshold with no concept of a capability grant.
  */
 

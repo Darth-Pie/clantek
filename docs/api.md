@@ -1,4 +1,4 @@
-# ClanTek API
+# mustr API
 
 The same JSON API that powers the web app also powers native/mobile clients.
 Every endpoint lives under `/api` on the site's origin
@@ -65,7 +65,7 @@ cookie, or `null` if unauthenticated.
     "roles": [{ "id": 2, "name": "Member", "color": "#c0392b" }],
     "permissions": ["roster.view", "events.view"]
   },
-  "siteName": "ClanTek",
+  "siteName": "mustr",
   "authKind": "token"
 }
 ```

@@ -1,7 +1,7 @@
 /**
  * Slash command handlers.
  *
- * Every command resolves the invoking Discord user to a ClanTek member and
+ * Every command resolves the invoking Discord user to a mustr member and
  * runs the same permission checks the web portal uses. There is no separate
  * "Discord admin" concept — one identity, one permission model, both surfaces.
  */
@@ -66,7 +66,7 @@ export async function handleCommand(env: Env, i: Interaction, baseUrl?: string) 
 
   const viewer = await viewerFromDiscordId(db, caller.id);
   if (!viewer) {
-    return ephemeral('You do not have a ClanTek account yet — sign in on the website once first.');
+    return ephemeral('You do not have a mustr account yet — sign in on the website once first.');
   }
 
   switch (i.data?.name) {
@@ -86,7 +86,7 @@ async function whois(db: DB, i: Interaction) {
   if (!targetId) return ephemeral('Specify a member.');
 
   const user = await db.query.users.findFirst({ where: eq(s.users.discordId, targetId) });
-  if (!user) return ephemeral('That person has no ClanTek account.');
+  if (!user) return ephemeral('That person has no mustr account.');
 
   const rank = user.rankId
     ? await db.query.ranks.findFirst({ where: eq(s.ranks.id, user.rankId) })
@@ -137,7 +137,7 @@ async function promote(env: Env, db: DB, viewer: Viewer, i: Interaction, baseUrl
   if (!targetId) return ephemeral('Specify a member.');
 
   const target = await db.query.users.findFirst({ where: eq(s.users.discordId, targetId) });
-  if (!target) return ephemeral('That person has no ClanTek account.');
+  if (!target) return ephemeral('That person has no mustr account.');
 
   const currentRank = target.rankId
     ? await db.query.ranks.findFirst({ where: eq(s.ranks.id, target.rankId) })

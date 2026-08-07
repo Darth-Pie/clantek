@@ -227,7 +227,7 @@ members.patch('/:id/profile', requireAuth, async (c) => {
           await client.setNickname(
             target.discordId,
             displayName ?? '',
-            `ClanTek: display name set by ${viewer.username}`,
+            `mustr: display name set by ${viewer.username}`,
           );
           discordSync = { synced: true };
         } catch (err) {
@@ -403,7 +403,7 @@ members.post('/:id/roles', requirePermission('roles.assign'), async (c) => {
     userId,
     roleId,
     actorId: viewer.id,
-    reason: reason ?? `Granted by ${viewer.username} via ClanTek`,
+    reason: reason ?? `Granted by ${viewer.username} via mustr`,
   });
 
   return c.json({ ok: true, ...result });

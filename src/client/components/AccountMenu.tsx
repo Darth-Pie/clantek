@@ -83,9 +83,13 @@ export default function AccountMenu() {
           <button
             className="menu-item"
             role="menuitem"
-            onClick={() => {
+            onClick={async () => {
               setOpen(false);
-              void logout();
+              await logout();
+              // Land on the home page (a full navigation, so any admin/member data
+              // held in memory is cleared) rather than staying on a now-forbidden
+              // route that would bounce to /login.
+              window.location.assign('/');
             }}
           >
             Sign Out

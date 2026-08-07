@@ -5,10 +5,13 @@
  * same component renders the live page and the editor preview, so what an admin
  * arranges is exactly what members see.
  *
- * A module may carry a `visibleToRole` gate; on the live page it is skipped for
- * viewers who don't hold that role (god bypasses). In the editor preview
- * (`showHidden`) those modules still render, tagged with a badge, so the admin
- * can see and manage them — pass `roles` there so the badge can name the role.
+ * Each module has one of three audiences (see LayoutModule): a specific role, the
+ * public (anyone, including logged-out visitors), or — the default — any signed-in
+ * member. On the live page a module is skipped when the current viewer isn't in its
+ * audience: role modules need that role (god bypasses), member modules need any
+ * login, public modules are always shown. In the editor preview (`showHidden`)
+ * every module renders with an audience badge so the admin sees exactly who gets
+ * what — pass `roles` there so a role badge can be named.
  */
 
 import type { CSSProperties } from 'react';
@@ -33,6 +36,22 @@ export default function PageRenderer({
   const roleName = (roleId: number): string =>
     roles?.find((r) => r.id === roleId)?.name ?? 'Restricted';
 
+  /** Is this module hidden from the current viewer on the live page? */
+  const isHidden = (m: PageLayout['rows'][number]['columns'][number]['modules'][number]): boolean => {
+    if (m.visibleToRole != null) return !canSeeRole(m.visibleToRole); // role only
+    if (m.public) return false; // public: everyone, including logged-out
+    return !viewer; // members: hidden from anonymous visitors only
+  };
+
+  /** The audience badge shown in the editor preview. */
+  const audienceBadge = (
+    m: PageLayout['rows'][number]['columns'][number]['modules'][number],
+  ): { icon: string; label: string; cls: string } => {
+    if (m.visibleToRole != null) return { icon: '🔒', label: roleName(m.visibleToRole), cls: 'role' };
+    if (m.public) return { icon: '🌐', label: 'Public', cls: 'public' };
+    return { icon: '👥', label: 'Members', cls: 'members' };
+  };
+
   if (!layout.rows.length) {
     return <p className="empty">This page has no content yet.</p>;
   }
@@ -51,16 +70,18 @@ export default function PageRenderer({
                 const Renderer = MODULE_RENDERERS[m.type];
                 if (!Renderer) return null;
 
-                const gated = m.visibleToRole != null ? !canSeeRole(m.visibleToRole) : false;
-                if (gated && !showHidden) return null;
+                const hidden = isHidden(m);
+                if (hidden && !showHidden) return null;
 
                 const node = <Renderer config={m.config} />;
-                if (gated && showHidden) {
-                  const label = roleName(m.visibleToRole!);
+                if (showHidden) {
+                  // Editor preview: render every module with an audience badge so
+                  // the admin can see and manage what each viewer would get.
+                  const b = audienceBadge(m);
                   return (
-                    <div className="module-gated" key={m.id}>
-                      <span className="module-gated-badge" title={`Only visible to: ${label}`}>
-                        🔒 {label}
+                    <div className={`module-gated audience-${b.cls}`} key={m.id}>
+                      <span className="module-gated-badge" title={`Visible to: ${b.label}`}>
+                        {b.icon} {b.label}
                       </span>
                       {node}
                     </div>

@@ -36,6 +36,7 @@ pages.get('/', requirePermission('pages.manage'), async (c) => {
       title: s.pageLayouts.title,
       showInNav: s.pageLayouts.showInNav,
       navOrder: s.pageLayouts.navOrder,
+      isPublic: s.pageLayouts.isPublic,
       updatedAt: s.pageLayouts.updatedAt,
     })
     .from(s.pageLayouts)
@@ -44,20 +45,48 @@ pages.get('/', requirePermission('pages.manage'), async (c) => {
   const home = rows.find((r) => r.slug === HOME_SLUG);
   const custom = rows.filter((r) => r.slug !== HOME_SLUG);
   const list = [
-    { slug: HOME_SLUG, title: home?.title ?? 'Home page', showInNav: false, navOrder: 0, isHome: true },
-    ...custom.map((r) => ({ ...r, showInNav: !!r.showInNav, isHome: false })),
+    // Home defaults to public when it has no stored row (fresh install), matching
+    // the seed in migration 0018 for installs that do.
+    { slug: HOME_SLUG, title: home?.title ?? 'Home page', showInNav: false, navOrder: 0, isHome: true, isPublic: home ? !!home.isPublic : true },
+    ...custom.map((r) => ({ ...r, showInNav: !!r.showInNav, isPublic: !!r.isPublic, isHome: false })),
   ];
   return c.json({ pages: list });
 });
 
-/** Public: the custom pages that opt into the top nav, in order. */
+/**
+ * Public: the custom pages that opt into the top nav, in order. `isPublic` rides
+ * along so a logged-out visitor's nav can be filtered to only the pages they can
+ * actually open (a signed-in member sees every in-nav page).
+ */
 pages.get('/nav', async (c) => {
   const rows = await db(c.env)
-    .select({ slug: s.pageLayouts.slug, title: s.pageLayouts.title, navOrder: s.pageLayouts.navOrder })
+    .select({
+      slug: s.pageLayouts.slug,
+      title: s.pageLayouts.title,
+      navOrder: s.pageLayouts.navOrder,
+      isPublic: s.pageLayouts.isPublic,
+    })
     .from(s.pageLayouts)
     .where(eq(s.pageLayouts.showInNav, true))
     .orderBy(asc(s.pageLayouts.navOrder), asc(s.pageLayouts.slug));
-  return c.json({ pages: rows.filter((r) => r.slug !== HOME_SLUG) });
+  return c.json({ pages: rows.filter((r) => r.slug !== HOME_SLUG).map((r) => ({ ...r, isPublic: !!r.isPublic })) });
+});
+
+/**
+ * Public: the slugs of every page a logged-out visitor may open — the custom
+ * pages flagged public, plus 'home' when the home page is public (which it is by
+ * default when it has no stored row). The nav renderer uses this to decide which
+ * menu links to show an anonymous viewer, so a link never points somewhere they'd
+ * just be bounced to /login. Two-segment path so it can't collide with /:slug.
+ */
+pages.get('/public/list', async (c) => {
+  const rows = await db(c.env)
+    .select({ slug: s.pageLayouts.slug, isPublic: s.pageLayouts.isPublic })
+    .from(s.pageLayouts);
+  const slugs = rows.filter((r) => r.isPublic).map((r) => r.slug);
+  // A fresh install has no 'home' row yet; home defaults to public in that case.
+  if (!rows.some((r) => r.slug === HOME_SLUG)) slugs.push(HOME_SLUG);
+  return c.json({ slugs });
 });
 
 /**
@@ -81,7 +110,11 @@ pages.get('/:slug', async (c) => {
   const row = await db(c.env).query.pageLayouts.findFirst({ where: eq(s.pageLayouts.slug, slug) });
   const exists = !!row || slug === HOME_SLUG;
   const layout = row ? sanitizeLayout(row.layout) : defaultLayout(slug);
-  return c.json({ slug, title: row?.title ?? (slug === HOME_SLUG ? 'Home' : slug), layout, exists, customized: !!row });
+  // Home is public by default when it has no stored row; everything else is
+  // private until an admin opts it in. The client uses this to decide whether a
+  // logged-out visitor may view the page at all.
+  const isPublic = row ? !!row.isPublic : slug === HOME_SLUG;
+  return c.json({ slug, title: row?.title ?? (slug === HOME_SLUG ? 'Home' : slug), layout, exists, customized: !!row, isPublic });
 });
 
 /** Create a custom page. */
@@ -147,19 +180,41 @@ pages.put('/:slug', requirePermission('pages.manage'), async (c) => {
   return c.json({ ok: true, slug, layout });
 });
 
-/** Update a page's metadata (title + nav placement). Home's nav flag is ignored. */
+/**
+ * Update a page's metadata (title, nav placement, public flag). Home's nav flag
+ * is ignored (it's never a nav link), but its public flag is honoured — and since
+ * home may have no stored row yet, we upsert one (seeded with the default layout)
+ * so the flag can be toggled on a fresh install without first editing the layout.
+ */
 pages.patch('/:slug', requirePermission('pages.manage'), async (c) => {
   const slug = c.req.param('slug');
+  const isHome = slug === HOME_SLUG;
   const existing = await db(c.env).query.pageLayouts.findFirst({ where: eq(s.pageLayouts.slug, slug) });
-  if (!existing) return c.json({ error: 'No such page.' }, 404);
+  if (!existing && !isHome) return c.json({ error: 'No such page.' }, 404);
 
-  const body = await c.req.json<{ title?: string; showInNav?: boolean; navOrder?: number }>();
+  const body = await c.req.json<{ title?: string; showInNav?: boolean; navOrder?: number; isPublic?: boolean }>();
   const set: Record<string, unknown> = { updatedAt: Math.floor(Date.now() / 1000) };
   if (typeof body.title === 'string' && body.title.trim()) set.title = body.title.trim().slice(0, 80);
-  if (slug !== HOME_SLUG && typeof body.showInNav === 'boolean') set.showInNav = body.showInNav;
+  if (!isHome && typeof body.showInNav === 'boolean') set.showInNav = body.showInNav;
   if (typeof body.navOrder === 'number' && Number.isFinite(body.navOrder)) set.navOrder = Math.round(body.navOrder);
+  if (typeof body.isPublic === 'boolean') set.isPublic = body.isPublic;
 
-  await db(c.env).update(s.pageLayouts).set(set).where(eq(s.pageLayouts.slug, slug));
+  if (existing) {
+    await db(c.env).update(s.pageLayouts).set(set).where(eq(s.pageLayouts.slug, slug));
+  } else {
+    // Home with no row yet: create it so the flag persists. Seed the default
+    // layout (identical to what the page already renders) and default public on.
+    await db(c.env).insert(s.pageLayouts).values({
+      slug,
+      title: (set.title as string | undefined) ?? 'Home page',
+      layout: defaultLayout(slug),
+      showInNav: false,
+      navOrder: 0,
+      isPublic: typeof body.isPublic === 'boolean' ? body.isPublic : true,
+      updatedBy: c.get('viewer')!.id,
+      updatedAt: Math.floor(Date.now() / 1000),
+    });
+  }
   return c.json({ ok: true, slug });
 });
 

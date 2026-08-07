@@ -40,6 +40,10 @@ export default function App() {
   const { branding } = useBranding();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navItems, setNavItems] = useState<NavItem[]>([]);
+  // Slugs of pages a logged-out visitor may open ('home' included when the home
+  // page is public). Passed to SiteNav so it can hide menu links that would just
+  // bounce an anonymous visitor to /login.
+  const [publicSlugs, setPublicSlugs] = useState<Set<string>>(new Set());
   const [footer, setFooter] = useState<FooterConfig | null>(null);
   const [scrolled, setScrolled] = useState(false);
   // Logo aspect ratio (width/height), measured on load, so the header can
@@ -61,6 +65,20 @@ export default function App() {
       .catch(() => setFooter(null));
   }, []);
 
+  // Which pages a logged-out visitor may open, for gating the nav. Loaded for
+  // everyone (the endpoint is public) and refreshed when a page's public flag or
+  // existence changes (ct-pages-changed).
+  useEffect(() => {
+    const loadPublic = () =>
+      api
+        .get<{ slugs: string[] }>('/pages/public/list')
+        .then((d) => setPublicSlugs(new Set(d.slugs)))
+        .catch(() => setPublicSlugs(new Set()));
+    void loadPublic();
+    window.addEventListener('ct-pages-changed', loadPublic);
+    return () => window.removeEventListener('ct-pages-changed', loadPublic);
+  }, []);
+
   // Shrink the header (and its logo) once the page scrolls past the top.
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -69,14 +87,12 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // The admin-arranged menu tree. Loaded once the viewer is known, and refreshed
-  // live when the Navigation builder saves (`ct-nav-changed`) or a page is
-  // created/deleted (`ct-pages-changed` — the server prunes deleted pages).
+  // The admin-arranged menu tree. Loaded for everyone (the endpoint is public;
+  // SiteNav gates each entry per viewer, so a logged-out visitor still sees Home
+  // and any public page). Reloaded when the viewer changes (permissions may add
+  // or remove entries), when the Navigation builder saves (`ct-nav-changed`), or
+  // when a page is created/deleted (`ct-pages-changed` — the server prunes it).
   useEffect(() => {
-    if (!viewer) {
-      setNavItems([]);
-      return;
-    }
     const loadNav = () =>
       api
         .get<{ nav: { items: NavItem[] } }>('/nav')
@@ -111,7 +127,7 @@ export default function App() {
         className={`topbar${scrolled ? ' scrolled' : ''}${hasLogo ? ' has-logo' : ''}`}
         style={hasLogo ? topbarStyle : undefined}
       >
-        {viewer && (
+        {navItems.length > 0 && (
           <button
             className="nav-toggle"
             aria-label="Menu"
@@ -137,11 +153,9 @@ export default function App() {
           )}
         </Link>
 
-        {viewer && (
-          <nav className={menuOpen ? 'nav open' : 'nav'}>
-            <SiteNav items={navItems} onNavigate={() => setMenuOpen(false)} />
-          </nav>
-        )}
+        <nav className={menuOpen ? 'nav open' : 'nav'}>
+          <SiteNav items={navItems} publicSlugs={publicSlugs} onNavigate={() => setMenuOpen(false)} />
+        </nav>
 
         <div className="account">
           {viewer ? (
@@ -158,14 +172,10 @@ export default function App() {
         <Suspense fallback={<div className="loading">Loading…</div>}>
           <Routes>
           <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
-              <Protected>
-                <Home />
-              </Protected>
-            }
-          />
+          {/* Home and custom pages are public-capable: they render for logged-out
+              visitors when the page is marked public, and redirect to /login
+              otherwise. The components make that call (they know each page's flag). */}
+          <Route path="/" element={<Home />} />
           <Route
             path="/news"
             element={
@@ -192,14 +202,7 @@ export default function App() {
               </Protected>
             }
           />
-          <Route
-            path="/p/:slug"
-            element={
-              <Protected>
-                <CustomPage />
-              </Protected>
-            }
-          />
+          <Route path="/p/:slug" element={<CustomPage />} />
           <Route
             path="/events"
             element={

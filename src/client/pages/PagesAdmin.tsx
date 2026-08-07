@@ -34,6 +34,8 @@ interface PageMeta {
   showInNav: boolean;
   navOrder: number;
   isHome: boolean;
+  /** Whether logged-out visitors may view this page (module visibility still applies). */
+  isPublic: boolean;
 }
 
 /** A role option for the "Visible to" audience picker. */
@@ -70,7 +72,9 @@ export default function PagesAdmin() {
     api
       .get<{ pages: PageMeta[] }>('/pages')
       .then(({ pages }) => setPages(pages))
-      .catch(() => setPages([{ slug: HOME_SLUG, title: 'Home page', showInNav: false, navOrder: 0, isHome: true }]));
+      .catch(() =>
+        setPages([{ slug: HOME_SLUG, title: 'Home page', showInNav: false, navOrder: 0, isHome: true, isPublic: true }]),
+      );
 
   // After a create/rename/delete/nav-toggle, refresh our own list and tell the
   // rest of the app (the top nav loads page names once) that they changed.
@@ -228,13 +232,37 @@ export default function PagesAdmin() {
       const mod = findCol(rows, rowId, colId)?.modules.find((m) => m.id === moduleId);
       if (mod) mod.config = { ...mod.config, ...patch };
     });
-  const setVisibility = (rowId: string, colId: string, moduleId: string, visibleToRole: number | undefined) =>
+  // The audience picker sends one of: 'public', 'members', or a role id (string).
+  // At most one audience field is ever stored (they're mutually exclusive).
+  const setVisibility = (rowId: string, colId: string, moduleId: string, value: string) =>
     edit((rows) => {
       const mod = findCol(rows, rowId, colId)?.modules.find((m) => m.id === moduleId);
       if (!mod) return;
-      if (visibleToRole != null) mod.visibleToRole = visibleToRole;
-      else delete mod.visibleToRole;
+      delete mod.visibleToRole;
+      delete mod.public;
+      if (value === 'public') mod.public = true;
+      else if (value && value !== 'members') mod.visibleToRole = Number(value);
+      // 'members' (the default) leaves both unset.
     });
+
+  async function togglePagePublic(next: boolean) {
+    if (!slug) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      await api.patch(`/pages/${slug}`, { isPublic: next });
+      await refreshPages(); // updates current.isPublic + the site's public nav
+      setMessage(
+        next
+          ? 'This page is now public. Set the modules you want visible to “Public”; the rest stay members-only.'
+          : 'This page now requires signing in.',
+      );
+    } catch {
+      setMessage('Could not change visibility. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   /** Drop the dragged module into `toCol`, before `beforeId` (or at the end). */
   const dropModule = (toRowId: string, toColId: string, beforeId: string | null) => {
@@ -355,8 +383,20 @@ export default function PagesAdmin() {
         </div>
       </header>
 
-      {/* Per-page controls: nav placement + rename/delete for custom pages, reset for home. */}
+      {/* Per-page controls: public visibility (all pages), plus nav placement +
+          rename/delete for custom pages, reset for home. */}
       <div className="pages-admin-meta">
+        <label className="inline-field pages-public-toggle" title="When on, logged-out visitors can view this page. Module-level visibility still applies.">
+          <input
+            type="checkbox"
+            checked={!!current?.isPublic}
+            onChange={(e) => togglePagePublic(e.target.checked)}
+            disabled={saving}
+          />
+          <span>
+            Public <span className="muted small">— viewable without signing in</span>
+          </span>
+        </label>
         {current?.isHome ? (
           <button type="button" className="ghost" onClick={resetDefault} disabled={saving}>
             Reset home to default
@@ -435,7 +475,7 @@ function RowEditor(props: {
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
   onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
-  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleToRole: number | undefined) => void;
+  onSetVisibility: (rowId: string, colId: string, moduleId: string, value: string) => void;
   roles: RoleOpt[];
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
@@ -470,7 +510,7 @@ function ColumnEditor(props: {
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
   onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
-  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleToRole: number | undefined) => void;
+  onSetVisibility: (rowId: string, colId: string, moduleId: string, value: string) => void;
   roles: RoleOpt[];
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
@@ -551,7 +591,7 @@ function ModuleEditor(props: {
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
   onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
-  onSetVisibility: (rowId: string, colId: string, moduleId: string, visibleToRole: number | undefined) => void;
+  onSetVisibility: (rowId: string, colId: string, moduleId: string, value: string) => void;
   roles: RoleOpt[];
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
@@ -605,17 +645,20 @@ function ModuleEditor(props: {
         <label className="inline-field module-audience">
           Visible to
           <select
-            value={m.visibleToRole != null ? String(m.visibleToRole) : ''}
-            onChange={(e) =>
-              props.onSetVisibility(rowId, colId, m.id, e.target.value ? Number(e.target.value) : undefined)
-            }
+            value={m.visibleToRole != null ? String(m.visibleToRole) : m.public ? 'public' : 'members'}
+            onChange={(e) => props.onSetVisibility(rowId, colId, m.id, e.target.value)}
           >
-            <option value="">Everyone</option>
-            {props.roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
+            <option value="public">🌐 Public — anyone</option>
+            <option value="members">👥 Members — signed in</option>
+            {props.roles.length > 0 && (
+              <optgroup label="Specific role">
+                {props.roles.map((r) => (
+                  <option key={r.id} value={String(r.id)}>
+                    🔒 {r.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </label>
 

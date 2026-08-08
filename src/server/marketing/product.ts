@@ -227,9 +227,8 @@ export function productPageHtml(): string {
 
   <div class="cta-band" id="get">
     <h2>Interested in mustr for your org?</h2>
-    <p class="section-lede" style="margin-inline:auto">Get in touch and we'll help you get your community set up.</p>
-    <!-- TODO(operator): set this href to your real contact — a Discord invite or mailto. -->
-    <a class="cta-btn" href="#get">Get in touch</a>
+    <p class="section-lede" style="margin-inline:auto">Join our Discord and we'll help you get your community set up.</p>
+    <a class="cta-btn" href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join our Discord</a>
     <p class="cta-note">You're already exploring a live mustr instance — poke around the
       <a href="/">site</a> to see it in action.</p>
   </div>

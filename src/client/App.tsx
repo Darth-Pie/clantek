@@ -25,10 +25,42 @@ import type { FooterConfig } from '../shared/footer';
 // large and admin-only — load it on demand so the feed and roster stay light.
 const Admin = lazy(() => import('./pages/Admin'));
 
-function Protected({ permission, children }: { permission?: Permission; children: ReactNode }) {
+/** Shown to a pending applicant who lands on a members-only area. */
+function PendingNotice() {
+  const { viewer } = useSession();
+  return (
+    <div className="pending-notice">
+      <h2>⏳ Your application is in review</h2>
+      <p>
+        Thanks for signing in! You’re not a member yet — an officer will review your application soon. In the
+        meantime you can complete your profile so they know who you are.
+      </p>
+      {viewer && (
+        <Link className="btn-cta primary" to={`/members/${viewer.id}`}>
+          Complete your profile
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function Protected({
+  permission,
+  allowPending,
+  children,
+}: {
+  permission?: Permission;
+  allowPending?: boolean;
+  children: ReactNode;
+}) {
   const { viewer, loading, can } = useSession();
   if (loading) return <div className="loading">Loading…</div>;
   if (!viewer) return <Navigate to="/login" replace />;
+  // A pending applicant (not in demo preview mode) can only reach their own
+  // profile; every other members-only area shows the "in review" notice.
+  if (viewer.pending && !viewer.preview && !allowPending) {
+    return <PendingNotice />;
+  }
   if (permission && !can(permission)) {
     return <div className="empty">You don’t have access to this area.</div>;
   }
@@ -241,7 +273,7 @@ export default function App() {
           <Route
             path="/members/:id"
             element={
-              <Protected>
+              <Protected allowPending>
                 <MemberDetail />
               </Protected>
             }

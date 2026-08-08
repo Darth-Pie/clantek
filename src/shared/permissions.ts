@@ -12,6 +12,8 @@ export const PERMISSIONS = {
   'roster.edit': 'Edit member details and profiles',
   'roster.promote': 'Change a member’s rank',
   'roster.remove': 'Remove or retire a member',
+  'members.approve': 'Approve or reject people applying to join',
+  'members.ban': 'Ban a Discord user from the site and manage the ban list',
 
   'roles.assign': 'Grant and revoke roles on members',
   'roles.manage': 'Create, edit, and delete roles and their permissions',
@@ -67,6 +69,18 @@ export interface Viewer {
   rank: { id: number; name: string; sortOrder: number } | null;
   roles: { id: number; name: string; color: string | null }[];
   permissions: Permission[];
+  /**
+   * An applicant who signed in via Discord but isn't an approved member yet.
+   * Authenticated, but authorized like a logged-out visitor (can only edit their
+   * own profile) — unless `preview` is set (the mustr.gg demo).
+   */
+  pending?: boolean;
+  /**
+   * Demo/preview mode (a per-install setting, off by default): a pending user is
+   * granted read-only visibility into members-only content and the admin panel.
+   * All writes are still blocked server-side. Only meaningful when `pending`.
+   */
+  preview?: boolean;
 }
 
 /**

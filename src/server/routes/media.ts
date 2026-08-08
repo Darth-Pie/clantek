@@ -11,7 +11,7 @@
 
 import { Hono } from 'hono';
 import type { AppContext, Env } from '../env';
-import { requireAuth } from '../middleware/auth';
+import { requireUser } from '../middleware/auth';
 import { can, type Permission } from '../../shared/permissions';
 
 // Raster only. An uploaded SVG served from our own origin can execute script
@@ -47,13 +47,20 @@ const media = new Hono<AppContext>();
  * single `file` field; the :category path segment selects the storage prefix
  * and the permission required to write it.
  */
-media.post('/:category', requireAuth, async (c) => {
+// requireUser (not requireAuth) so a pending applicant can set their own avatar.
+// 'avatars' is the only permission-less category, and every other category's
+// permission check below rejects a pending user — so they can upload nothing else.
+media.post('/:category', requireUser, async (c) => {
   const conf = CATEGORIES[c.req.param('category')];
   if (!conf) return c.json({ error: 'Unknown upload category.' }, 404);
 
   const viewer = c.get('viewer')!;
   if (conf.permission && !can(viewer, conf.permission)) {
     return c.json({ error: 'Forbidden', missing: conf.permission }, 403);
+  }
+  // A pending applicant may only upload an avatar (their one self-service write).
+  if (viewer.pending && c.req.param('category') !== 'avatars') {
+    return c.json({ error: 'Forbidden' }, 403);
   }
 
   if (!c.env.MEDIA) {

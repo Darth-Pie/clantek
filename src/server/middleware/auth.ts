@@ -45,8 +45,27 @@ export const requireWebSession = createMiddleware<AppContext>(async (c, next) =>
   await next();
 });
 
-/** Requires a signed-in member. */
+/**
+ * Requires a signed-in, approved member. A *pending* applicant is authenticated
+ * but not a member, so this rejects them — every members-only route stays closed
+ * to applicants by default. Routes an applicant legitimately needs (editing their
+ * own profile, their account, /me, logout) use `requireUser` instead.
+ */
 export const requireAuth = createMiddleware<AppContext>(async (c, next) => {
+  const viewer = c.get('viewer');
+  if (!viewer) return c.json({ error: 'Authentication required' }, 401);
+  if (viewer.pending) {
+    return c.json({ error: 'Your application is awaiting approval.' }, 403);
+  }
+  await next();
+});
+
+/**
+ * Requires any signed-in user, INCLUDING a pending applicant. Only for
+ * self-service routes that then confirm the target is the caller themselves —
+ * never for anything that reads or changes another member.
+ */
+export const requireUser = createMiddleware<AppContext>(async (c, next) => {
   if (!c.get('viewer')) {
     return c.json({ error: 'Authentication required' }, 401);
   }

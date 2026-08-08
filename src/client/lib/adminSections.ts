@@ -49,6 +49,14 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     label: 'People',
     items: [
       {
+        key: 'admissions',
+        label: 'Applicants & Bans',
+        tabs: [
+          { key: 'applicants', label: 'Applicants', permission: 'members.approve' },
+          { key: 'bans', label: 'Bans', permission: 'members.ban' },
+        ],
+      },
+      {
         key: 'ranks-roles',
         label: 'Ranks & Roles',
         tabs: [

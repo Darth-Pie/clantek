@@ -38,6 +38,27 @@ export async function buildViewer(db: DB, userId: number): Promise<Viewer | null
   const user = await db.query.users.findFirst({ where: eq(s.users.id, userId) });
   if (!user || user.status === 'banned') return null;
 
+  // A pending applicant is authenticated but NOT a member: no rank, no roles, and
+  // no permissions — authorized like a logged-out visitor except that they can
+  // edit their own profile (enforced per-route via requireUser + a self check).
+  // The `preview` demo grant is layered on in a later phase.
+  if (user.status === 'pending') {
+    return {
+      id: user.id,
+      discordId: user.discordId,
+      username: user.username,
+      globalName: user.globalName,
+      displayName: user.displayName,
+      avatar: user.avatar,
+      profileImageUrl: user.profileImageUrl,
+      isGod: false,
+      rank: null,
+      roles: [],
+      permissions: [],
+      pending: true,
+    };
+  }
+
   const rank = user.rankId
     ? ((await db.query.ranks.findFirst({ where: eq(s.ranks.id, user.rankId) })) ?? null)
     : null;

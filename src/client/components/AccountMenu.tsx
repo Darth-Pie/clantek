@@ -52,6 +52,7 @@ export default function AccountMenu() {
       >
         <img className="avatar sm" src={memberAvatar(viewer, 64)} alt="" width={28} height={28} />
         <span className="account-name">{memberName(viewer)}</span>
+        {viewer.pending && <span className="pending-chip" title="Application in review">Pending</span>}
         {viewer.rank && <span className="rank-chip">{viewer.rank.name}</span>}
         {viewer.isGod && (
           <span className="god-chip" title="God status">

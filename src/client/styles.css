@@ -3940,6 +3940,79 @@ a.org-box:hover {
 }
 
 /* ------------------------------------------------------------------ *
+ * Applicants / pending members / bans
+ * ------------------------------------------------------------------ */
+.pending-chip {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #f59e0b 22%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 45%, transparent);
+  color: var(--color-text);
+}
+.pending-banner {
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 38%, transparent);
+}
+.pending-notice {
+  max-width: 44rem;
+  margin: 2rem auto;
+  text-align: center;
+  padding: 2rem 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface, transparent);
+}
+.pending-notice h2 {
+  margin: 0 0 0.6rem;
+}
+.pending-notice p {
+  color: var(--color-text-muted, #888);
+  margin: 0 0 1.2rem;
+}
+
+.people-review-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.people-review-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+.people-review-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.people-review-info .name {
+  font-weight: 600;
+}
+.people-review-bio {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #888);
+  white-space: pre-wrap;
+}
+.people-review-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* ------------------------------------------------------------------ *
  * Top-nav categories (dropdowns) — see components/SiteNav.tsx
  * ------------------------------------------------------------------ */
 

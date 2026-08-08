@@ -40,6 +40,7 @@ import { awardTenureMedals } from './medals/tenure';
 import { materializeRecurringEvents } from './events/recurrence';
 import ranks from './routes/ranks';
 import members from './routes/members';
+import bansRoutes from './routes/bans';
 import settings from './routes/settings';
 import rolesRoutes from './routes/roles';
 import medalsRoutes from './routes/medals';
@@ -194,33 +195,54 @@ app.get('/api/auth/callback', async (c) => {
   const token = await exchangeCode(discord.clientId, discord.clientSecret, code, redirectUri);
 
   const discordUser = await fetchUser(token.access_token);
+  const database = db(c.env);
 
-  // Membership in the clan's Discord server is the gate. No invite, no account.
-  const guildMember = await fetchGuildMember(token.access_token, discord.guildId);
-  if (!guildMember) {
+  // The ban list is the first gate: a banned Discord id can never sign in — even
+  // with no member record, even if they're in the guild. Deleting the ban row
+  // lifts it. This is checked before anything is created or read about them.
+  const ban = await database.query.bans.findFirst({ where: eq(s.bans.discordId, discordUser.id) });
+  if (ban) {
     c.header('Set-Cookie', clearedStateCookie);
-    return c.redirect('/login?error=not_in_guild');
+    return c.redirect('/login?error=banned');
   }
 
+  // Guild membership decides member vs. applicant. Not in the guild no longer
+  // means "no account" — they sign in as a *pending applicant* (apply-to-join)
+  // and can fill out their profile while awaiting approval.
+  const guildMember = await fetchGuildMember(token.access_token, discord.guildId);
+  const inGuild = !!guildMember;
+
   // Discord's guild-join date is the authoritative basis for tenure medals.
-  const guildJoinedAt = guildMember.joined_at
+  const guildJoinedAt = guildMember?.joined_at
     ? Math.floor(Date.parse(guildMember.joined_at) / 1000)
     : null;
   const validGuildJoinedAt =
     guildJoinedAt != null && !Number.isNaN(guildJoinedAt) ? guildJoinedAt : null;
 
-  const database = db(c.env);
   const existing = await database.query.users.findFirst({
     where: eq(s.users.discordId, discordUser.id),
   });
 
+  // Belt-and-suspenders with the ban list: a record still flagged banned is out.
   if (existing?.status === 'banned') {
     c.header('Set-Cookie', clearedStateCookie);
     return c.redirect('/login?error=banned');
   }
 
+  const nowSec = Math.floor(Date.now() / 1000);
   let userId: number;
+  let pendingNow = false; // still an unapproved applicant after this login
+
   if (existing) {
+    // A pending applicant who has since joined the guild is auto-approved into a
+    // full member on this login (assign the default rank + roles below).
+    const autoApprove = existing.status === 'pending' && inGuild;
+    pendingNow = existing.status === 'pending' && !inGuild;
+
+    const defaultRank = autoApprove
+      ? await database.query.ranks.findFirst({ where: eq(s.ranks.isDefault, true) })
+      : null;
+
     await database
       .update(s.users)
       .set({
@@ -231,15 +253,36 @@ app.get('/api/auth/callback', async (c) => {
         // Only set once — the guild-join date doesn't change, and a re-join
         // shouldn't reset accrued tenure.
         guildJoinedAt: existing.guildJoinedAt ?? validGuildJoinedAt,
-        lastSeenAt: Math.floor(Date.now() / 1000),
-        updatedAt: Math.floor(Date.now() / 1000),
+        ...(autoApprove ? { status: 'active' as const, rankId: existing.rankId ?? defaultRank?.id ?? null } : {}),
+        lastSeenAt: nowSec,
+        updatedAt: nowSec,
       })
       .where(eq(s.users.id, existing.id));
     userId = existing.id;
+
+    if (autoApprove) {
+      await database.insert(s.auditLog).values({
+        action: 'member.approve',
+        targetType: 'user',
+        targetId: String(userId),
+        meta: { via: 'guild-join' },
+        source: 'system',
+      });
+      if (defaultRank) {
+        const client = await discordClient(c.env, database);
+        c.executionCtx.waitUntil(
+          syncMemberRankRoles(database, client, { userId, rankId: defaultRank.id, actorId: null }),
+        );
+      }
+    }
   } else {
-    const defaultRank = await database.query.ranks.findFirst({
-      where: eq(s.ranks.isDefault, true),
-    });
+    // First sign-in. In the guild → a full member with the default rank + roles.
+    // Not in the guild → a pending applicant (no rank, no roles) until they join
+    // the guild or an officer approves them.
+    pendingNow = !inGuild;
+    const defaultRank = inGuild
+      ? await database.query.ranks.findFirst({ where: eq(s.ranks.isDefault, true) })
+      : null;
     const inserted = await database
       .insert(s.users)
       .values({
@@ -249,8 +292,9 @@ app.get('/api/auth/callback', async (c) => {
         avatar: discordUser.avatar,
         email: discordUser.email ?? null,
         rankId: defaultRank?.id ?? null,
+        status: inGuild ? 'active' : 'pending',
         guildJoinedAt: validGuildJoinedAt,
-        lastSeenAt: Math.floor(Date.now() / 1000),
+        lastSeenAt: nowSec,
       })
       .returning({ id: s.users.id });
     const created = inserted[0];
@@ -258,16 +302,17 @@ app.get('/api/auth/callback', async (c) => {
     userId = created.id;
 
     await database.insert(s.auditLog).values({
-      action: 'member.join',
+      action: inGuild ? 'member.join' : 'member.apply',
       targetType: 'user',
       targetId: String(userId),
       meta: { discordId: discordUser.id, username: discordUser.username },
       source: 'system',
     });
 
-    // Apply the default rank's roles to the new member. Done in the background
-    // so the Discord round-trips don't hold up the login redirect.
-    if (defaultRank) {
+    // Apply the default rank's roles to a new member. Done in the background so
+    // the Discord round-trips don't hold up the login redirect. (Applicants get
+    // no rank/roles until approved.)
+    if (inGuild && defaultRank) {
       const client = await discordClient(c.env, database);
       c.executionCtx.waitUntil(
         syncMemberRankRoles(database, client, {
@@ -299,7 +344,9 @@ app.get('/api/auth/callback', async (c) => {
   c.header('Set-Cookie', sessionCookie(sessionToken, expiresAt - Math.floor(Date.now() / 1000)), {
     append: true,
   });
-  return c.redirect('/');
+  // Applicants land on their own profile page (which shows the "in review" state
+  // and lets them fill out their profile); members go to the home page.
+  return c.redirect(pendingNow ? `/members/${userId}` : '/');
 });
 
 app.post('/api/auth/logout', async (c) => {
@@ -331,6 +378,7 @@ app.get('/api/version', async (c) => {
 
 app.route('/api/ranks', ranks);
 app.route('/api/members', members);
+app.route('/api/bans', bansRoutes);
 app.route('/api/settings', settings);
 app.route('/api/roles', rolesRoutes);
 app.route('/api/medals', medalsRoutes);

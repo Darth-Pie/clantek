@@ -19,6 +19,7 @@ export type ModuleType =
   | 'html'
   | 'hero'
   | 'image'
+  | 'gallery'
   | 'button'
   | 'embed'
   | 'divider'
@@ -164,6 +165,12 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     label: 'Image / banner',
     description: 'A standalone image, optionally linked.',
     defaultConfig: { url: '', alt: '', href: '', caption: '' },
+  },
+  {
+    type: 'gallery',
+    label: 'Gallery',
+    description: 'A grid of images and YouTube videos that open in a lightbox.',
+    defaultConfig: { title: '', columns: 3, items: [] },
   },
   {
     type: 'button',
@@ -422,6 +429,29 @@ function cleanConfig(
     out.href = cleanUrl(src.href);
     out.alt = (typeof src.alt === 'string' ? src.alt : '').slice(0, 200);
     out.caption = (typeof src.caption === 'string' ? src.caption : '').slice(0, 200);
+  }
+
+  if (type === 'gallery') {
+    const s = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
+    const cols = Math.round(Number(src.columns));
+    out.columns = [2, 3, 4, 5].includes(cols) ? cols : 3;
+    out.items = (Array.isArray(src.items) ? src.items : [])
+      .slice(0, 60)
+      .map((raw) => {
+        const it = asObject(raw);
+        if (it.kind === 'video') {
+          // Same rule as the embed module: never echo the pasted URL into an
+          // iframe — re-derive a canonical, origin-locked src from it every save.
+          const url = typeof it.url === 'string' ? it.url.slice(0, 500) : '';
+          const resolved = resolveEmbed(url);
+          if (!resolved) return null;
+          return { kind: 'video', url, src: resolved.src, provider: resolved.provider, caption: s(it.caption, 200) };
+        }
+        const url = cleanUrl(it.url);
+        if (!url) return null;
+        return { kind: 'image', url, alt: s(it.alt, 200), caption: s(it.caption, 200) };
+      })
+      .filter((it) => it !== null);
   }
 
   if (type === 'button') {

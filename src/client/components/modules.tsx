@@ -412,6 +412,175 @@ function DividerModule() {
   return <hr className="module module-divider" />;
 }
 
+/* ------------------------------------------------------------------ *
+ * Media gallery — a grid of images and YouTube/embed videos that open in a
+ * native lightbox (no third-party library). Video items reuse the same
+ * origin-locked embed src the Video module does; image src is 'self'/https.
+ * ------------------------------------------------------------------ */
+
+interface GalleryItem {
+  kind: 'image' | 'video';
+  url: string;
+  src?: string;
+  provider?: string;
+  alt?: string;
+  caption?: string;
+}
+
+/** Derive a YouTube poster from the canonical embed src (…/embed/<id>). */
+function youtubePoster(src: string | undefined): string | null {
+  if (!src) return null;
+  const m = src.match(/youtube(?:-nocookie)?\.com\/embed\/([A-Za-z0-9_-]{11})/);
+  return m ? `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg` : null;
+}
+
+/** A single embedded-video iframe, boxed and cross-origin like the embed module. */
+function EmbedFrame({ src, title }: { src: string; title: string }) {
+  return (
+    <iframe
+      src={src}
+      title={title}
+      loading="lazy"
+      allowFullScreen
+      sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+      allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
+      referrerPolicy="strict-origin-when-cross-origin"
+    />
+  );
+}
+
+function Lightbox({
+  items,
+  index,
+  onClose,
+  onIndex,
+}: {
+  items: GalleryItem[];
+  index: number;
+  onClose: () => void;
+  onIndex: (i: number) => void;
+}) {
+  const many = items.length > 1;
+  const step = (dir: number) => onIndex((index + dir + items.length) % items.length);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      else if (many && e.key === 'ArrowRight') step(1);
+      else if (many && e.key === 'ArrowLeft') step(-1);
+    };
+    document.addEventListener('keydown', onKey);
+    // Lock background scroll while the overlay is open.
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+    // step/onClose are stable enough for this modal's lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, items.length]);
+
+  const it = items[index];
+  if (!it) return null;
+
+  return (
+    <div className="lightbox" role="dialog" aria-modal="true" onClick={onClose}>
+      <button className="lightbox-close" onClick={onClose} aria-label="Close">
+        ✕
+      </button>
+      {many && (
+        <button
+          className="lightbox-nav prev"
+          onClick={(e) => {
+            e.stopPropagation();
+            step(-1);
+          }}
+          aria-label="Previous"
+        >
+          ‹
+        </button>
+      )}
+      <figure className="lightbox-stage" onClick={(e) => e.stopPropagation()}>
+        {it.kind === 'video' && isAllowedEmbedSrc(it.src) ? (
+          <div className="lightbox-video">
+            <EmbedFrame src={it.src} title={it.caption || 'Video'} />
+          </div>
+        ) : (
+          <img src={it.url} alt={it.alt || it.caption || ''} />
+        )}
+        {it.caption && <figcaption className="lightbox-cap">{it.caption}</figcaption>}
+      </figure>
+      {many && (
+        <button
+          className="lightbox-nav next"
+          onClick={(e) => {
+            e.stopPropagation();
+            step(1);
+          }}
+          aria-label="Next"
+        >
+          ›
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MediaGalleryModule({ config }: { config: Config }) {
+  const title = str(config, 'title');
+  const columns = Math.min(5, Math.max(2, num(config, 'columns', 3)));
+  const raw = Array.isArray(config.items) ? (config.items as GalleryItem[]) : [];
+  // Only render items that are actually displayable (a real image url, or an
+  // embed src on an allowed origin) — mirrors the render-time guard elsewhere.
+  const items = raw.filter((it) => it && (it.kind === 'video' ? isAllowedEmbedSrc(it.src) : !!it.url));
+  const [open, setOpen] = useState<number | null>(null);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section className="panel module module-gallery-block">
+      {title && (
+        <header className="panel-head">
+          <h2>{title}</h2>
+        </header>
+      )}
+      <ul className="gallery-grid" style={{ ['--cols' as string]: columns }}>
+        {items.map((it, i) => {
+          const poster = it.kind === 'video' ? youtubePoster(it.src) : it.url;
+          return (
+            <li key={i} className="gallery-cell">
+              <button
+                type="button"
+                className="gallery-thumb"
+                onClick={() => setOpen(i)}
+                aria-label={it.caption || (it.kind === 'video' ? 'Play video' : 'View image')}
+              >
+                {poster ? (
+                  <img src={poster} alt={it.alt || it.caption || ''} loading="lazy" />
+                ) : (
+                  <span className="gallery-thumb-fallback" aria-hidden>
+                    {it.provider || 'video'}
+                  </span>
+                )}
+                {it.kind === 'video' && (
+                  <span className="gallery-play" aria-hidden>
+                    ▶
+                  </span>
+                )}
+              </button>
+              {it.caption && <span className="gallery-cap muted small">{it.caption}</span>}
+            </li>
+          );
+        })}
+      </ul>
+      {open !== null && (
+        <Lightbox items={items} index={open} onClose={() => setOpen(null)} onIndex={setOpen} />
+      )}
+    </section>
+  );
+}
+
 /**
  * A hero CTA link. Unlike SmartLink, a root-relative path that targets a *server*
  * route (/api/…, /media/…) must be a real navigation, not an SPA <Link> — the
@@ -578,6 +747,7 @@ export const MODULE_RENDERERS: Record<ModuleType, (props: { config: Config }) =>
   html: HtmlModule,
   hero: HeroModule,
   image: ImageModule,
+  gallery: MediaGalleryModule,
   button: ButtonModule,
   embed: EmbedModule,
   divider: DividerModule,

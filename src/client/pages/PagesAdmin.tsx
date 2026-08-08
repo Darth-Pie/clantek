@@ -805,6 +805,13 @@ function ModuleEditor(props: {
           />
         )}
 
+        {m.type === 'gallery' && (
+          <GalleryConfig
+            config={cfg}
+            onPatch={(patch) => props.onPatchConfig(rowId, colId, m.id, patch)}
+          />
+        )}
+
         {m.type === 'button' && (
           <>
             <input
@@ -957,6 +964,171 @@ function ImageConfig({
         placeholder="Caption (optional)"
         onChange={(e) => onPatch({ caption: e.target.value })}
       />
+    </div>
+  );
+}
+
+interface GalleryItemEdit {
+  kind: 'image' | 'video';
+  url: string;
+  src?: string;
+  provider?: string;
+  alt?: string;
+  caption?: string;
+}
+
+/**
+ * Gallery config: build an ordered list of images (uploaded to the 'pages' media
+ * category) and videos (a pasted link resolved to a safe embed). Reorder, caption,
+ * and remove each; pick how many columns the grid uses.
+ */
+function GalleryConfig({
+  config,
+  onPatch,
+}: {
+  config: Record<string, unknown>;
+  onPatch: (patch: Record<string, unknown>) => void;
+}) {
+  const items: GalleryItemEdit[] = Array.isArray(config.items) ? (config.items as GalleryItemEdit[]) : [];
+  const columns = typeof config.columns === 'number' ? config.columns : 3;
+  const [uploading, setUploading] = useState(false);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+
+  const setItems = (next: GalleryItemEdit[]) => onPatch({ items: next });
+
+  const addVideo = () => {
+    const r = resolveEmbed(videoUrl);
+    if (!r) {
+      setErr('Not a supported video link — use YouTube, Twitch, Vimeo or Streamable.');
+      return;
+    }
+    setItems([...items, { kind: 'video', url: videoUrl.trim(), src: r.src, provider: r.provider, caption: '' }]);
+    setVideoUrl('');
+    setErr(null);
+  };
+
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= items.length) return;
+    const copy = [...items];
+    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
+    setItems(copy);
+  };
+
+  return (
+    <div className="gallery-config">
+      <div className="gallery-config-controls">
+        <input
+          type="text"
+          value={typeof config.title === 'string' ? config.title : ''}
+          placeholder="Gallery title (optional)"
+          onChange={(e) => onPatch({ title: e.target.value })}
+        />
+        <label className="inline-field">
+          Columns
+          <select value={columns} onChange={(e) => onPatch({ columns: Number(e.target.value) })}>
+            {[2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="gallery-config-add">
+        <label className="upload-btn mini">
+          {uploading ? 'Uploading…' : '+ Add image'}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            hidden
+            disabled={uploading}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              setErr(null);
+              setUploading(true);
+              try {
+                const res = await api.upload<{ url: string }>('/media/pages', file);
+                setItems([...items, { kind: 'image', url: res.url, alt: '', caption: '' }]);
+              } catch (e2) {
+                setErr(e2 instanceof Error ? e2.message : 'Upload failed.');
+              } finally {
+                setUploading(false);
+              }
+            }}
+          />
+        </label>
+        <span className="gallery-config-or muted small">or</span>
+        <input
+          type="text"
+          value={videoUrl}
+          placeholder="Paste a YouTube / Twitch / Vimeo link"
+          onChange={(e) => setVideoUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              addVideo();
+            }
+          }}
+        />
+        <button type="button" className="mini" onClick={addVideo} disabled={!videoUrl.trim()}>
+          + Add video
+        </button>
+      </div>
+      {err && <p className="muted small module-image-err">{err}</p>}
+
+      {items.length === 0 ? (
+        <p className="muted small">No items yet — add an image or a video above.</p>
+      ) : (
+        <ul className="gallery-config-list">
+          {items.map((it, i) => (
+            <li key={i} className="gallery-config-item">
+              <span className="gallery-config-thumb">
+                {it.kind === 'image' ? (
+                  <img src={it.url} alt="" />
+                ) : (
+                  <span className="gallery-config-video" title={it.url}>
+                    ▶ {it.provider ?? 'video'}
+                  </span>
+                )}
+              </span>
+              <input
+                type="text"
+                className="gallery-config-caption"
+                value={it.caption ?? ''}
+                placeholder="Caption (optional)"
+                onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, caption: e.target.value } : x)))}
+              />
+              <div className="module-editor-tools">
+                <button type="button" className="mini" title="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="mini"
+                  title="Move down"
+                  disabled={i === items.length - 1}
+                  onClick={() => move(i, 1)}
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  className="mini danger"
+                  title="Remove"
+                  onClick={() => setItems(items.filter((_, j) => j !== i))}
+                >
+                  ✕
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

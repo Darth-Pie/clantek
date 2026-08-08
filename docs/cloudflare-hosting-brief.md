@@ -146,9 +146,10 @@ Two honest footnotes to include:
 - *If you add paid memberships, use a hosted checkout like Stripe rather than
   collecting card details on the site itself.*
 
-The admin **Usage** dashboard already shows R2 and D1 storage against their free
-limits, so a host can watch the one metric that matters. (The planned Analytics &
-Usage page will surface request/query rates too.)
+The admin **Analytics & Usage** dashboard (Settings → Analytics) shows R2 and D1
+storage against their free limits, plus — once a read-only Cloudflare Analytics
+token is connected — live request/query rates and a 30-day trend, so a host can
+watch the one metric that matters and see exactly where they sit.
 
 ---
 

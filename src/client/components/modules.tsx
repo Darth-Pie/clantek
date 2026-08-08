@@ -8,7 +8,7 @@
  * the full-page routes (/roster, /events, …) remain the place to manage things.
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { sanitizeHtml, sanitizePageHtml, excerptFromHtml } from '../lib/richtext';
@@ -777,6 +777,8 @@ function TrainingModal({
   onClose: () => void;
   onMark: (done: boolean) => void;
 }) {
+  const frameRef = useRef<HTMLIFrameElement>(null);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
@@ -788,6 +790,11 @@ function TrainingModal({
     };
   }, [onClose]);
 
+  const goFullscreen = () => {
+    const el = frameRef.current;
+    if (el?.requestFullscreen) el.requestFullscreen().catch(() => {});
+  };
+
   return (
     <div className="lightbox" role="dialog" aria-modal="true" onClick={onClose}>
       <button className="lightbox-close" onClick={onClose} aria-label="Close">
@@ -796,18 +803,26 @@ function TrainingModal({
       <div className="training-modal" onClick={(e) => e.stopPropagation()}>
         <div className="training-modal-head">
           <h3>{course.title}</h3>
-          {course.completionMode === 'self' &&
-            (course.completed ? (
-              <span className="training-done">✓ Completed</span>
-            ) : (
-              <button type="button" className="primary small" disabled={busy} onClick={() => onMark(true)}>
-                Mark complete
+          <div className="training-modal-actions">
+            {course.completionMode === 'self' &&
+              (course.completed ? (
+                <span className="training-done">✓ Completed</span>
+              ) : (
+                <button type="button" className="primary small" disabled={busy} onClick={() => onMark(true)}>
+                  Mark complete
+                </button>
+              ))}
+            {isAllowedSlidesSrc(course.embedSrc) && (
+              <button type="button" className="small" onClick={goFullscreen} title="View full screen">
+                ⛶ Full screen
               </button>
-            ))}
+            )}
+          </div>
         </div>
         <div className="training-embed">
           {isAllowedSlidesSrc(course.embedSrc) ? (
             <iframe
+              ref={frameRef}
               src={course.embedSrc}
               title={course.title}
               loading="lazy"
@@ -860,20 +875,18 @@ function TrainingModule({ config }: { config: Config }) {
 
   const item = (c: TrainingCourse) => (
     <li key={c.id} className="training-item">
-      <div className="training-item-main">
-        <div className="training-item-head">
+      {/* The whole card opens the course; the mark buttons sit outside it. */}
+      <button type="button" className="training-item-open" onClick={() => setOpen(c)} title="Open training">
+        <span className="training-item-head">
           <span className="training-name">{c.title}</span>
           {c.requiredForMe && <span className="training-req">Required</span>}
           {c.completed && <span className="training-done">✓ Completed</span>}
-        </div>
-        {c.description && <p className="training-desc muted small">{c.description}</p>}
-      </div>
-      <div className="training-item-actions">
-        <button type="button" className="mini" onClick={() => setOpen(c)}>
-          Open
-        </button>
-        {c.completionMode === 'self' &&
-          (c.completed ? (
+        </span>
+        {c.description && <span className="training-desc muted small">{c.description}</span>}
+      </button>
+      {c.completionMode === 'self' && (
+        <div className="training-item-actions">
+          {c.completed ? (
             <button type="button" className="mini" disabled={busy === c.id} onClick={() => mark(c, false)}>
               Undo
             </button>
@@ -881,8 +894,9 @@ function TrainingModule({ config }: { config: Config }) {
             <button type="button" className="mini primary" disabled={busy === c.id} onClick={() => mark(c, true)}>
               Mark done
             </button>
-          ))}
-      </div>
+          )}
+        </div>
+      )}
     </li>
   );
 

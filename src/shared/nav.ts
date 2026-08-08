@@ -30,6 +30,13 @@ export interface BuiltinTarget {
   permission?: Permission;
   /** True → gated on "can reach any admin tool" rather than a single permission. */
   admin?: boolean;
+  /**
+   * True → this path is served by the Worker directly (e.g. /about), not an SPA
+   * route, so its nav link must be a full-page navigation, not a client <Link>.
+   */
+  serverRoute?: boolean;
+  /** True → reachable by anyone, including logged-out visitors (e.g. the About page). */
+  public?: boolean;
 }
 
 /** The fixed destinations the app always ships. `key` is what a link stores. */
@@ -38,6 +45,7 @@ export const BUILTIN_TARGETS: Record<string, BuiltinTarget> = {
   news: { key: 'news', path: '/news', label: 'News' },
   roster: { key: 'roster', path: '/roster', label: 'Roster' },
   events: { key: 'events', path: '/events', label: 'Events', permission: 'events.view' },
+  about: { key: 'about', path: '/about', label: 'About', serverRoute: true, public: true },
   admin: { key: 'admin', path: '/admin', label: 'Admin', admin: true },
 };
 

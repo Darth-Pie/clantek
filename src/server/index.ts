@@ -42,6 +42,7 @@ import ranks from './routes/ranks';
 import members from './routes/members';
 import bansRoutes from './routes/bans';
 import training from './routes/training';
+import { aboutPageHtml } from './marketing/about';
 import settings from './routes/settings';
 import rolesRoutes from './routes/roles';
 import medalsRoutes from './routes/medals';
@@ -511,6 +512,16 @@ app.get('/legal', async (c) => {
     `</style></head><body><div class="wrap">${body}<hr><a class="home" href="/">← ${esc(site)}</a></div></body></html>`;
 
   return c.html(page, 200, { 'Cache-Control': 'public, max-age=300' });
+});
+
+/**
+ * mustr.gg marketing: the public "honest hosting & costs" About page, with a live
+ * free-tier estimator. First-party self-contained HTML (its own inline script), so
+ * it's a real page rather than a sanitized layout module. This is mustr.gg-only
+ * marketing — like /legal, it isn't part of a buyer's deployment.
+ */
+app.get('/about', (c) => {
+  return c.html(aboutPageHtml(), 200, { 'Cache-Control': 'public, max-age=300' });
 });
 
 app.all('*', async (c) => {

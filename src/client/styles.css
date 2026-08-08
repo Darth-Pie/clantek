@@ -1511,6 +1511,34 @@ a.admin-crumb:hover {
   font-weight: 600;
 }
 
+/* Morphing tabs: one sliding "ink" bar replaces the per-tab underline, so it
+   glides and resizes between tabs instead of snapping. */
+.admin-tabs.morphing {
+  position: relative;
+}
+.admin-tabs.morphing .admin-tab {
+  border-bottom-color: transparent;
+  transition: color 0.2s ease;
+}
+.admin-tab-ink {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+  will-change: transform, width;
+  transition:
+    transform 0.28s cubic-bezier(0.5, 0.8, 0.3, 1),
+    width 0.28s cubic-bezier(0.5, 0.8, 0.3, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-tab-ink {
+    transition: none;
+  }
+}
+
 .admin-nav-link {
   display: flex;
   align-items: center;

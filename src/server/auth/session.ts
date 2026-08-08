@@ -1,8 +1,23 @@
 import { eq, lt } from 'drizzle-orm';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import * as s from '../../db/schema';
-import type { Permission, Viewer } from '../../shared/permissions';
+import { PREVIEW_PERMISSIONS, type Permission, type Viewer } from '../../shared/permissions';
 import { randomToken, sha256Base64url } from './crypto';
+
+/**
+ * Demo/preview mode (settings key 'demo', `{ pendingPreview: true }`) — off unless
+ * explicitly set. When on, a pending applicant is granted read-only preview access
+ * (see PREVIEW_PERMISSIONS + the write-block middleware). Failing safe to false.
+ */
+async function isDemoMode(db: DB): Promise<boolean> {
+  try {
+    const row = await db.query.settings.findFirst({ where: eq(s.settings.key, 'demo') });
+    const v = row?.value as { pendingPreview?: unknown } | undefined;
+    return !!v && typeof v === 'object' && v.pendingPreview === true;
+  } catch {
+    return false;
+  }
+}
 
 export const SESSION_COOKIE = 'ct_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
@@ -43,6 +58,9 @@ export async function buildViewer(db: DB, userId: number): Promise<Viewer | null
   // edit their own profile (enforced per-route via requireUser + a self check).
   // The `preview` demo grant is layered on in a later phase.
   if (user.status === 'pending') {
+    // Off by default (the sellable product). On the mustr.gg demo it grants a
+    // read-only tour; writes are still blocked by the method guard middleware.
+    const preview = await isDemoMode(db);
     return {
       id: user.id,
       discordId: user.discordId,
@@ -54,8 +72,9 @@ export async function buildViewer(db: DB, userId: number): Promise<Viewer | null
       isGod: false,
       rank: null,
       roles: [],
-      permissions: [],
+      permissions: preview ? [...PREVIEW_PERMISSIONS] : [],
       pending: true,
+      preview,
     };
   }
 

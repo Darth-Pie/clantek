@@ -132,6 +132,40 @@ settings.get('/page-access', requireAuth, async (c) => {
   return c.json({ pageAccess: await loadPageAccess(c.env, db(c.env)) });
 });
 
+/* ------------------------------------------------------------------ *
+ * Demo / preview mode. When on, a pending applicant gets read-only visibility
+ * into members-only content + the content/people admin panels (writes still
+ * blocked). Off by default — this is the mustr.gg showcase switch, never the
+ * sellable product's default. Read by any member; changed by settings.manage.
+ * ------------------------------------------------------------------ */
+
+settings.get('/demo', requireAuth, async (c) => {
+  const row = await db(c.env).query.settings.findFirst({ where: eq(s.settings.key, 'demo') });
+  const v = row?.value as { pendingPreview?: unknown } | undefined;
+  return c.json({ demo: { pendingPreview: !!(v && typeof v === 'object' && v.pendingPreview === true) } });
+});
+
+settings.put('/demo', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ demo?: { pendingPreview?: unknown } }>();
+  const clean = { pendingPreview: body.demo?.pendingPreview === true };
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: 'demo', value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  await db(c.env).insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'settings.demo',
+    targetType: 'settings',
+    targetId: 'demo',
+    meta: clean,
+  });
+  return c.json({ ok: true, demo: clean });
+});
+
 settings.put('/page-access', requirePermission('pages.manage'), async (c) => {
   const body = await c.req.json<{ pageAccess?: unknown }>();
   const clean = cleanPageAccess(body.pageAccess);

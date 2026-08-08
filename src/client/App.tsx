@@ -227,6 +227,12 @@ export default function App() {
         </div>
       </header>
 
+      {viewer?.preview && (
+        <div className="preview-banner">
+          👀 Preview mode — you’re exploring {siteName} as a guest. Changes are disabled.
+        </div>
+      )}
+
       <main className="content">
         <Suspense fallback={<div className="loading">Loading…</div>}>
           <Routes>

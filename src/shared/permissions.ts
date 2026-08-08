@@ -52,6 +52,33 @@ export type Permission = keyof typeof PERMISSIONS;
 
 export const ALL_PERMISSIONS = Object.keys(PERMISSIONS) as Permission[];
 
+/**
+ * What a pending applicant is granted in demo/preview mode (a per-install setting,
+ * off by default — see the OAuth/viewer flow). It opens read-only visibility into
+ * the community content and the content/people admin panels so a prospective buyer
+ * can tour the product. Writes are still blocked server-side (a method guard), so
+ * these read as "look but don't touch".
+ *
+ * Deliberately EXCLUDES the Settings group (settings.manage, theme.manage,
+ * discord.sync) and the people-management actions (roster.edit/promote/remove,
+ * members.approve/ban) — nothing here can expose a secret or another applicant's
+ * queue, even read-only.
+ */
+export const PREVIEW_PERMISSIONS: Permission[] = [
+  'roster.view',
+  'events.view',
+  'events.attendees',
+  'hangar.view',
+  'audit.view',
+  'pages.manage',
+  'news.create',
+  'ranks.manage',
+  'roles.manage',
+  'medals.manage',
+  'warrecords.manage',
+  'games.manage',
+];
+
 export function isPermission(value: string): value is Permission {
   return value in PERMISSIONS;
 }

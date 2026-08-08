@@ -35,6 +35,7 @@ import { useSession } from '../lib/session';
 import { visibleAdminGroups } from '../lib/adminSections';
 import { getRecent } from '../lib/recent';
 import UsageBar from '../components/UsageBar';
+import MorphingTabs from '../components/MorphingTabs';
 import NewsAdmin from './NewsAdmin';
 import Ranks from './Ranks';
 import Roles from './Roles';
@@ -230,19 +231,12 @@ export default function Admin() {
           )}
 
           {tabs.length > 1 && (
-            <div className="admin-tabs" role="tablist" aria-label={activeItem.label}>
-              {tabs.map((t) => (
-                <NavLink
-                  key={t.key}
-                  to={`/admin/${activeItem.key}/${t.key}`}
-                  className={t.key === activeTab.key ? 'admin-tab active' : 'admin-tab'}
-                  role="tab"
-                  aria-selected={t.key === activeTab.key}
-                >
-                  {t.label}
-                </NavLink>
-              ))}
-            </div>
+            <MorphingTabs
+              tabs={tabs}
+              activeKey={activeTab.key}
+              ariaLabel={activeItem.label}
+              hrefFor={(k) => `/admin/${activeItem.key}/${k}`}
+            />
           )}
           {TAB_RENDERERS[activeTab.key]?.()}
         </div>

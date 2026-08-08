@@ -29,6 +29,7 @@ import {
   Gauge,
   Palette,
   ScrollText,
+  UserPlus,
 } from 'lucide';
 import { useSession } from '../lib/session';
 import { visibleAdminGroups } from '../lib/adminSections';
@@ -51,6 +52,8 @@ import FooterAdmin from './FooterAdmin';
 import PagesAdmin from './PagesAdmin';
 import NavAdmin from './NavAdmin';
 import OrgChartDesigner from './OrgChartDesigner';
+import ApplicantsAdmin from './ApplicantsAdmin';
+import BansAdmin from './BansAdmin';
 import AuditLog from './AuditLog';
 
 /** Sidebar item key → an icon, so the rail reads like a real nav rail. */
@@ -58,6 +61,7 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
   pages: FileText,
   navigation: Navigation,
   news: Newspaper,
+  admissions: UserPlus,
   'ranks-roles': Users,
   'medals-records': Award,
   'org-chart': Network,
@@ -73,6 +77,8 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   pages: () => <PagesAdmin />,
   navigation: () => <NavAdmin />,
   news: () => <NewsAdmin />,
+  applicants: () => <ApplicantsAdmin />,
+  bans: () => <BansAdmin />,
   ranks: () => <Ranks />,
   roles: () => <Roles />,
   medals: () => <Medals />,

@@ -39,7 +39,10 @@ export const users = sqliteTable(
     // for them yet.
     guildJoinedAt: integer('guild_joined_at'),
 
-    status: text('status', { enum: ['active', 'inactive', 'loa', 'retired', 'banned'] })
+    // 'pending' = applied via Discord login but not yet a full member (may not be
+    // in the guild yet). A pending user is authenticated but authorized like a
+    // logged-out visitor (except editing their own profile) — see buildViewer.
+    status: text('status', { enum: ['pending', 'active', 'inactive', 'loa', 'retired', 'banned'] })
       .notNull()
       .default('active'),
 
@@ -60,6 +63,20 @@ export const users = sqliteTable(
     index('users_status_idx').on(t.status),
   ],
 );
+
+/**
+ * The ban list — keyed by Discord id so a ban survives deleting the member's
+ * record (that's the whole point: it must block re-login even with no user row).
+ * Checked at the very top of the OAuth callback, before anything is created.
+ * `username` is a display snapshot; removing the row un-bans the Discord id.
+ */
+export const bans = sqliteTable('bans', {
+  discordId: text('discord_id').primaryKey(),
+  username: text('username'),
+  reason: text('reason'),
+  bannedBy: integer('banned_by').references(() => users.id, { onDelete: 'set null' }),
+  bannedAt: integer('banned_at').notNull().default(now),
+});
 
 export const profiles = sqliteTable('profiles', {
   userId: integer('user_id')

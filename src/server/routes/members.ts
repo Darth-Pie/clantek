@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext } from '../env';
-import { db, requireAuth, requirePermission } from '../middleware/auth';
+import { db, requireAuth, requireUser, requirePermission } from '../middleware/auth';
 import { can, outranks } from '../../shared/permissions';
 import { memberName } from '../../shared/names';
 import { discordAvatar } from '../../shared/avatar';
@@ -81,7 +81,127 @@ members.get('/', requirePermission('roster.view'), async (c) => {
   return c.json({ members: rows, total, limit, offset });
 });
 
-members.get('/:id', requireAuth, async (c) => {
+/**
+ * People awaiting approval (status 'pending') — the applicant queue. Their bio
+ * doubles as the "application". Registered before /:id so the literal path wins.
+ */
+members.get('/applicants', requirePermission('members.approve'), async (c) => {
+  const database = db(c.env);
+  const rows = await database
+    .select({
+      id: s.users.id,
+      discordId: s.users.discordId,
+      username: s.users.username,
+      globalName: s.users.globalName,
+      displayName: s.users.displayName,
+      avatar: s.users.avatar,
+      profileImageUrl: s.users.profileImageUrl,
+      createdAt: s.users.createdAt,
+      bio: s.profiles.bio,
+    })
+    .from(s.users)
+    .leftJoin(s.profiles, eq(s.profiles.userId, s.users.id))
+    .where(eq(s.users.status, 'pending'))
+    .orderBy(asc(s.users.createdAt));
+  return c.json({ applicants: rows });
+});
+
+/**
+ * Approve an applicant into a full member: status → active, assign the default
+ * rank if they have none, and push the rank's Discord roles (best-effort — a
+ * no-op if they haven't joined the guild yet; their next login reconciles).
+ */
+members.post('/:id/approve', requirePermission('members.approve'), async (c) => {
+  const id = Number(c.req.param('id'));
+  const viewer = c.get('viewer')!;
+  const database = db(c.env);
+
+  const target = await database.query.users.findFirst({ where: eq(s.users.id, id) });
+  if (!target) return c.json({ error: 'No such applicant' }, 404);
+  if (target.status !== 'pending') return c.json({ error: 'This person is not awaiting approval.' }, 400);
+
+  const defaultRank = await database.query.ranks.findFirst({ where: eq(s.ranks.isDefault, true) });
+  const rankId = target.rankId ?? defaultRank?.id ?? null;
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  await database
+    .update(s.users)
+    .set({ status: 'active', rankId, updatedAt: nowSec })
+    .where(eq(s.users.id, id));
+
+  await database.insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'member.approve',
+    targetType: 'user',
+    targetId: String(id),
+    meta: { via: 'manual' },
+    ip: c.req.header('cf-connecting-ip'),
+  });
+
+  if (rankId) {
+    const client = await rest(c.env);
+    if (client) {
+      c.executionCtx.waitUntil(
+        syncMemberRankRoles(database, client, { userId: id, rankId, actorId: viewer.id }).catch((err) =>
+          console.error('Role sync on approve failed', err),
+        ),
+      );
+    }
+  }
+  return c.json({ ok: true });
+});
+
+/**
+ * Ban a Discord user from the site. Adds them to the ban list (the authoritative
+ * re-login block that survives deleting their record), flags the record, and
+ * kills their sessions so they're logged out at once. Reason required.
+ */
+members.post('/:id/ban', requirePermission('members.ban'), async (c) => {
+  const id = Number(c.req.param('id'));
+  const viewer = c.get('viewer')!;
+  const { reason } = await jsonBody<{ reason?: string }>(c);
+  const cleanedReason = cleanReason(reason);
+  if (!cleanedReason) return c.json({ error: 'A reason is required to ban someone.' }, 400);
+
+  const database = db(c.env);
+  const target = await database.query.users.findFirst({ where: eq(s.users.id, id) });
+  if (!target) return c.json({ error: 'No such member' }, 404);
+  if (target.id === viewer.id) return c.json({ error: 'You cannot ban yourself.' }, 400);
+  if (target.isGod) return c.json({ error: 'You cannot ban this user.' }, 403);
+
+  const targetRank = target.rankId
+    ? await database.query.ranks.findFirst({ where: eq(s.ranks.id, target.rankId) })
+    : null;
+  if (!outranks(viewer, targetRank?.sortOrder ?? null)) {
+    return c.json({ error: 'You cannot ban someone at or above your rank.' }, 403);
+  }
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  await database
+    .insert(s.bans)
+    .values({ discordId: target.discordId, username: target.username, reason: cleanedReason, bannedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.bans.discordId,
+      set: { username: target.username, reason: cleanedReason, bannedBy: viewer.id, bannedAt: nowSec },
+    });
+  await database.update(s.users).set({ status: 'banned', updatedAt: nowSec }).where(eq(s.users.id, id));
+  await database.delete(s.sessions).where(eq(s.sessions.userId, id));
+
+  await database.insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'member.ban',
+    targetType: 'user',
+    targetId: String(id),
+    reason: cleanedReason,
+    meta: { discordId: target.discordId, username: target.username },
+    ip: c.req.header('cf-connecting-ip'),
+  });
+  return c.json({ ok: true });
+});
+
+// requireUser so a pending applicant can load their OWN profile (to edit it); the
+// self check below still blocks them from viewing anyone else (they lack roster.view).
+members.get('/:id', requireUser, async (c) => {
   const id = Number(c.req.param('id'));
   const viewer = c.get('viewer')!;
   // The roster can be restricted to certain roles (roster.view). A member can
@@ -155,7 +275,9 @@ members.get('/:id', requireAuth, async (c) => {
  * clear it and revert to the Discord avatar. Replacing or clearing it deletes
  * the previous R2 object so orphans don't pile up.
  */
-members.patch('/:id/profile', requireAuth, async (c) => {
+// requireUser so a pending applicant can edit their OWN profile; the self check
+// below blocks editing anyone else (they lack roster.edit).
+members.patch('/:id/profile', requireUser, async (c) => {
   const id = Number(c.req.param('id'));
   const viewer = c.get('viewer')!;
   const isSelf = viewer.id === id;

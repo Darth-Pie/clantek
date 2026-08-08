@@ -276,9 +276,16 @@ export default function MemberDetail() {
 
   return (
     <section className="panel member-detail">
-      <button className="back" onClick={() => navigate('/roster')}>
-        ← Roster
-      </button>
+      {viewer?.pending && isSelf ? (
+        <div className="pending-banner">
+          <strong>⏳ Application in review.</strong> You’re not a member yet — fill out your profile below so an
+          officer knows who you are. You’ll get full access once you’re approved.
+        </div>
+      ) : (
+        <button className="back" onClick={() => navigate('/roster')}>
+          ← Roster
+        </button>
+      )}
 
       <Alerts error={error} warning={warning} notice={notice} />
 

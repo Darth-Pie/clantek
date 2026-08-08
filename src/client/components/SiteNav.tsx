@@ -37,8 +37,10 @@ function useVisibility(publicSlugs?: Set<string>) {
     if (item.kind === 'builtin' && item.target) {
       const b = BUILTIN_TARGETS[item.target];
       if (!b) return false;
-      // A logged-out visitor sees a built-in only when its destination is public
-      // (publicSlugs carries the built-in keys — 'home', 'news', … — that opted in).
+      // Some built-ins (e.g. About) are reachable by anyone — always shown.
+      if (b.public) return true;
+      // A logged-out visitor sees other built-ins only when the destination is
+      // public (publicSlugs carries the built-in keys — 'home', 'news', … — that opted in).
       if (anon) return !!publicSlugs?.has(item.target);
       if (b.admin) return canAccessAdmin(can);
       if (b.permission) return can(b.permission);
@@ -61,10 +63,20 @@ function Leaf({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
   if (!href) return null;
   const label = navItemLabel(item);
   const external = item.kind === 'url' && /^https?:\/\//i.test(href);
+  // A built-in that the Worker serves directly (e.g. /about) isn't an SPA route,
+  // so it needs a real navigation — a client <Link> would 404 in the router.
+  const serverRoute = item.kind === 'builtin' && !!item.target && !!BUILTIN_TARGETS[item.target]?.serverRoute;
 
   if (external) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" onClick={onNavigate}>
+        {label}
+      </a>
+    );
+  }
+  if (serverRoute) {
+    return (
+      <a href={href} onClick={onNavigate}>
         {label}
       </a>
     );

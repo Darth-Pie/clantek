@@ -754,9 +754,16 @@ interface TrainingCourse {
   embedSrc: string;
   provider: string | null;
   completionMode: 'self' | 'officer';
+  sectionId: number | null;
   requiredRankIds: number[];
   requiredForMe: boolean;
   completed: boolean;
+}
+
+interface TrainingSection {
+  id: number;
+  title: string;
+  sortOrder: number;
 }
 
 function TrainingModal({
@@ -820,13 +827,17 @@ function TrainingModal({
 function TrainingModule({ config }: { config: Config }) {
   const title = str(config, 'title', 'Training');
   const [courses, setCourses] = useState<TrainingCourse[] | null>(null);
+  const [sections, setSections] = useState<TrainingSection[]>([]);
   const [open, setOpen] = useState<TrainingCourse | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
 
   const load = () =>
     api
-      .get<{ trainings: TrainingCourse[] }>('/training')
-      .then((d) => setCourses(d.trainings))
+      .get<{ trainings: TrainingCourse[]; sections: TrainingSection[] }>('/training')
+      .then((d) => {
+        setCourses(d.trainings);
+        setSections(d.sections ?? []);
+      })
       .catch(() => setCourses([]));
 
   useEffect(() => {
@@ -847,6 +858,34 @@ function TrainingModule({ config }: { config: Config }) {
     }
   };
 
+  const item = (c: TrainingCourse) => (
+    <li key={c.id} className="training-item">
+      <div className="training-item-main">
+        <div className="training-item-head">
+          <span className="training-name">{c.title}</span>
+          {c.requiredForMe && <span className="training-req">Required</span>}
+          {c.completed && <span className="training-done">✓ Completed</span>}
+        </div>
+        {c.description && <p className="training-desc muted small">{c.description}</p>}
+      </div>
+      <div className="training-item-actions">
+        <button type="button" className="mini" onClick={() => setOpen(c)}>
+          Open
+        </button>
+        {c.completionMode === 'self' &&
+          (c.completed ? (
+            <button type="button" className="mini" disabled={busy === c.id} onClick={() => mark(c, false)}>
+              Undo
+            </button>
+          ) : (
+            <button type="button" className="mini primary" disabled={busy === c.id} onClick={() => mark(c, true)}>
+              Mark done
+            </button>
+          ))}
+      </div>
+    </li>
+  );
+
   if (courses === null)
     return (
       <ModuleCard title={title}>
@@ -855,37 +894,27 @@ function TrainingModule({ config }: { config: Config }) {
     );
   if (courses.length === 0) return null;
 
+  // Ungrouped courses render flat at the top; each non-empty section becomes a
+  // collapsible group (default open). A course whose section was deleted falls
+  // back to ungrouped.
+  const sectionIds = new Set(sections.map((s2) => s2.id));
+  const ungrouped = courses.filter((c) => c.sectionId == null || !sectionIds.has(c.sectionId));
+  const groups = sections
+    .map((sec) => ({ sec, items: courses.filter((c) => c.sectionId === sec.id) }))
+    .filter((g) => g.items.length > 0);
+
   return (
     <ModuleCard title={title}>
-      <ul className="training-list">
-        {courses.map((c) => (
-          <li key={c.id} className="training-item">
-            <div className="training-item-main">
-              <div className="training-item-head">
-                <span className="training-name">{c.title}</span>
-                {c.requiredForMe && <span className="training-req">Required</span>}
-                {c.completed && <span className="training-done">✓ Completed</span>}
-              </div>
-              {c.description && <p className="training-desc muted small">{c.description}</p>}
-            </div>
-            <div className="training-item-actions">
-              <button type="button" className="mini" onClick={() => setOpen(c)}>
-                Open
-              </button>
-              {c.completionMode === 'self' &&
-                (c.completed ? (
-                  <button type="button" className="mini" disabled={busy === c.id} onClick={() => mark(c, false)}>
-                    Undo
-                  </button>
-                ) : (
-                  <button type="button" className="mini primary" disabled={busy === c.id} onClick={() => mark(c, true)}>
-                    Mark done
-                  </button>
-                ))}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {ungrouped.length > 0 && <ul className="training-list">{ungrouped.map(item)}</ul>}
+      {groups.map((g) => (
+        <details key={g.sec.id} className="training-section" open>
+          <summary>
+            <span className="training-section-title">{g.sec.title}</span>
+            <span className="training-section-count">{g.items.length}</span>
+          </summary>
+          <ul className="training-list">{g.items.map(item)}</ul>
+        </details>
+      ))}
       {open && (
         <TrainingModal course={open} busy={busy === open.id} onClose={() => setOpen(null)} onMark={(d) => mark(open, d)} />
       )}

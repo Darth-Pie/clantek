@@ -48,7 +48,10 @@ async function setRequiredRanks(database: DB, trainingId: number, rankIds: unkno
 training.get('/', requireAuth, async (c) => {
   const viewer = c.get('viewer')!;
   const database = db(c.env);
-  const courses = await database.select().from(s.trainings).orderBy(asc(s.trainings.sortOrder), asc(s.trainings.id));
+  const [courses, sections] = await Promise.all([
+    database.select().from(s.trainings).orderBy(asc(s.trainings.sortOrder), asc(s.trainings.id)),
+    database.select().from(s.trainingSections).orderBy(asc(s.trainingSections.sortOrder), asc(s.trainingSections.id)),
+  ]);
   const ids = courses.map((t) => t.id);
   const reqMap = await requiredRanksFor(database, ids);
   const mine = ids.length
@@ -61,6 +64,7 @@ training.get('/', requireAuth, async (c) => {
   const myRank = viewer.rank?.id ?? -1;
 
   return c.json({
+    sections: sections.map((sec) => ({ id: sec.id, title: sec.title, sortOrder: sec.sortOrder })),
     trainings: courses.map((t) => {
       const requiredRankIds = reqMap.get(t.id) ?? [];
       return {
@@ -71,6 +75,7 @@ training.get('/', requireAuth, async (c) => {
         embedSrc: t.embedSrc,
         provider: t.provider,
         completionMode: t.completionMode,
+        sectionId: t.sectionId,
         sortOrder: t.sortOrder,
         requiredRankIds,
         requiredForMe: requiredRankIds.includes(myRank),
@@ -78,6 +83,52 @@ training.get('/', requireAuth, async (c) => {
       };
     }),
   });
+});
+
+/* Sections — collapsible groups courses can be filed under. training.manage. */
+
+training.post('/sections', requirePermission('training.manage'), async (c) => {
+  const body = await c.req.json<{ title?: string; sortOrder?: number }>();
+  const title = (body.title ?? '').trim().slice(0, 120);
+  if (!title) return c.json({ error: 'A title is required.' }, 400);
+  const viewer = c.get('viewer')!;
+  const inserted = await db(c.env)
+    .insert(s.trainingSections)
+    .values({ title, sortOrder: Number.isFinite(Number(body.sortOrder)) ? Math.round(Number(body.sortOrder)) : 0 })
+    .returning({ id: s.trainingSections.id });
+  const id = inserted[0]!.id;
+  await db(c.env).insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'training.section.create',
+    targetType: 'training_section',
+    targetId: String(id),
+    meta: { title },
+  });
+  return c.json({ ok: true, id }, 201);
+});
+
+training.patch('/sections/:id', requirePermission('training.manage'), async (c) => {
+  const id = Number(c.req.param('id'));
+  const body = await c.req.json<{ title?: string; sortOrder?: number }>();
+  const set: Record<string, unknown> = { updatedAt: Math.floor(Date.now() / 1000) };
+  if (typeof body.title === 'string' && body.title.trim()) set.title = body.title.trim().slice(0, 120);
+  if (Number.isFinite(Number(body.sortOrder))) set.sortOrder = Math.round(Number(body.sortOrder));
+  await db(c.env).update(s.trainingSections).set(set).where(eq(s.trainingSections.id, id));
+  return c.json({ ok: true });
+});
+
+training.delete('/sections/:id', requirePermission('training.manage'), async (c) => {
+  const id = Number(c.req.param('id'));
+  const viewer = c.get('viewer')!;
+  // Courses in this section are un-grouped (FK set null), never deleted.
+  await db(c.env).delete(s.trainingSections).where(eq(s.trainingSections.id, id));
+  await db(c.env).insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'training.section.delete',
+    targetType: 'training_section',
+    targetId: String(id),
+  });
+  return c.json({ ok: true });
 });
 
 /** Create a course. */
@@ -88,6 +139,7 @@ training.post('/', requirePermission('training.manage'), async (c) => {
     embedUrl?: string;
     completionMode?: string;
     requiredRankIds?: number[];
+    sectionId?: number | null;
     sortOrder?: number;
   }>();
   const title = (body.title ?? '').trim().slice(0, 120);
@@ -107,6 +159,7 @@ training.post('/', requirePermission('training.manage'), async (c) => {
       embedSrc: resolved.src,
       provider: resolved.provider,
       completionMode: body.completionMode === 'self' ? 'self' : 'officer',
+      sectionId: Number.isInteger(body.sectionId) ? Number(body.sectionId) : null,
       sortOrder: Number.isFinite(Number(body.sortOrder)) ? Math.round(Number(body.sortOrder)) : 0,
       createdBy: viewer.id,
       createdAt: nowSec,
@@ -139,11 +192,13 @@ training.patch('/:id', requirePermission('training.manage'), async (c) => {
     embedUrl?: string;
     completionMode?: string;
     requiredRankIds?: number[];
+    sectionId?: number | null;
     sortOrder?: number;
   }>();
   const set: Record<string, unknown> = { updatedAt: Math.floor(Date.now() / 1000) };
   if (typeof body.title === 'string' && body.title.trim()) set.title = body.title.trim().slice(0, 120);
   if (typeof body.description === 'string') set.description = body.description.trim().slice(0, 2000) || null;
+  if (body.sectionId !== undefined) set.sectionId = Number.isInteger(body.sectionId) ? Number(body.sectionId) : null;
   if (typeof body.embedUrl === 'string' && body.embedUrl.trim()) {
     const resolved = resolveSlides(body.embedUrl);
     if (!resolved) return c.json({ error: 'Paste a valid Google Slides link.' }, 400);

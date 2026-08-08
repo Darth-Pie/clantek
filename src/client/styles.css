@@ -4226,6 +4226,68 @@ a.org-box:hover {
   gap: 0.5rem;
 }
 
+/* Collapsible training sections (module) */
+.training-section {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  margin: 0.5rem 0;
+  overflow: hidden;
+}
+.training-section > summary {
+  cursor: pointer;
+  padding: 0.6rem 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  list-style: none;
+}
+.training-section > summary::-webkit-details-marker {
+  display: none;
+}
+.training-section > summary::before {
+  content: '▸';
+  color: var(--color-muted);
+  transition: transform 0.15s ease;
+}
+.training-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+.training-section-title {
+  flex: 1 1 auto;
+}
+.training-section-count {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  background: var(--color-border);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+.training-section > .training-list {
+  padding: 0.6rem 0.7rem;
+}
+
+/* Training admin — sections management */
+.training-sections-admin {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.training-add-section {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.training-add-section input {
+  flex: 1 1 auto;
+}
+.training-form-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 /* ------------------------------------------------------------------ *
  * Top-nav categories (dropdowns) — see components/SiteNav.tsx
  * ------------------------------------------------------------------ */

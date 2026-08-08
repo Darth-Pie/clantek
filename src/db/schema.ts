@@ -328,10 +328,22 @@ export const news = sqliteTable(
  * private (visible to the member + holders of training.view).
  * ------------------------------------------------------------------ */
 
+/** Collapsible sections/categories a course can be grouped under in the module. */
+export const trainingSections = sqliteTable('training_sections', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  title: text('title').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at').notNull().default(now),
+  updatedAt: integer('updated_at').notNull().default(now),
+});
+
 export const trainings = sqliteTable('trainings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   title: text('title').notNull(),
   description: text('description'),
+  // Optional grouping; NULL = ungrouped. Deleting a section un-groups its courses
+  // (set null), it never deletes them.
+  sectionId: integer('section_id').references(() => trainingSections.id, { onDelete: 'set null' }),
   // The pasted source URL (kept for editing) and the canonical, origin-locked
   // embed src derived from it (what actually goes in the iframe). See
   // shared/trainingEmbed.ts — the src is never the raw pasted value.

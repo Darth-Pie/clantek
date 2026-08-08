@@ -28,7 +28,8 @@ export type ModuleType =
   | 'events'
   | 'medals'
   | 'warrecords'
-  | 'games';
+  | 'games'
+  | 'training';
 
 export interface LayoutModule {
   /** Stable id for React keys and drag-and-drop; not meaningful to the server. */
@@ -219,6 +220,12 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     label: 'Games',
     description: 'The games the clan plays.',
     defaultConfig: { title: 'Games We Play', limit: 12 },
+  },
+  {
+    type: 'training',
+    label: 'Training',
+    description: 'The training courses members can take, with completion tracking.',
+    defaultConfig: { title: 'Training' },
   },
 ];
 

@@ -322,6 +322,62 @@ export const news = sqliteTable(
  * Theme tokens live under the 'theme' key as CSS custom properties, e.g.
  * { "--color-accent": "#c0392b", "--font-body": "Inter" }
  */
+/* ------------------------------------------------------------------ *
+ * Training — a repository of courses (embedded Google Slides today) that can be
+ * required for specific ranks and marked complete per member. Completion is
+ * private (visible to the member + holders of training.view).
+ * ------------------------------------------------------------------ */
+
+export const trainings = sqliteTable('trainings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  title: text('title').notNull(),
+  description: text('description'),
+  // The pasted source URL (kept for editing) and the canonical, origin-locked
+  // embed src derived from it (what actually goes in the iframe). See
+  // shared/trainingEmbed.ts — the src is never the raw pasted value.
+  embedUrl: text('embed_url').notNull(),
+  embedSrc: text('embed_src').notNull(),
+  provider: text('provider'),
+  // How a member gets marked done: 'self' = they can tick it off themselves;
+  // 'officer' = only a training.manage holder can (verified). Chosen per course.
+  completionMode: text('completion_mode', { enum: ['self', 'officer'] }).notNull().default('officer'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: integer('created_at').notNull().default(now),
+  updatedAt: integer('updated_at').notNull().default(now),
+});
+
+/** Which ranks a training is required for (many-to-many). No rows = not required. */
+export const trainingRequiredRanks = sqliteTable(
+  'training_required_ranks',
+  {
+    trainingId: integer('training_id')
+      .notNull()
+      .references(() => trainings.id, { onDelete: 'cascade' }),
+    rankId: integer('rank_id')
+      .notNull()
+      .references(() => ranks.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.trainingId, t.rankId] })],
+);
+
+/** One row per member per training they've completed. markedBy = who checked it (self or an officer). */
+export const trainingCompletions = sqliteTable(
+  'training_completions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    trainingId: integer('training_id')
+      .notNull()
+      .references(() => trainings.id, { onDelete: 'cascade' }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    completedAt: integer('completed_at').notNull().default(now),
+    markedBy: integer('marked_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [uniqueIndex('training_completion_unique').on(t.trainingId, t.userId)],
+);
+
 export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value', { mode: 'json' }).notNull(),

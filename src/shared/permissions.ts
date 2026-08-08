@@ -26,6 +26,9 @@ export const PERMISSIONS = {
   'medals.award': 'Award and revoke medals',
   'medals.manage': 'Create, edit, and delete medal definitions',
 
+  'training.view': 'See any member’s training completion status',
+  'training.manage': 'Create and edit training courses, and mark members complete',
+
   'games.manage': 'Create, edit, and delete games',
   'matches.record': 'Record match results',
   'matches.manage': 'Edit and delete any match record',

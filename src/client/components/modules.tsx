@@ -15,6 +15,7 @@ import { sanitizeHtml, sanitizePageHtml, excerptFromHtml } from '../lib/richtext
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
 import { isAllowedEmbedSrc } from '../../shared/embeds';
+import { isAllowedSlidesSrc } from '../../shared/trainingEmbed';
 import type { ModuleType } from '../../shared/layout';
 
 type Config = Record<string, unknown>;
@@ -741,6 +742,157 @@ function GamesModule({ config }: { config: Config }) {
  * Registry — the single map the renderer and editor read.
  * ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ *
+ * Training — the course catalog, each an embedded Google Slides deck opened in a
+ * modal, with per-member completion (self-attest or officer-marked per course).
+ * ------------------------------------------------------------------ */
+
+interface TrainingCourse {
+  id: number;
+  title: string;
+  description: string | null;
+  embedSrc: string;
+  provider: string | null;
+  completionMode: 'self' | 'officer';
+  requiredRankIds: number[];
+  requiredForMe: boolean;
+  completed: boolean;
+}
+
+function TrainingModal({
+  course,
+  busy,
+  onClose,
+  onMark,
+}: {
+  course: TrainingCourse;
+  busy: boolean;
+  onClose: () => void;
+  onMark: (done: boolean) => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  return (
+    <div className="lightbox" role="dialog" aria-modal="true" onClick={onClose}>
+      <button className="lightbox-close" onClick={onClose} aria-label="Close">
+        ✕
+      </button>
+      <div className="training-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="training-modal-head">
+          <h3>{course.title}</h3>
+          {course.completionMode === 'self' &&
+            (course.completed ? (
+              <span className="training-done">✓ Completed</span>
+            ) : (
+              <button type="button" className="primary small" disabled={busy} onClick={() => onMark(true)}>
+                Mark complete
+              </button>
+            ))}
+        </div>
+        <div className="training-embed">
+          {isAllowedSlidesSrc(course.embedSrc) ? (
+            <iframe
+              src={course.embedSrc}
+              title={course.title}
+              loading="lazy"
+              allowFullScreen
+              sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          ) : (
+            <p className="muted">This course’s slides link is unavailable.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrainingModule({ config }: { config: Config }) {
+  const title = str(config, 'title', 'Training');
+  const [courses, setCourses] = useState<TrainingCourse[] | null>(null);
+  const [open, setOpen] = useState<TrainingCourse | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
+
+  const load = () =>
+    api
+      .get<{ trainings: TrainingCourse[] }>('/training')
+      .then((d) => setCourses(d.trainings))
+      .catch(() => setCourses([]));
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const mark = async (course: TrainingCourse, done: boolean) => {
+    setBusy(course.id);
+    try {
+      if (done) await api.post(`/training/${course.id}/complete`);
+      else await api.del(`/training/${course.id}/complete`);
+      setCourses((cs) => cs?.map((c) => (c.id === course.id ? { ...c, completed: done } : c)) ?? cs);
+      setOpen((o) => (o && o.id === course.id ? { ...o, completed: done } : o));
+    } catch {
+      /* leave state as-is on failure */
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (courses === null)
+    return (
+      <ModuleCard title={title}>
+        <p className="muted">Loading…</p>
+      </ModuleCard>
+    );
+  if (courses.length === 0) return null;
+
+  return (
+    <ModuleCard title={title}>
+      <ul className="training-list">
+        {courses.map((c) => (
+          <li key={c.id} className="training-item">
+            <div className="training-item-main">
+              <div className="training-item-head">
+                <span className="training-name">{c.title}</span>
+                {c.requiredForMe && <span className="training-req">Required</span>}
+                {c.completed && <span className="training-done">✓ Completed</span>}
+              </div>
+              {c.description && <p className="training-desc muted small">{c.description}</p>}
+            </div>
+            <div className="training-item-actions">
+              <button type="button" className="mini" onClick={() => setOpen(c)}>
+                Open
+              </button>
+              {c.completionMode === 'self' &&
+                (c.completed ? (
+                  <button type="button" className="mini" disabled={busy === c.id} onClick={() => mark(c, false)}>
+                    Undo
+                  </button>
+                ) : (
+                  <button type="button" className="mini primary" disabled={busy === c.id} onClick={() => mark(c, true)}>
+                    Mark done
+                  </button>
+                ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {open && (
+        <TrainingModal course={open} busy={busy === open.id} onClose={() => setOpen(null)} onMark={(d) => mark(open, d)} />
+      )}
+    </ModuleCard>
+  );
+}
+
 export const MODULE_RENDERERS: Record<ModuleType, (props: { config: Config }) => ReactNode> = {
   heading: HeadingModule,
   text: TextModule,
@@ -757,4 +909,5 @@ export const MODULE_RENDERERS: Record<ModuleType, (props: { config: Config }) =>
   medals: MedalsModule,
   warrecords: WarRecordsModule,
   games: GamesModule,
+  training: TrainingModule,
 };

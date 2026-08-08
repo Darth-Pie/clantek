@@ -798,6 +798,18 @@ function ModuleEditor(props: {
           </>
         )}
 
+        {m.type === 'training' && (
+          <>
+            <input
+              type="text"
+              value={typeof cfg.title === 'string' ? cfg.title : ''}
+              placeholder="Section title"
+              onChange={(e) => props.onPatchConfig(rowId, colId, m.id, { title: e.target.value })}
+            />
+            <p className="muted small">Courses are managed under Content → Training.</p>
+          </>
+        )}
+
         {m.type === 'image' && (
           <ImageConfig
             config={cfg}

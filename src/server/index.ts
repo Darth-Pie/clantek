@@ -41,6 +41,7 @@ import { materializeRecurringEvents } from './events/recurrence';
 import ranks from './routes/ranks';
 import members from './routes/members';
 import bansRoutes from './routes/bans';
+import training from './routes/training';
 import settings from './routes/settings';
 import rolesRoutes from './routes/roles';
 import medalsRoutes from './routes/medals';
@@ -400,6 +401,7 @@ app.get('/api/version', async (c) => {
 app.route('/api/ranks', ranks);
 app.route('/api/members', members);
 app.route('/api/bans', bansRoutes);
+app.route('/api/training', training);
 app.route('/api/settings', settings);
 app.route('/api/roles', rolesRoutes);
 app.route('/api/medals', medalsRoutes);

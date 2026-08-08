@@ -129,6 +129,128 @@ export async function fetchRates(cfg: AnalyticsConfig): Promise<{ rates: Rates |
   }
 }
 
+interface HistoryDay {
+  date: string;
+  requests: number;
+  rowsRead: number;
+  rowsWritten: number;
+}
+
+/** YYYY-MM-DD in UTC for a Date. */
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Per-day requests + D1 rows for the last `days` days, via the GraphQL Analytics
+ * API (grouped by date). Same graceful contract as fetchRates: returns an empty
+ * series + a reason string on any problem, never throws. Cloudflare retains
+ * ~30 days of this data on the free plan, so `days` is capped accordingly.
+ */
+export async function fetchHistory(
+  cfg: AnalyticsConfig,
+  days: number,
+): Promise<{ series: HistoryDay[]; error: string | null }> {
+  if (!cfg.apiToken || !cfg.accountId) return { series: [], error: null };
+
+  const span = Math.min(Math.max(days, 1), 30);
+  const until = new Date();
+  const since = new Date(until.getTime() - (span - 1) * 24 * 60 * 60 * 1000);
+  const sinceDate = isoDate(since);
+  const untilDate = isoDate(until);
+
+  const query = `
+    query History($account: String!, $script: String!, $db: String!, $since: Date!, $until: Date!) {
+      viewer {
+        accounts(filter: { accountTag: $account }) {
+          workersInvocationsAdaptiveGroups(
+            limit: 100,
+            filter: { scriptName: $script, date_geq: $since, date_leq: $until },
+            orderBy: [date_ASC]
+          ) {
+            dimensions { date }
+            sum { requests }
+          }
+          d1AnalyticsAdaptiveGroups(
+            limit: 100,
+            filter: { databaseId: $db, date_geq: $since, date_leq: $until },
+            orderBy: [date_ASC]
+          ) {
+            dimensions { date }
+            sum { rowsRead rowsWritten }
+          }
+        }
+      }
+    }`;
+
+  try {
+    const resp = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${cfg.apiToken}` },
+      body: JSON.stringify({
+        query,
+        variables: {
+          account: cfg.accountId,
+          script: cfg.scriptName,
+          db: cfg.d1DatabaseId,
+          since: sinceDate,
+          until: untilDate,
+        },
+      }),
+    });
+
+    const json = (await resp.json()) as {
+      data?: {
+        viewer?: {
+          accounts?: Array<{
+            workersInvocationsAdaptiveGroups?: Array<{ dimensions?: { date?: string }; sum?: { requests?: number } }>;
+            d1AnalyticsAdaptiveGroups?: Array<{ dimensions?: { date?: string }; sum?: { rowsRead?: number; rowsWritten?: number } }>;
+          }>;
+        };
+      };
+      errors?: Array<{ message: string }>;
+    };
+
+    if (json.errors?.length) return { series: [], error: json.errors.map((e) => e.message).join('; ') };
+    const acct = json.data?.viewer?.accounts?.[0];
+    if (!acct) return { series: [], error: 'Analytics returned no data for this account.' };
+
+    // Merge the two grouped result sets onto a continuous, gap-filled day axis so
+    // the chart has one point per day even when a day had zero traffic.
+    const byDate = new Map<string, HistoryDay>();
+    for (let i = 0; i < span; i += 1) {
+      const d = isoDate(new Date(since.getTime() + i * 24 * 60 * 60 * 1000));
+      byDate.set(d, { date: d, requests: 0, rowsRead: 0, rowsWritten: 0 });
+    }
+    for (const g of acct.workersInvocationsAdaptiveGroups ?? []) {
+      const day = g.dimensions?.date && byDate.get(g.dimensions.date);
+      if (day) day.requests += g.sum?.requests ?? 0;
+    }
+    for (const g of acct.d1AnalyticsAdaptiveGroups ?? []) {
+      const day = g.dimensions?.date && byDate.get(g.dimensions.date);
+      if (day) {
+        day.rowsRead += g.sum?.rowsRead ?? 0;
+        day.rowsWritten += g.sum?.rowsWritten ?? 0;
+      }
+    }
+    return { series: [...byDate.values()], error: null };
+  } catch (err) {
+    return { series: [], error: `Could not reach the Analytics API: ${(err as Error).message}` };
+  }
+}
+
+usage.get('/history', requireAuth, async (c) => {
+  const analytics = await loadAnalytics(c.env, db(c.env));
+  const days = Math.min(Math.max(Number(c.req.query('days')) || 30, 1), 30);
+  const { series, error } = await fetchHistory(analytics, days);
+  return c.json({
+    days,
+    configured: Boolean(analytics.apiToken && analytics.accountId),
+    series,
+    error,
+  });
+});
+
 usage.get('/', requireAuth, async (c) => {
   const analytics = await loadAnalytics(c.env, db(c.env));
   const [r2, d1Bytes, rateResult] = await Promise.all([

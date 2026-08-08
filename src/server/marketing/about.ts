@@ -7,7 +7,10 @@
  * simply doesn't route /about to this (see index.ts). Figures are verified against
  * Cloudflare's published pricing/terms (2026-08-08); sources are linked in-page.
  *
- * Keep it honest: every number here is defensible and the assumptions are shown.
+ * The hero mirrors the app's home-page hero module (dark accent-glow panel,
+ * uppercase eyebrow, clamped headline, glassy stat chips) so the marketing page
+ * feels like part of the product. Keep it honest: every number here is
+ * defensible and the assumptions are shown.
  */
 
 export function aboutPageHtml(): string {
@@ -22,7 +25,7 @@ export function aboutPageHtml(): string {
   :root{
     --bg:#0b0e14; --panel:#121722; --panel2:#0f1420; --text:#e6e9ef; --muted:#9aa4b2;
     --border:#232b3a; --accent:#6ea8fe; --accent2:#8b5cf6; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
-    --radius:14px;
+    --radius:14px; --hero-accent:#6ea8fe;
   }
   @media (prefers-color-scheme: light){
     :root{ --bg:#f6f8fc; --panel:#ffffff; --panel2:#f0f3f9; --text:#12161f; --muted:#5a6473; --border:#e2e8f2; }
@@ -31,27 +34,73 @@ export function aboutPageHtml(): string {
   body{ margin:0; background:var(--bg); color:var(--text);
     font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
   a{ color:var(--accent); }
-  .wrap{ max-width:860px; margin:0 auto; padding:0 1.1rem 4rem; }
+  .wrap{ max-width:920px; margin:0 auto; padding:0 1.1rem 4rem; }
   header.top{ position:sticky; top:0; z-index:5; background:color-mix(in srgb,var(--bg) 88%,transparent);
     backdrop-filter:blur(8px); border-bottom:1px solid var(--border); }
-  header.top .row{ max-width:860px; margin:0 auto; padding:.7rem 1.1rem; display:flex; align-items:center; justify-content:space-between; }
+  header.top .row{ max-width:920px; margin:0 auto; padding:.7rem 1.1rem; display:flex; align-items:center; justify-content:space-between; }
   .brand{ font-weight:800; letter-spacing:.02em; color:var(--text); text-decoration:none; font-size:1.15rem; }
   .brand span{ color:var(--accent); }
   .backlink{ color:var(--muted); text-decoration:none; font-size:.9rem; }
-  .hero{ padding:3rem 0 1.5rem; }
+  .backlink:hover{ color:var(--text); }
+
+  /* ---- Hero (mirrors the home-page hero module) ---- */
+  .hero-wrap{ max-width:920px; margin:0 auto; padding:1.6rem 1.1rem 0; }
+  .hero-panel{
+    position:relative; overflow:hidden; border-radius:22px;
+    padding:clamp(2.6rem,6vw,4.6rem) clamp(1.5rem,5vw,4rem);
+    text-align:center; color:#f5f7fb;
+    background:
+      radial-gradient(1200px 500px at 80% -10%, color-mix(in srgb,var(--hero-accent) 30%, transparent), transparent 60%),
+      radial-gradient(900px 400px at 0% 110%, color-mix(in srgb,var(--accent2) 22%, transparent), transparent 55%),
+      linear-gradient(160deg,#0c1020 0%,#0a0d18 60%,#080a12 100%);
+    border:1px solid color-mix(in srgb,#fff 8%,transparent);
+    box-shadow:0 30px 80px -40px color-mix(in srgb,var(--hero-accent) 60%,transparent);
+  }
+  .hero-eyebrow{ display:inline-block; letter-spacing:.14em; text-transform:uppercase; font-size:.72rem;
+    font-weight:700; color:var(--hero-accent); margin-bottom:1rem; }
+  .hero-headline{ margin:0 auto .9rem; max-width:20ch; font-weight:800; line-height:1.06;
+    font-size:clamp(2rem,5.2vw,3.3rem); color:#fff; }
+  .hero-headline .glow{ color:var(--hero-accent); }
+  .hero-subhead{ margin:0 auto; max-width:62ch; color:#aeb7c8; font-size:clamp(1rem,2.2vw,1.16rem); line-height:1.6; }
+  .hero-cta{ display:flex; flex-wrap:wrap; gap:.9rem; justify-content:center; margin:2rem 0 1.6rem; }
+  .hero-btn{ display:inline-flex; align-items:center; gap:.55rem; padding:.85rem 1.6rem; border-radius:12px;
+    font-size:1.02rem; font-weight:700; text-decoration:none;
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+  .hero-btn:hover{ transform:translateY(-2px); }
+  .hero-btn-primary{ background:var(--hero-accent); color:#0a0d18;
+    box-shadow:0 10px 30px color-mix(in srgb,var(--hero-accent) 45%,transparent); }
+  .hero-btn-primary:hover{ box-shadow:0 14px 38px color-mix(in srgb,var(--hero-accent) 60%,transparent); }
+  .hero-btn-secondary{ background:transparent; color:#f5f7fb; border:1.5px solid color-mix(in srgb,#fff 28%,transparent); }
+  .hero-btn-secondary:hover{ border-color:var(--hero-accent); color:#fff; }
+  .hero-chips{ display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; }
+  .hero-chip{ display:inline-flex; align-items:baseline; gap:.4rem; padding:.5rem 1rem; border-radius:999px;
+    font-size:.9rem; color:#dfe6f5; background:color-mix(in srgb,#fff 6%,transparent);
+    border:1px solid color-mix(in srgb,#fff 12%,transparent); }
+  .hero-chip b{ color:#fff; font-weight:800; }
+  .hero-chip .u{ color:var(--hero-accent); font-weight:700; }
+
+  .hero{ padding:2.4rem 0 .5rem; }
   .eyebrow{ text-transform:uppercase; letter-spacing:.12em; font-size:.72rem; color:var(--accent); font-weight:700; }
   h1{ font-size:2.1rem; line-height:1.15; margin:.5rem 0 .6rem; }
-  h2{ font-size:1.4rem; margin:2.4rem 0 .8rem; }
+  h2{ font-size:1.5rem; margin:2.6rem 0 .9rem; display:flex; align-items:center; gap:.6rem; scroll-margin-top:4.5rem; }
+  h2::before{ content:""; width:.55rem; height:1.35rem; border-radius:3px;
+    background:linear-gradient(180deg,var(--accent),var(--accent2)); flex:none; }
   h3{ margin:1.4rem 0 .4rem; }
   .lede{ font-size:1.12rem; color:var(--muted); }
-  .card{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:1.4rem; margin:1.2rem 0; }
-  .callout{ background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 12%,transparent),transparent);
-    border:1px solid color-mix(in srgb,var(--accent) 35%,transparent); }
+  .card{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; margin:1.2rem 0;
+    box-shadow:0 1px 0 color-mix(in srgb,#fff 4%,transparent) inset; }
+  .callout{ position:relative; overflow:hidden;
+    background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 14%,transparent),transparent);
+    border:1px solid color-mix(in srgb,var(--accent) 38%,transparent); }
+  .callout::before{ content:""; position:absolute; inset:0 auto 0 0; width:4px;
+    background:linear-gradient(180deg,var(--accent),var(--accent2)); }
+  .callout strong:first-child{ color:var(--accent); }
   .muted{ color:var(--muted); }
   .small{ font-size:.85rem; }
   table{ width:100%; border-collapse:collapse; margin:.5rem 0; font-size:.93rem; }
-  th,td{ text-align:left; padding:.55rem .5rem; border-bottom:1px solid var(--border); vertical-align:top; }
+  th,td{ text-align:left; padding:.6rem .5rem; border-bottom:1px solid var(--border); vertical-align:top; }
   th{ color:var(--muted); font-weight:600; }
+  tbody tr:hover{ background:color-mix(in srgb,var(--accent) 6%,transparent); }
   code{ background:var(--panel2); padding:.08rem .35rem; border-radius:6px; font-size:.9em; }
   /* Calculator */
   .calc{ display:grid; gap:1rem; }
@@ -61,6 +110,8 @@ export function aboutPageHtml(): string {
   .field .hint{ color:var(--muted); font-size:.8rem; margin-top:.2rem; }
   .field input[type=number]{ width:100%; padding:.6rem .7rem; border-radius:10px; border:1px solid var(--border);
     background:var(--panel2); color:var(--text); font-size:1rem; }
+  .field input[type=number]:focus{ outline:none; border-color:var(--accent);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent); }
   .adv summary{ cursor:pointer; color:var(--muted); font-size:.85rem; }
   .adv input[type=number]{ max-width:8rem; }
   .result{ background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:1.1rem; }
@@ -76,8 +127,9 @@ export function aboutPageHtml(): string {
   .src a{ display:block; margin:.25rem 0; }
   .disclaimer{ font-size:.82rem; color:var(--muted); border-top:1px solid var(--border); margin-top:2.5rem; padding-top:1.2rem; }
   footer.foot{ border-top:1px solid var(--border); margin-top:2rem; }
-  footer.foot .row{ max-width:860px; margin:0 auto; padding:1.2rem 1.1rem; display:flex; gap:1rem; flex-wrap:wrap; color:var(--muted); font-size:.9rem; }
+  footer.foot .row{ max-width:920px; margin:0 auto; padding:1.2rem 1.1rem; display:flex; gap:1rem; flex-wrap:wrap; color:var(--muted); font-size:.9rem; }
   footer.foot a{ color:var(--muted); }
+  @media (prefers-reduced-motion: reduce){ .hero-btn:hover{ transform:none; } }
 </style>
 </head>
 <body>
@@ -86,14 +138,26 @@ export function aboutPageHtml(): string {
   <a class="backlink" href="/">&larr; Back to mustr</a>
 </div></header>
 
-<div class="wrap">
-  <section class="hero">
-    <div class="eyebrow">Honest hosting</div>
-    <h1>mustr runs on Cloudflare's free tier — here's the real math.</h1>
-    <p class="lede">No fine-print surprises. Below is exactly what mustr uses, what could ever cost you money,
+<div class="hero-wrap">
+  <section class="hero-panel">
+    <div class="hero-eyebrow">Honest hosting</div>
+    <h1 class="hero-headline">Runs on Cloudflare's free tier — <span class="glow">here's the real math.</span></h1>
+    <p class="hero-subhead">No fine-print surprises. Exactly what mustr uses, what could ever cost you money,
       what Cloudflare's terms actually say, and a quick estimator for <em>your</em> community.</p>
+    <div class="hero-cta">
+      <a class="hero-btn hero-btn-primary" href="#estimator">Estimate your cost &darr;</a>
+      <a class="hero-btn hero-btn-secondary" href="#legal">Is it legal?</a>
+    </div>
+    <div class="hero-chips">
+      <span class="hero-chip"><b>$0</b><span class="u">/mo to Cloudflare</span></span>
+      <span class="hero-chip"><b>10&nbsp;GB</b><span class="u">free images</span></span>
+      <span class="hero-chip"><b>Egress</b><span class="u">always free</span></span>
+      <span class="hero-chip"><b>Only cost:</b><span class="u">a domain name</span></span>
+    </div>
   </section>
+</div>
 
+<div class="wrap">
   <div class="card callout">
     <strong>The bottom line.</strong> A mustr instance fits comfortably inside Cloudflare's free allowances.
     The only guaranteed cost to run it is a <strong>domain name</strong> (bought from a registrar, not Cloudflare).
@@ -102,7 +166,7 @@ export function aboutPageHtml(): string {
     (thousands of pictures).
   </div>
 
-  <h2>Estimate your situation</h2>
+  <h2 id="estimator">Estimate your situation</h2>
   <div class="card">
     <div class="calc">
       <div class="calc-inputs">
@@ -164,7 +228,7 @@ export function aboutPageHtml(): string {
       premium ones like <code>.gg</code> cost more). Pointing its DNS at Cloudflare is free.</p>
   </div>
 
-  <h2>Is it legal? (What Cloudflare's terms actually say)</h2>
+  <h2 id="legal">Is it legal? (What Cloudflare's terms actually say)</h2>
   <div class="card">
     <p>Yes — and Cloudflare rewrote the relevant rule in 2023 to make this kind of use plainly allowed.</p>
     <h3>The clause people remember — old "Section 2.8"</h3>

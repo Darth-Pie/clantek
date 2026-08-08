@@ -43,6 +43,7 @@ import members from './routes/members';
 import bansRoutes from './routes/bans';
 import training from './routes/training';
 import { aboutPageHtml } from './marketing/about';
+import { productPageHtml } from './marketing/product';
 import settings from './routes/settings';
 import rolesRoutes from './routes/roles';
 import medalsRoutes from './routes/medals';
@@ -522,6 +523,21 @@ app.get('/legal', async (c) => {
  */
 app.get('/about', (c) => {
   return c.html(aboutPageHtml(), 200, { 'Cache-Control': 'public, max-age=300' });
+});
+
+/**
+ * mustr.gg marketing: the product / go-to-sale landing (a pitch to prospective
+ * *buyers*). Deliberately host-gated to mustr.gg — a buyer's own deployment must
+ * never show a "buy mustr" page to its members, so on any other host this falls
+ * through to the app (app.all below) as if the route didn't exist.
+ */
+function isMarketingHost(host: string): boolean {
+  const h = host.split(':')[0]!.toLowerCase();
+  return h === 'mustr.gg' || h === 'www.mustr.gg' || h === 'localhost' || h.endsWith('.localhost') || h.startsWith('127.');
+}
+app.get('/product', (c, next) => {
+  if (!isMarketingHost(new URL(c.req.url).hostname)) return next();
+  return c.html(productPageHtml(), 200, { 'Cache-Control': 'public, max-age=300' });
 });
 
 app.all('*', async (c) => {

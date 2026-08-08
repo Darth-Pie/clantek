@@ -18,6 +18,7 @@ import { useModules, useScConfig } from '../lib/modules';
 import HangarView from '../components/HangarView';
 import HangarImport from '../components/HangarImport';
 import ScVerify from '../components/ScVerify';
+import MemberTraining from '../components/MemberTraining';
 
 interface Role {
   id: number;
@@ -595,6 +596,12 @@ export default function MemberDetail() {
                 )
               ))}
           </section>
+
+          {(isSelf || can('training.view')) && (
+            <div className="block">
+              <MemberTraining userId={member.id} isSelf={isSelf} />
+            </div>
+          )}
 
           {modules.starcitizen && (sc.hangarEnabled || sc.verifyEnabled) && (isSelf || can('hangar.view')) && (
             <section className="block hangar-section">

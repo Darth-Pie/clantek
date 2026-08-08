@@ -29,6 +29,7 @@ export default function ModulesAdmin() {
   const [flags, setFlags] = useState<ModuleFlags | null>(null);
   const [sc, setSc] = useState<ScConfig | null>(null);
   const [orgSidDraft, setOrgSidDraft] = useState('');
+  const [demo, setDemo] = useState<boolean | null>(null);
   const { run, busy, error, notice, warning } = useAction();
 
   useEffect(() => {
@@ -43,7 +44,20 @@ export default function ModulesAdmin() {
         setOrgSidDraft(sc.orgSid);
       })
       .catch(() => {});
+    api
+      .get<{ demo: { pendingPreview: boolean } }>('/settings/demo')
+      .then(({ demo }) => setDemo(demo.pendingPreview))
+      .catch(() => setDemo(false));
   }, []);
+
+  const toggleDemo = (value: boolean) =>
+    run(async () => {
+      const { demo: saved } = await api.put<{ demo: { pendingPreview: boolean } }>('/settings/demo', {
+        demo: { pendingPreview: value },
+      });
+      setDemo(saved.pendingPreview);
+      return value ? 'Preview mode on.' : 'Preview mode off.';
+    });
 
   // Every save sends the FULL SC config (the server replaces the blob), so
   // toggling a kill switch preserves the org SID and vice-versa.
@@ -95,6 +109,30 @@ export default function ModulesAdmin() {
           </li>
         ))}
       </ul>
+
+      <div className="module-config">
+        <h3>Demo / preview mode</h3>
+        <div className="module-row">
+          <div className="module-info">
+            <span className="module-name">Read-only applicant preview</span>
+            <span className="muted small">
+              When on, people awaiting approval can browse members-only content and the content/people admin
+              panels <strong>read-only</strong> — a live tour for prospective members. Leave it <strong>off</strong>
+              for a real community: applicants then see only their own profile. Writes are always blocked for
+              applicants, and Settings (secrets) are never exposed.
+            </span>
+          </div>
+          <label className="module-toggle">
+            <input
+              type="checkbox"
+              checked={!!demo}
+              disabled={busy || demo === null}
+              onChange={(e) => void toggleDemo(e.target.checked)}
+            />
+            <span>{demo ? 'On' : 'Off'}</span>
+          </label>
+        </div>
+      </div>
 
       {flags.starcitizen && sc && (
         <div className="module-config">

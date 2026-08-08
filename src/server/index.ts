@@ -164,6 +164,27 @@ app.use('/api/*', async (c, next) => {
 
 app.use('/api/*', withViewer);
 
+// Pending applicants are read-only. In demo/preview mode they're granted read
+// permissions to tour the product, but this hard method guard still blocks every
+// write — the belt behind the permission grant, so "preview" can never mutate
+// anything. The only exceptions are genuine self-service writes: their own
+// profile, their own avatar, and signing out. Approved members are unaffected.
+app.use('/api/*', async (c, next) => {
+  const viewer = c.get('viewer');
+  const method = c.req.method.toUpperCase();
+  if (viewer?.pending && method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    const path = new URL(c.req.url).pathname;
+    const selfService =
+      path === '/api/auth/logout' ||
+      path === '/api/media/avatars' ||
+      /^\/api\/members\/\d+\/profile$/.test(path);
+    if (!selfService) {
+      return c.json({ error: 'This is a read-only preview — sign-in is pending approval.' }, 403);
+    }
+  }
+  await next();
+});
+
 app.get('/api/auth/login', async (c) => {
   const { discord } = await loadConfig(c.env);
   const state = newState();

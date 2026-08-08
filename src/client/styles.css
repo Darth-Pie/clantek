@@ -2281,6 +2281,92 @@ label.check {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- Analytics & Usage dashboard (Settings → Analytics) --- */
+.analytics-verdict {
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-accent, #5b8cff);
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  margin: 0.4rem 0 1.2rem;
+  font-size: 0.98rem;
+  background: color-mix(in srgb, var(--color-accent, #5b8cff) 8%, transparent);
+}
+.analytics-verdict.over {
+  border-left-color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 10%, transparent);
+}
+.analytics-h {
+  margin: 1.6rem 0 0.7rem;
+  font-size: 1.05rem;
+}
+.usage-cards {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.usage-card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  background: var(--color-surface, var(--color-panel, #fff));
+}
+.usage-card.wide {
+  grid-column: span 1;
+}
+.usage-card-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.usage-card-sub {
+  font-weight: 400;
+}
+.usage-card-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.usage-card-of {
+  font-size: 0.78rem;
+  margin-bottom: 0.55rem;
+}
+.usage-card-pct {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.spark {
+  margin-top: 0.5rem;
+}
+.spark-svg {
+  width: 100%;
+  height: 44px;
+  display: block;
+}
+.spark-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+.analytics-connect {
+  margin-top: 1.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0 1.1rem;
+}
+.analytics-connect > summary {
+  cursor: pointer;
+  padding: 0.9rem 0;
+  font-weight: 600;
+}
+.analytics-connect[open] > summary {
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 1rem;
+}
+
 .usage-connect {
   grid-column: 1 / -1;
   font-size: 0.82rem;

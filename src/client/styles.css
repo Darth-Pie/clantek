@@ -4066,13 +4066,31 @@ a.org-box:hover {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.6rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
-.training-item-main {
+.training-item:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+/* The whole card is a button that opens the course. */
+.training-item-open {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0.6rem 0.75rem;
 }
 .training-item-head {
   display: flex;
@@ -4084,12 +4102,18 @@ a.org-box:hover {
   font-weight: 600;
 }
 .training-desc {
-  margin: 0.25rem 0 0;
+  margin: 0;
 }
 .training-item-actions {
   flex: 0 0 auto;
   display: flex;
   gap: 0.4rem;
+  padding: 0 0.6rem 0 0;
+}
+.training-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 .training-req {
   font-size: 0.66rem;

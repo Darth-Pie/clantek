@@ -123,6 +123,31 @@ export function productPageHtml(accent = '#a56bf0'): string {
     background:var(--accent); color:#0a0d18; margin-top:.6rem; box-shadow:0 10px 30px color-mix(in srgb,var(--accent) 40%,transparent); }
   .cta-note{ color:var(--muted); font-size:.86rem; margin-top:1rem; }
 
+  /* Screenshot showcase */
+  .shots{ display:flex; flex-direction:column; gap:2.4rem; margin-top:1.2rem; }
+  .shot-cap{ margin-top:.85rem; color:var(--muted); font-size:1rem; line-height:1.55; max-width:70ch; }
+  .shot-cap b{ color:var(--text); }
+  .shot-row{ display:grid; gap:1.5rem; grid-template-columns:1fr 1fr; align-items:start; }
+  .sync-row{ display:grid; gap:1.5rem; grid-template-columns:1.5fr 1fr; align-items:start; }
+  @media (max-width:760px){ .shot-row, .sync-row{ grid-template-columns:1fr; } }
+  .frame-win, .frame-chat{ border-radius:13px; overflow:hidden; border:1px solid var(--border);
+    box-shadow:0 34px 70px -36px rgba(0,0,0,.75); }
+  .frame-win{ background:var(--panel2); }
+  .frame-chat{ background:#0f1421; }
+  .frame-bar{ display:flex; align-items:center; gap:.7rem; padding:.55rem .85rem;
+    background:#0f1421; border-bottom:1px solid var(--border); }
+  .frame-chat .frame-bar{ background:#0b0f1a; }
+  .frame-dots{ display:flex; gap:.42rem; flex:none; }
+  .frame-dots i{ width:11px; height:11px; border-radius:50%; display:block; }
+  .frame-dots i:nth-child(1){ background:#ff5f57; }
+  .frame-dots i:nth-child(2){ background:#febc2e; }
+  .frame-dots i:nth-child(3){ background:#28c840; }
+  .frame-url{ flex:1; text-align:center; font-size:.78rem; color:var(--muted); background:var(--bg);
+    border-radius:6px; padding:.3rem .8rem; max-width:360px; margin:0 auto;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .frame-tag{ font-size:.82rem; font-weight:700; color:#c9d2e3; display:flex; align-items:center; gap:.45rem; }
+  .frame-win img, .frame-chat img{ display:block; width:100%; height:auto; }
+
   footer.foot{ border-top:1px solid var(--border); margin-top:2.5rem; }
   footer.foot .row{ max-width:980px; margin:0 auto; padding:1.2rem 1.1rem; display:flex; gap:1rem; flex-wrap:wrap; color:var(--muted); font-size:.9rem; }
   footer.foot a{ color:var(--muted); }
@@ -134,6 +159,7 @@ export function productPageHtml(accent = '#a56bf0'): string {
   <a class="brand" href="/"><span>m</span>ustr</a>
   <div class="top-links">
     <a href="#features">Features</a>
+    <a href="#inside">In action</a>
     <a href="#pricing">Pricing</a>
     <a href="/setup">Setup guide</a>
     <a href="/about">Cost &amp; legal</a>
@@ -184,6 +210,68 @@ export function productPageHtml(accent = '#a56bf0'): string {
     <div class="feature"><span class="ic">🔗</span><h3>Discord, properly wired in</h3><p>Login, slash commands, role sync, event sign-ups — the site and your server stay in step instead of drifting apart.</p></div>
     <div class="feature"><span class="ic">📱</span><h3>Works on phones</h3><p>Installs like an app, and there's a proper API with tokens if someone wants to build their own client.</p></div>
     <div class="feature"><span class="ic">🚀</span><h3>Game modules</h3><p>Optional per-game extras you can switch on — first up is a Star Citizen hangar import — with room for more.</p></div>
+  </div>
+
+  <h2 id="inside">See it in action</h2>
+  <p class="section-lede">Real screens from a live mustr install — this one, in fact. No mockups.</p>
+  <div class="shots">
+
+    <div class="shot">
+      <div class="frame-win">
+        <div class="frame-bar"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url">mustr.gg/roster</span></div>
+        <img src="/assets/shots/roster.png" alt="mustr roster showing the leadership hierarchy" loading="lazy" width="2080" height="974" />
+      </div>
+      <p class="shot-cap"><b>The roster.</b> Ranks, roles, and your leadership tree at a glance — pulled straight from who's in your Discord.</p>
+    </div>
+
+    <div class="shot">
+      <div class="sync-row">
+        <div class="frame-win">
+          <div class="frame-bar"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url">mustr.gg/events</span></div>
+          <img src="/assets/shots/event2.png" alt="An event on the mustr site with sign-up roles" loading="lazy" width="1208" height="643" />
+        </div>
+        <div class="frame-chat">
+          <div class="frame-bar"><span class="frame-tag">&#128172; In your Discord</span></div>
+          <img src="/assets/shots/discord-event.png" alt="The same event posted to Discord by mustrBot with RSVP buttons" loading="lazy" width="516" height="742" />
+        </div>
+      </div>
+      <p class="shot-cap"><b>Plan an event once.</b> Create it on the site and it posts to Discord with working RSVP buttons — sign up in either place and it's the same list.</p>
+    </div>
+
+    <div class="shot-row">
+      <div class="shot">
+        <div class="frame-win">
+          <div class="frame-bar"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url">mustr.gg/admin &middot; Ranks</span></div>
+          <img src="/assets/shots/ranks.png" alt="The ranks admin, showing a nine-tier rank ladder" loading="lazy" width="1261" height="892" />
+        </div>
+        <p class="shot-cap"><b>Your rank ladder.</b> Build the tiers your group actually uses; each maps to Discord roles and stays in sync.</p>
+      </div>
+      <div class="shot">
+        <div class="frame-win">
+          <div class="frame-bar"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url">mustr.gg/admin &middot; Theme</span></div>
+          <img src="/assets/shots/theme.png" alt="The theme editor with colour controls and preset palettes" loading="lazy" width="1252" height="877" />
+        </div>
+        <p class="shot-cap"><b>Make it yours.</b> A dozen presets plus your own colours, fonts, and logo — it doesn't have to look like mine.</p>
+      </div>
+    </div>
+
+    <div class="shot-row">
+      <div class="shot">
+        <div class="frame-win">
+          <div class="frame-bar"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url">mustr.gg/admin &middot; Org Chart</span></div>
+          <img src="/assets/shots/orgchart.png" alt="The drag-and-drop org chart designer" loading="lazy" width="1242" height="822" />
+        </div>
+        <p class="shot-cap"><b>Leadership, mapped.</b> Drag people into a chain of command — the public org tree new folks actually read.</p>
+      </div>
+      <div class="shot">
+        <div class="frame-win">
+          <div class="frame-bar"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url">mustr.gg/roster &middot; Member</span></div>
+          <img src="/assets/shots/profile1.png" alt="A member profile with medals and service record" loading="lazy" width="1269" height="850" />
+        </div>
+        <p class="shot-cap"><b>Every member's history.</b> Medals, service records, and a one-click Discord re-sync on each profile.</p>
+      </div>
+    </div>
+
   </div>
 
   <h2 id="cost">It costs about nothing to run</h2>

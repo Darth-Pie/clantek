@@ -1,16 +1,17 @@
 /**
  * The public product / go-to-sale landing served at mustr.gg/product.
  *
- * This is the pitch to *prospective buyers* — other org leaders who might deploy
- * their own mustr instance. It is deliberately mustr.gg-ONLY: a buyer's own
- * install must never show a "buy mustr" page to its members, so the route in
+ * This is the pitch to *prospective adopters* — other org leaders who might
+ * deploy their own mustr instance. It is deliberately mustr.gg-ONLY: a buyer's
+ * own install must never show this page to its members, so the route in
  * index.ts host-gates this to mustr.gg (falling through to the app elsewhere).
  * Self-contained HTML with its own inline CSS, matching the /about page's hero
  * look so the marketing surface feels like one product.
  *
- * Honesty rules: every feature listed here is actually shipped. Pricing is stated
- * softly and non-committally (one-time, possibly free, amount unset) — do not
- * invent a number. The contact CTA is a placeholder for the operator to wire.
+ * Model (decided 2026-08-09): mustr is FREE and source-available (FSL-1.1-MIT),
+ * self-deployed via the Deploy-to-Cloudflare button. The only money path is an
+ * optional GitHub Sponsors "Support mustr" button in the pricing section — never
+ * a paywall. Honesty rule: every feature listed here is actually shipped.
  */
 
 export function productPageHtml(accent = '#a56bf0'): string {
@@ -113,6 +114,10 @@ export function productPageHtml(accent = '#a56bf0'): string {
   .price-list{ list-style:none; margin:1.2rem auto 0; padding:0; max-width:360px; text-align:left; }
   .price-list li{ margin:.5rem 0; padding-left:1.6rem; position:relative; }
   .price-list li::before{ content:"✓"; position:absolute; left:0; color:var(--good); font-weight:800; }
+  .support-btn{ display:inline-flex; align-items:center; gap:.5rem; margin-top:1.3rem; padding:.72rem 1.5rem;
+    border-radius:12px; font-weight:700; font-size:1rem; text-decoration:none; color:var(--accent);
+    background:transparent; border:1.5px solid color-mix(in srgb,var(--accent) 55%,transparent); }
+  .support-btn:hover{ background:color-mix(in srgb,var(--accent) 12%,transparent); border-color:var(--accent); }
 
   .cta-band{ text-align:center; background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:2.2rem 1.4rem; margin-top:1.4rem;
     background:
@@ -299,19 +304,21 @@ export function productPageHtml(accent = '#a56bf0'): string {
     <div class="tl"><div class="yr">2026</div><h4>mustr</h4><p>A full rebuild for the modern web: Discord-native, self-hosted, installable. Same idea, far fewer &lt;font&gt; tags.</p></div>
   </div>
 
-  <h2 id="pricing">Pricing</h2>
-  <p class="section-lede">Buy it once. No subscription — honestly, I'd only forget to cancel it too.</p>
+  <h2 id="pricing">Pricing? There isn't any.</h2>
+  <p class="section-lede">mustr is free. No subscription, no "pro" tier, no per-seat anything. Take it, run it, make it yours.</p>
   <div class="pricing">
     <div class="price-card">
-      <div class="hero-eyebrow" style="color:var(--accent)">One-time</div>
-      <div class="price-tag">Pay once. That's the whole model.</div>
-      <p class="price-sub">Still settling on the number for the 2026 launch.</p>
+      <div class="hero-eyebrow" style="color:var(--accent)">Free &amp; source-available</div>
+      <div class="price-tag">$0. Really.</div>
+      <p class="price-sub">Runs on your own Cloudflare for about nothing — the only real cost is a domain name (~$10–15/yr, from any registrar).</p>
       <ul class="price-list">
-        <li>Pay once — no recurring anything</li>
-        <li>Your own self-hosted instance, not a seat on mine</li>
-        <li>Every feature included — I didn't wall things off to sell them back to you</li>
-        <li>~$0/month to run, on Cloudflare's free tier</li>
+        <li>Free to run, self-host, and modify</li>
+        <li>Your own instance and database — not a seat on mine</li>
+        <li>Every feature included; nothing walled off</li>
+        <li>Source-available — you can read every line (it's how the bot stays honest)</li>
       </ul>
+      <a class="support-btn" href="https://github.com/sponsors/Darth-Pie" target="_blank" rel="noopener noreferrer">&#9829; Support mustr</a>
+      <p class="price-sub" style="margin-top:.9rem">If it saves your org some headaches, a tip keeps me building — but it's entirely optional. The whole thing works free, forever.</p>
     </div>
   </div>
 

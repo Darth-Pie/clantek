@@ -189,7 +189,7 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
     <h3>The honest bar</h3>
     <ul class="checklist">
       <li>You'll spend <b>about 45 minutes</b>, once.</li>
-      <li>You'll need a <b>card</b> for a domain name — roughly <b>$10–15 a year</b>, the only guaranteed cost.</li>
+      <li>You'll buy a <b>domain name</b> — roughly <b>$10–15 a year</b>, the only guaranteed cost (any credit or debit card works).</li>
       <li>You'll do a lot of <b>clicking buttons and pasting values I hand you</b>. No coding.</li>
       <li>If a step doesn't work, you'll <b>re-read the step</b> — there's no me to message. I've tried to make that rare. I'm also an optimist.</li>
     </ul>
@@ -202,7 +202,7 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
   <ul class="checklist">
     <li>A <b>Discord server</b> you own or admin — the one mustr will be the website for.</li>
     <li>A <b>Cloudflare account</b> (free — we make it in Step 2 if you don't have one).</li>
-    <li>A <b>card</b> for the domain purchase.</li>
+    <li>A <b>credit or debit card</b> to buy the domain name.</li>
     <li><b>45 minutes</b> and a cup of something.</li>
   </ul>
   <p class="small muted">Notably <b>not</b> on the list: a server to rent, a monthly subscription, or any software to
@@ -231,8 +231,10 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
       <p>A domain is the <code>something.gg</code> people type to reach you. You <b>rent</b> it, yearly, from a company
         called a <em>registrar</em>.</p>
       <ol>
-        <li>Pick any registrar and buy a domain. <b>Any of them works</b> — I won't recommend one, because they're all
-          fine for this. Search "buy a domain," pick one that isn't sketchy, done.</li>
+        <li>Buy a domain from a registrar. <b>Any reputable one works.</b> If you'd like a suggestion, I used
+          <a href="https://porkbun.com" target="_blank" rel="noopener noreferrer">Porkbun</a> for mustr.gg and it was
+          painless — no upsells, honest pricing. To be clear: I'm not affiliated with them, I earn nothing if you use
+          them, and I can't help you with anything on their end. It's just where I had a good experience.</li>
         <li>Choose a name that's short and yours. <code>.gg</code> is popular with gaming groups; a plain <code>.com</code> is never wrong.</li>
         <li>Pay for it. You do <b>not</b> need the add-ons they'll upsell — no "web hosting," no "site builder," no "email hosting." mustr is your hosting.</li>
       </ol>
@@ -357,7 +359,7 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
       <h3>Your first hour as an owner</h3>
       <p>You're in. A sane order to get your community actually using it:</p>
       <ol>
-        <li><b>Invite the bot to your server.</b> <em>Now</em> it has somewhere to go — mustr shows you the invite link in the admin area, pre-set with the right permissions.</li>
+        <li><b>Invite the bot to your server.</b> <em>Now</em> it has somewhere to go — Settings &rarr; Identity &amp; Discord gives you a ready-made invite that asks for <strong>only</strong> the handful of permissions mustr actually uses (never Administrator). Got members wary of bots? Point them at <a href="/bot">the plain-English rundown</a> of exactly what it can and can't do.</li>
         <li><b>Set your look:</b> Admin → Theme &amp; Branding. Logo, colors. Ten minutes here makes it feel like <em>yours</em>, not mine.</li>
         <li><b>Build your ranks</b> to match how your group works: Admin → Ranks &amp; Roles. Line them up with your Discord roles so the two-way sync has something to sync.</li>
         <li><b>Make your home page:</b> Admin → Pages. Drag the blocks, write a welcome.</li>

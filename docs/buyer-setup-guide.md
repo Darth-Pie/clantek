@@ -40,7 +40,7 @@ Grab these first so you're not stopping halfway:
 
 - [ ] A **Discord server** you own (or admin) — the one mustr will be the website for.
 - [ ] A **Cloudflare account** (free — we make it in Step 2 if you don't have one).
-- [ ] A **card** for the domain purchase.
+- [ ] A **credit or debit card** to buy the domain name.
 - [ ] **45 minutes** and a cup of something.
 
 That's the whole shopping list. Notably **not** on it: a server to rent, a monthly
@@ -74,9 +74,11 @@ them** — so don't panic if a term looks unfamiliar now.
 A domain is the `something.com` (or `.gg`, or `.org`) people type to reach you.
 You **rent** it, yearly, from a company called a *registrar*.
 
-1. Pick any registrar you like and buy a domain. **Any of them works** — I'm not
-   going to recommend one, because they're all fine for this and I don't want to
-   play favorites. Search "buy a domain," pick one that isn't sketchy, done.
+1. Buy a domain from a registrar. **Any reputable one works.** If you'd like a
+   suggestion, I used [Porkbun](https://porkbun.com) for mustr.gg and it was
+   painless — no upsells, honest pricing. To be clear: I'm not affiliated with
+   them, I earn nothing if you use them, and I can't help you with anything on
+   their end. It's just where I had a good experience.
 2. Choose a name that's short and yours. `.gg` is popular with gaming groups; a
    plain `.com` is never wrong.
 3. Pay for it. You do **not** need any add-ons they upsell you — no "web hosting,"

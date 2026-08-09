@@ -6,6 +6,7 @@ import { db, requireAuth, requirePermission } from '../middleware/auth';
 import { loadModules, cleanModuleFlags, MODULES_KEY, loadScConfig, cleanScConfig, SC_KEY } from '../modules';
 import { loadFooter, FOOTER_KEY } from '../footer';
 import { cleanFooter } from '../../shared/footer';
+import { botInviteUrl } from '../../shared/botPermissions';
 import { loadPageAccess, PAGE_ACCESS_KEY } from '../pageAccess';
 import { cleanPageAccess } from '../../shared/pageAccess';
 import { mergeSeo, SEO_KEY, type StoredSeo } from '../seo';
@@ -399,6 +400,8 @@ settings.get('/identity', requirePermission('settings.manage'), async (c) => {
     urls: {
       redirectUri: new URL('/api/auth/callback', c.req.url).toString(),
       interactionsUrl: new URL('/api/discord/interactions', c.req.url).toString(),
+      // Pre-scoped, least-privilege bot invite (empty until the Client ID is set).
+      botInvite: botInviteUrl(cfg.discord.clientId),
     },
   });
 });

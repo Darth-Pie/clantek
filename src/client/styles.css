@@ -2030,6 +2030,37 @@ a.admin-crumb:hover {
   text-decoration: underline;
 }
 
+/* The least-privilege bot invite in Identity & Discord. */
+.bot-perms {
+  list-style: none;
+  margin: 0.4rem 0 0.9rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.bot-perms li {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.bot-perms li:last-child {
+  border-bottom: 0;
+}
+.bot-invite-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 700;
+  text-decoration: none;
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+}
+.bot-invite-btn:hover {
+  filter: brightness(1.08);
+}
+
 /* Inline external help links (e.g. "where to get this" links in admin panels).
    Themed to the accent so they read as links even inside muted helper text. */
 .ext-link {

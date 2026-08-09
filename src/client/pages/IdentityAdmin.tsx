@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import { BOT_PERMISSIONS } from '../../shared/botPermissions';
 
 interface Identity {
   siteName: string;
@@ -28,6 +29,8 @@ interface Identity {
 interface Urls {
   redirectUri: string;
   interactionsUrl: string;
+  /** Pre-scoped, least-privilege bot invite — empty until the Client ID is set. */
+  botInvite: string;
 }
 
 /** A plain external link that opens safely in a new tab. */
@@ -250,6 +253,37 @@ export default function IdentityAdmin() {
           </p>
           <CopyField label="OAuth2 redirect URL" value={urls.redirectUri} />
           <CopyField label="Interactions Endpoint URL" value={urls.interactionsUrl} />
+        </fieldset>
+      )}
+
+      {urls?.botInvite && (
+        <fieldset>
+          <legend>Invite the bot</legend>
+          <p className="muted small">
+            A ready-made invite that asks Discord for <strong>only</strong> the permissions mustr
+            actually uses — never Administrator. Open it while signed in as your server’s owner (or an
+            admin) and pick your server. What each permission is for:
+          </p>
+          <ul className="bot-perms">
+            {BOT_PERMISSIONS.map((p) => (
+              <li key={p.name}>
+                <strong>{p.name}</strong>
+                <span className="muted small"> — {p.why}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="news-editor-actions">
+            <a className="bot-invite-btn" href={urls.botInvite} target="_blank" rel="noopener noreferrer">
+              Open invite in Discord ↗
+            </a>
+          </div>
+          <CopyField label="Or copy the invite link" value={urls.botInvite} />
+          <p className="muted small">
+            Members wary of bots? Point them at the plain-English rundown of exactly what this bot can
+            and can’t do: <Ext href="/bot">mustr.gg/bot</Ext>.{' '}
+            After inviting, drag the bot’s role <strong>above</strong> the ranks it manages
+            (Server Settings → Roles) so role sync can work.
+          </p>
         </fieldset>
       )}
 

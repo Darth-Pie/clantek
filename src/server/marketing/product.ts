@@ -326,6 +326,7 @@ export function productPageHtml(accent = '#a56bf0'): string {
 <footer class="foot"><div class="row">
   <a href="/">Home</a>
   <a href="/about">Cost &amp; legal</a>
+  <a href="/bot">The bot</a>
   <a href="/legal">Legal</a>
   <span style="margin-left:auto">© ${new Date().getFullYear()} mustr</span>
 </div></footer>

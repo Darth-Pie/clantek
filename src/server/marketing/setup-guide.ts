@@ -295,7 +295,7 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
       </p>
       <ol>
         <li>Click it, sign in with your Cloudflare account from Step 2, and let it connect your GitHub — it makes you your <em>own</em> copy of mustr.</li>
-        <li>On the setup screen, Cloudflare <b>creates your database and file storage automatically</b> and asks you to invent two passwords. Make both long and random (mash the keyboard):
+        <li>On the setup screen, Cloudflare <b>creates your database and file storage automatically</b> and asks you to invent two passwords. Make both long and random — <b>letters and numbers only</b> (symbols like <code>+</code> or <code>/</code> can get mangled by the form):
           <ul>
             <li><code>SETUP_TOKEN</code> — unlocks the setup wizard in a moment. <b>Keep this one</b>; you'll paste it in Step 6.</li>
             <li><code>SESSION_SECRET</code> — mustr uses it to keep logins secure. Set it and forget it.</li>

@@ -13,9 +13,10 @@
 # A long random password YOU invent. It unlocks the one-time setup wizard the
 # first time your site loads, so a random passer-by can't claim your site
 # before you do. You paste it once in the wizard, then it's done.
-# Generate one with:  openssl rand -base64 24
+# Use LETTERS AND NUMBERS ONLY — symbols like + / = can get mangled by web
+# forms. Generate a safe one with:  openssl rand -hex 24
 SETUP_TOKEN=
 
-# 32+ random bytes used to sign login/session cookies.
-# Generate one with:  openssl rand -base64 32
+# 32+ random bytes used to sign login/session cookies. Letters and numbers only.
+# Generate one with:  openssl rand -hex 32
 SESSION_SECRET=

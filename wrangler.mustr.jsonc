@@ -1,0 +1,128 @@
+{
+  // ────────────────────────────────────────────────────────────────────────
+  // mustr.gg's OWN deploy config (the showcase install). NOT the buyer template.
+  // Deploy the live site with:   npx wrangler deploy -c wrangler.mustr.jsonc
+  // The plain `wrangler.jsonc` is the generic buyer template the "Deploy to
+  // Cloudflare" button reads; deploying THAT here would drop the custom domain
+  // and mustr.gg's Discord vars — so always pass -c for the live site.
+  // ────────────────────────────────────────────────────────────────────────
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "clantek",
+  "main": "src/server/index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The site's primary hostname. Declaring it here keeps the custom domain
+  // reproducible — a fresh deploy (or the CI pipeline) re-asserts it rather
+  // than depending on a one-off dashboard binding. Requires the mustr.gg
+  // zone to be on this Cloudflare account (it is).
+  // The apex is canonical. `www` is bound here purely so custom_domain
+  // auto-provisions its DNS record + TLS cert; the actual www→apex 301 is a
+  // Cloudflare *Redirect Rule* (edge phase), because a worker-level redirect is
+  // bypassed for page loads — the static-assets layer answers navigations before
+  // the Worker runs (see run_worker_first below). The redirect in
+  // src/server/index.ts still covers any /api or /media path requested on www.
+  // Cookies and OAuth stay on the single apex host; nobody actually browses www.
+  "routes": [
+    { "pattern": "mustr.gg", "custom_domain": true },
+    { "pattern": "www.mustr.gg", "custom_domain": true }
+  ],
+
+  // One canonical URL. With the custom domain above, the *.workers.dev
+  // subdomain is intentionally off, so there is a single host for OAuth
+  // redirects and cookies. Flip to true to restore the fallback URL.
+  "workers_dev": false,
+
+  // The React admin builds to dist/client and is served as static assets by the
+  // same Worker that serves the API.
+  //
+  // run_worker_first is essential here: without it, the assets layer answers
+  // *navigation* requests (Accept: text/html) before the Worker, and
+  // single-page-application not_found_handling then serves index.html for
+  // /api/auth/login — so a clicked sign-in link renders the SPA's 404 instead
+  // of ever reaching the Worker. Scoping it to /api/* means API routes always
+  // hit the Worker while every other path (/, /login, /admin/*, hashed assets)
+  // is served directly by the assets layer with SPA fallback.
+  // /media/* is served by the Worker from R2 (medal art, etc.). It must be in
+  // run_worker_first or the assets layer would answer those paths with the SPA
+  // fallback (index.html) before the Worker ever sees them — the same trap the
+  // /api/* scoping avoids for the API.
+  // run_worker_first: true routes every request through the Worker first. The
+  // Worker serves API + /media itself and hands everything else to ASSETS — but
+  // for the HTML shell it rewrites <head> from the site's SEO settings (title,
+  // Open Graph, etc.) so crawlers and social scrapers see the right tags. The
+  // Worker's `app.all('*')` fallback preserves SPA not_found_handling by proxying
+  // to ASSETS. (Was scoped to /api|/media, which left navigations to the assets
+  // layer and made server-side <head> injection impossible.)
+  "assets": {
+    "directory": "./dist/client",
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "clantek",
+      "database_id": "19d7ebe6-e379-411b-8597-17b630cb8394",
+      "migrations_dir": "drizzle"
+    }
+  ],
+
+  // Media storage for medal art (and, later, avatars and rank insignia).
+  // Requires R2 enabled once on the Cloudflare dashboard (R2 → Enable) and the
+  // bucket created:  npx wrangler r2 bucket create clantek-media
+  // Uploads land here via POST /api/media; they're served back at /media/*.
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "clantek-media"
+    }
+  ],
+
+  "vars": {
+    // Non-secret config only. Real secrets (client secret, bot token, session
+    // secret) go in .dev.vars locally and `wrangler secret put` in production.
+    "SITE_NAME": "mustr",
+
+    // Canonical public origin, used to turn stored relative media URLs
+    // (/media/events/…) into absolute ones for Discord embeds, which a bot
+    // context can't derive from a request. Must match the custom domain above.
+    "SITE_URL": "https://mustr.gg",
+
+    // Application ID — public; it appears in every bot invite URL.
+    "DISCORD_CLIENT_ID": "1533902498065023286",
+
+    // Ed25519 *verification* key. Public by design: it proves a request came
+    // from Discord, and cannot be used to forge one (Discord holds the private
+    // half). Safe to commit.
+    "DISCORD_PUBLIC_KEY": "4b3b9448e8b3cc5bf0c8fdb513e8f14b3d2ad18e20b18d864cb4babbc55b53dd",
+
+    // Your Discord server. Login is gated on membership in this guild:
+    // no invite, no account.
+    "DISCORD_GUILD_ID": "607936444132098081",
+
+    // Optional — powers the live request/query-rate gauges in the admin usage
+    // dashboard. The account id is not a secret (it appears in dashboard URLs);
+    // fill it in and pair it with a read-only token:
+    //   npx wrangler secret put CLOUDFLARE_API_TOKEN
+    // (create the token as "Account Analytics: Read"). Left blank → the
+    // dashboard still shows storage, just not the daily rates.
+    "CLOUDFLARE_ACCOUNT_ID": "f9954b71f74407c9f7678cde6a4c21b0"
+  },
+
+  // Two cadences (branched on controller.cron in src/server/index.ts):
+  //  - */5      : a bounded batch of the Discord role-reconcile sweep, so cost
+  //               stays flat as the roster grows.
+  //  - "7 * * * *" (hourly, minute 7): the tenure-medal sweep. Kept off the
+  //               5-min tick because tenure only changes daily; minute 7 avoids
+  //               colliding with the */5 ticks.
+  "triggers": {
+    "crons": ["*/5 * * * *", "7 * * * *"]
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}

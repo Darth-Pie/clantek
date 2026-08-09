@@ -17,6 +17,7 @@ import CustomPage from './pages/CustomPage';
 import News from './pages/News';
 import NewsPost from './pages/NewsPost';
 import Events from './pages/Events';
+import Setup, { fetchSetupStatus, type SetupStatus } from './pages/Setup';
 import { api } from './lib/api';
 import { sanitizeHtml } from './lib/richtext';
 import type { FooterConfig } from '../shared/footer';
@@ -103,6 +104,10 @@ export default function App() {
   // can wait for it before deciding to bounce an anonymous visitor to /login.
   const [accessReady, setAccessReady] = useState(false);
   const [footer, setFooter] = useState<FooterConfig | null>(null);
+  // First-run detection: undefined = still checking, null = check failed (treat as
+  // claimed so a transient error never hides a live site), object = known state.
+  // An unclaimed install renders the wizard ahead of everything else.
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null | undefined>(undefined);
   const [scrolled, setScrolled] = useState(false);
   // Logo aspect ratio (width/height), measured on load, so the header can
   // reserve exactly the collapsed logo's width and the nav never jumps.
@@ -113,6 +118,12 @@ export default function App() {
   useEffect(() => {
     if (siteName) document.title = siteName;
   }, [siteName]);
+
+  // Is this a brand-new, unclaimed install? Checked once on mount; if so, the
+  // whole app is replaced by the setup wizard below.
+  useEffect(() => {
+    void fetchSetupStatus().then(setSetupStatus);
+  }, []);
 
   // The site footer is public (shows on the login page too) and rarely changes,
   // so load it once on mount regardless of auth.
@@ -166,7 +177,11 @@ export default function App() {
     };
   }, [viewer]);
 
-  if (loading) return <div className="loading">Loading…</div>;
+  if (loading || setupStatus === undefined) return <div className="loading">Loading…</div>;
+
+  // A fresh install with no owner yet: the setup wizard is the only thing that
+  // should render, full-bleed, regardless of the requested route.
+  if (setupStatus && !setupStatus.claimed) return <Setup status={setupStatus} />;
 
   const hasLogo = !!branding.logoUrl;
   const collapsed = 38; // logo height (px) once docked inside the bar
@@ -237,6 +252,10 @@ export default function App() {
         <Suspense fallback={<div className="loading">Loading…</div>}>
           <Routes>
           <Route path="/login" element={<Login />} />
+          {/* Setup only renders (full-bleed, above) while unclaimed; once claimed,
+              visiting it just goes home. */}
+          <Route path="/setup" element={<Navigate to="/" replace />} />
+
           {/* Home and custom pages are public-capable: they render for logged-out
               visitors when the page is marked public, and redirect to /login
               otherwise. The components make that call (they know each page's flag). */}

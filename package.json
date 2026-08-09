@@ -6,10 +6,11 @@
   "description": "Clan management system — Cloudflare Workers + D1 + React. A rewrite of the 2003 PHP original.",
   "scripts": {
     "dev": "concurrently -n vite,worker -c cyan,magenta \"vite\" \"wrangler dev\"",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run db:bundle && tsc --noEmit && vite build",
     "deploy": "npm run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "db:bundle": "node scripts/bundle-migrations.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply clantek --local",
     "db:migrate:remote": "wrangler d1 migrations apply clantek --remote",

@@ -13,7 +13,7 @@
  * invent a number. The contact CTA is a placeholder for the operator to wire.
  */
 
-export function productPageHtml(): string {
+export function productPageHtml(accent = '#a56bf0'): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -24,7 +24,7 @@ export function productPageHtml(): string {
 <style>
   :root{
     --bg:#0b0e14; --panel:#121722; --panel2:#0f1420; --text:#e6e9ef; --muted:#9aa4b2;
-    --border:#232b3a; --accent:#6ea8fe; --accent2:#8b5cf6; --good:#22c55e; --radius:14px; --hero-accent:#6ea8fe;
+    --border:#232b3a; --accent:${accent}; --accent2:color-mix(in srgb, ${accent} 72%, #000); --good:#22c55e; --radius:14px; --hero-accent:${accent};
   }
   @media (prefers-color-scheme: light){
     :root{ --bg:#f6f8fc; --panel:#ffffff; --panel2:#f0f3f9; --text:#12161f; --muted:#5a6473; --border:#e2e8f2; }

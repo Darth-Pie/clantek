@@ -45,6 +45,7 @@ import training from './routes/training';
 import setupRoutes from './routes/setup';
 import { aboutPageHtml } from './marketing/about';
 import { productPageHtml } from './marketing/product';
+import { loadThemeAccent } from './marketing/palette';
 import settings from './routes/settings';
 import rolesRoutes from './routes/roles';
 import medalsRoutes from './routes/medals';
@@ -523,8 +524,9 @@ app.get('/legal', async (c) => {
  * it's a real page rather than a sanitized layout module. This is mustr.gg-only
  * marketing — like /legal, it isn't part of a buyer's deployment.
  */
-app.get('/about', (c) => {
-  return c.html(aboutPageHtml(), 200, { 'Cache-Control': 'public, max-age=300' });
+app.get('/about', async (c) => {
+  const accent = await loadThemeAccent(c.env);
+  return c.html(aboutPageHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
 });
 
 /**
@@ -537,9 +539,10 @@ function isMarketingHost(host: string): boolean {
   const h = host.split(':')[0]!.toLowerCase();
   return h === 'mustr.gg' || h === 'www.mustr.gg' || h === 'localhost' || h.endsWith('.localhost') || h.startsWith('127.');
 }
-app.get('/product', (c, next) => {
+app.get('/product', async (c, next) => {
   if (!isMarketingHost(new URL(c.req.url).hostname)) return next();
-  return c.html(productPageHtml(), 200, { 'Cache-Control': 'public, max-age=300' });
+  const accent = await loadThemeAccent(c.env);
+  return c.html(productPageHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
 });
 
 app.all('*', async (c) => {

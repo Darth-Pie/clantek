@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import NumberField from '../components/NumberField';
 
 interface Medal {
   id: number;
@@ -237,13 +238,13 @@ function MedalEditor({
       <fieldset className="tenure">
         <legend>Auto-award by time in guild</legend>
         <div className="tenure-row">
-          <input
-            type="number"
+          <NumberField
             min={1}
             step={1}
             value={months}
             placeholder="e.g. 12"
-            onChange={(e) => setMonths(e.target.value)}
+            ariaLabel="Months in guild"
+            onChange={setMonths}
             disabled={busy}
           />
           <span className="muted small">

@@ -142,8 +142,9 @@ export function aboutPageHtml(): string {
   <section class="hero-panel">
     <div class="hero-eyebrow">Honest hosting</div>
     <h1 class="hero-headline">Runs on Cloudflare's free tier — <span class="glow">here's the real math.</span></h1>
-    <p class="hero-subhead">No fine-print surprises. Exactly what mustr uses, what could ever cost you money,
-      what Cloudflare's terms actually say, and a quick estimator for <em>your</em> community.</p>
+    <p class="hero-subhead">No fine print, no surprise bill. Here's exactly what mustr uses, what could ever cost
+      you money, what Cloudflare's terms actually say, and a little estimator for <em>your</em> community. I'd
+      rather over-explain this than have you find out the hard way.</p>
     <div class="hero-cta">
       <a class="hero-btn hero-btn-primary" href="#estimator">Estimate your cost &darr;</a>
       <a class="hero-btn hero-btn-secondary" href="#legal">Is it legal?</a>
@@ -159,11 +160,12 @@ export function aboutPageHtml(): string {
 
 <div class="wrap">
   <div class="card callout">
-    <strong>The bottom line.</strong> A mustr instance fits comfortably inside Cloudflare's free allowances.
-    The only guaranteed cost to run it is a <strong>domain name</strong> (bought from a registrar, not Cloudflare).
-    You'd only ever pay Cloudflare if you <em>choose</em> the flat <strong>$5/month</strong> plan — and the single
-    metric that even slowly creeps toward a limit is stored images, whose free ceiling is <strong>10&nbsp;GB</strong>
-    (thousands of pictures).
+    <strong>The short version.</strong> A mustr instance fits comfortably inside Cloudflare's free allowances, so
+    hosting costs you roughly nothing — I'm not saying that to sound clever, I just didn't want a bill either. The
+    only thing you're guaranteed to pay for is a <strong>domain name</strong> (from a registrar, not Cloudflare).
+    You'd only ever pay Cloudflare if you <em>choose</em> the flat <strong>$5/month</strong> plan, and the one number
+    that even slowly creeps up is stored images, with a free ceiling of <strong>10&nbsp;GB</strong> (a lot of
+    screenshots).
   </div>
 
   <h2 id="estimator">Estimate your situation</h2>

@@ -23,7 +23,10 @@ export default function Login() {
 
   return (
     <div className="login">
-      <h1>{siteName}</h1>
+      <h1>
+        <span className="brand-lead">{(siteName || '').slice(0, 1)}</span>
+        {(siteName || '').slice(1)}
+      </h1>
       <p className="muted">Sign in with the Discord account you use in the server — no separate password to forget.</p>
 
       {message && <div className="alert">{message}</div>}

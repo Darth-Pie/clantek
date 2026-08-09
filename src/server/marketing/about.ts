@@ -134,7 +134,7 @@ export function aboutPageHtml(): string {
 </head>
 <body>
 <header class="top"><div class="row">
-  <a class="brand" href="/">mu<span>str</span></a>
+  <a class="brand" href="/"><span>m</span>ustr</a>
   <a class="backlink" href="/">&larr; Back to mustr</a>
 </div></header>
 

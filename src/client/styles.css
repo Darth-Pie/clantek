@@ -57,6 +57,14 @@ input {
   letter-spacing: 0.02em;
 }
 
+/* Wordmark: emphasize the site name's leading letter (e.g. the "m" in mustr).
+   Used in the header brand and the login heading; the self-contained marketing
+   pages carry their own equivalent rule. */
+.brand-lead {
+  color: var(--color-accent);
+  font-weight: 800;
+}
+
 /* --- Header logo: oversized + overhanging at the top, docked once scrolled --- */
 .topbar.has-logo .brand {
   position: relative;

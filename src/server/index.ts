@@ -45,6 +45,7 @@ import training from './routes/training';
 import setupRoutes from './routes/setup';
 import { aboutPageHtml } from './marketing/about';
 import { productPageHtml } from './marketing/product';
+import { setupGuideHtml } from './marketing/setup-guide';
 import { loadThemeAccent } from './marketing/palette';
 import settings from './routes/settings';
 import rolesRoutes from './routes/roles';
@@ -543,6 +544,18 @@ app.get('/product', async (c, next) => {
   if (!isMarketingHost(new URL(c.req.url).hostname)) return next();
   const accent = await loadThemeAccent(c.env);
   return c.html(productPageHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
+});
+
+/**
+ * mustr.gg marketing: the ELI5 buyer setup walkthrough. Host-gated to mustr.gg
+ * like /product — a buyer's own deployment must never show a "how to install
+ * mustr" page to its members. (The in-app setup *wizard* is a different thing
+ * that only ever runs on an unclaimed buyer install, never on mustr.gg.)
+ */
+app.get('/setup', async (c, next) => {
+  if (!isMarketingHost(new URL(c.req.url).hostname)) return next();
+  const accent = await loadThemeAccent(c.env);
+  return c.html(setupGuideHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
 });
 
 app.all('*', async (c) => {

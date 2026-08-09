@@ -135,6 +135,7 @@ export function productPageHtml(accent = '#a56bf0'): string {
   <div class="top-links">
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
+    <a href="/setup">Setup guide</a>
     <a href="/about">Cost &amp; legal</a>
     <a href="/">Live site &rarr;</a>
   </div>
@@ -228,9 +229,9 @@ export function productPageHtml(accent = '#a56bf0'): string {
 
   <div class="cta-band" id="get">
     <h2>Want it for your org?</h2>
-    <p class="section-lede" style="margin-inline:auto">Hop in the Discord and I'll help you get set up.</p>
+    <p class="section-lede" style="margin-inline:auto">Read the step-by-step <a href="/setup">setup guide</a>, or hop in the Discord and I'll help you get set up.</p>
     <a class="cta-btn" href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join the Discord</a>
-    <p class="cta-note">You're already on a live one — click around the <a href="/">site</a> and kick the tires.</p>
+    <p class="cta-note">You're already on a live one — click around the <a href="/">site</a> and kick the tires. New here? Start with the <a href="/setup">setup guide</a>.</p>
   </div>
 </div>
 

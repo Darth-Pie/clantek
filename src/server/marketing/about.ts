@@ -280,6 +280,8 @@ export function aboutPageHtml(accent = '#a56bf0'): string {
 
 <footer class="foot"><div class="row">
   <a href="/">Home</a>
+  <a href="/product">Product</a>
+  <a href="/setup">Setup guide</a>
   <a href="/legal">Legal</a>
   <a href="/third-party-notices.txt">Open-Source Licenses</a>
   <span style="margin-left:auto">© ${new Date().getFullYear()} mustr</span>

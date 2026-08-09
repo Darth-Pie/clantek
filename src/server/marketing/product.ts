@@ -20,7 +20,7 @@ export function productPageHtml(): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>mustr — Community management for gaming orgs</title>
-<meta name="description" content="mustr is a modern, self-hosted community platform for gaming orgs — roster, ranks, events with two-way Discord sync, training, and more. Founded 2026, built on two decades of ClanTek. Runs on Cloudflare's free tier." />
+<meta name="description" content="mustr is a self-hosted community site for gaming orgs — roster, ranks, events that sync with Discord, training, and more. New in 2026, built by a gamer who's been at this since 2003. Runs on Cloudflare's free tier for about nothing." />
 <style>
   :root{
     --bg:#0b0e14; --panel:#121722; --panel2:#0f1420; --text:#e6e9ef; --muted:#9aa4b2;
@@ -142,19 +142,20 @@ export function productPageHtml(): string {
 
 <div class="hero-wrap">
   <section class="hero-panel">
-    <div class="hero-eyebrow">Community management for gaming orgs</div>
-    <h1 class="hero-headline">Run your org like it's <span class="glow">2026.</span></h1>
-    <p class="hero-subhead">mustr is a modern, self-hosted platform for gaming communities — roster &amp; ranks,
-      events that sync both ways with Discord, training, galleries, and more. You're looking at a live one right now.</p>
+    <div class="hero-eyebrow">Community tools for gaming orgs</div>
+    <h1 class="hero-headline">Run your gaming org without the <span class="glow">spreadsheet gymnastics.</span></h1>
+    <p class="hero-subhead">Roster, ranks, events that actually sync with Discord, training, galleries — the stuff
+      you're probably holding together with pinned messages and a shared spreadsheet right now. You're looking at
+      a live one, in fact.</p>
     <div class="hero-cta">
       <a class="hero-btn hero-btn-primary" href="#get">Get mustr</a>
-      <a class="hero-btn hero-btn-secondary" href="/">Explore the live demo &rarr;</a>
+      <a class="hero-btn hero-btn-secondary" href="/">Poke around the live site &rarr;</a>
     </div>
     <div class="hero-chips">
-      <span class="hero-chip"><b>Founded 2026</b></span>
-      <span class="hero-chip"><b>20+ yrs</b><span class="u">of ClanTek heritage</span></span>
-      <span class="hero-chip"><b>$0</b><span class="u">hosting</span></span>
-      <span class="hero-chip"><b>No subscriptions</b></span>
+      <span class="hero-chip"><b>New in 2026</b></span>
+      <span class="hero-chip"><b>Built by a gamer</b><span class="u">old enough to remember LAN parties</span></span>
+      <span class="hero-chip"><b>~$0</b><span class="u">to host</span></span>
+      <span class="hero-chip"><b>No subscription</b></span>
       <span class="hero-chip"><b>Your data,</b><span class="u">your server</span></span>
     </div>
   </section>
@@ -162,75 +163,74 @@ export function productPageHtml(): string {
 
 <div class="wrap">
   <p class="section-lede" style="margin-top:1.8rem">
-    mustr gives a gaming org everything it needs to organize itself — members, ranks, roles, events, training,
-    and history — in one place that plugs straight into Discord and runs on infrastructure that costs nothing to
-    keep online. Every feature below is live in this very site.
+    It keeps a gaming org organized — members, ranks, roles, events, training, history — in one place that talks
+    to Discord and runs on hosting that costs about nothing. Everything below is switched on right here, so this
+    isn't a mockup you have to imagine; it's the actual thing.
   </p>
 
-  <h2 id="features">Everything your community needs</h2>
-  <p class="section-lede">One platform instead of a patchwork of bots, spreadsheets, and forum threads.</p>
+  <h2 id="features">The stuff it does</h2>
+  <p class="section-lede">One place, instead of a bot for this, a spreadsheet for that, and a forum thread nobody reads.</p>
   <div class="features">
-    <div class="feature"><span class="ic">🪖</span><h3>Roster, ranks &amp; roles</h3><p>A full member roster with a rank ladder, assignable roles, medals, and war records — all reflected back into Discord roles automatically.</p></div>
-    <div class="feature"><span class="ic">📅</span><h3>Events with Discord sync</h3><p>Schedule events with sign-up slots (Tank/Healer/DPS, etc.), capacities, banners, and recurrence. RSVPs on the site and in Discord update the same live sign-up sheet.</p></div>
-    <div class="feature"><span class="ic">🎓</span><h3>Training repository</h3><p>Embed Google Slides courses, mark them required for specific ranks, and track completion per member — self-attested or officer-verified.</p></div>
-    <div class="feature"><span class="ic">🖼️</span><h3>Gallery &amp; media</h3><p>Image galleries with a built-in lightbox, plus embedded YouTube/Twitch video that costs you nothing to host.</p></div>
-    <div class="feature"><span class="ic">📰</span><h3>News &amp; announcements</h3><p>Post updates to the site and push them to Discord, with public or members-only visibility per post.</p></div>
-    <div class="feature"><span class="ic">🕸️</span><h3>Org chart</h3><p>A visual leadership chart that shows your command structure at a glance.</p></div>
-    <div class="feature"><span class="ic">🤝</span><h3>Apply-to-join &amp; bans</h3><p>Let prospects apply through Discord login, approve or ban with a real ban list, and auto-onboard members who join your server.</p></div>
-    <div class="feature"><span class="ic">🧩</span><h3>Drag-and-drop pages</h3><p>Arrange your home page and build custom pages from modules — no code. 12 built-in themes, your own branding, logo, and favicon.</p></div>
-    <div class="feature"><span class="ic">📜</span><h3>Audit log</h3><p>Every promotion, demotion, medal, and removal is logged with a mandatory reason — full accountability for your leadership.</p></div>
-    <div class="feature"><span class="ic">🔗</span><h3>Deep Discord integration</h3><p>OAuth login, slash commands, automatic role sync, and event sign-up sheets — your site and your server stay in lockstep.</p></div>
-    <div class="feature"><span class="ic">📱</span><h3>Mobile-ready &amp; installable</h3><p>Installs as an app (PWA) and ships a versioned JSON API with bearer tokens for building your own mobile clients.</p></div>
-    <div class="feature"><span class="ic">🚀</span><h3>Game modules</h3><p>Toggleable per-game features — the first ships a Star Citizen hangar import — with a framework for more.</p></div>
+    <div class="feature"><span class="ic">🪖</span><h3>Roster, ranks &amp; roles</h3><p>A member roster with a rank ladder, roles, medals, and war records — and it keeps the matching Discord roles in sync so you're not doing it by hand at 1am.</p></div>
+    <div class="feature"><span class="ic">📅</span><h3>Events, wired to Discord</h3><p>Sign-up slots (Tank/Healer/DPS, whatever), capacities, banners, recurrence. RSVPs on the site and in Discord update the same sheet — no more counting reacts.</p></div>
+    <div class="feature"><span class="ic">🎓</span><h3>Training</h3><p>Embed Google Slides, mark courses required per rank, and see who's actually done them versus who says they have.</p></div>
+    <div class="feature"><span class="ic">🖼️</span><h3>Gallery &amp; media</h3><p>Image galleries with a lightbox, plus embedded YouTube/Twitch — video you don't pay to host.</p></div>
+    <div class="feature"><span class="ic">📰</span><h3>News &amp; announcements</h3><p>Post to the site and push to Discord, public or members-only per post.</p></div>
+    <div class="feature"><span class="ic">🕸️</span><h3>Org chart</h3><p>A leadership chart, so new folks can figure out who to bug about what.</p></div>
+    <div class="feature"><span class="ic">🤝</span><h3>Apply-to-join &amp; bans</h3><p>People apply by signing in with Discord; you approve or ban with a real ban list, and anyone who joins your server gets onboarded automatically.</p></div>
+    <div class="feature"><span class="ic">🧩</span><h3>Build your own pages</h3><p>Arrange the home page and add pages from blocks — no code. A dozen themes plus your own logo and colors, so it doesn't have to look like mine.</p></div>
+    <div class="feature"><span class="ic">📜</span><h3>Audit log</h3><p>Every promotion, demotion, and medal logged with a reason — for the inevitable "wait, who did that?"</p></div>
+    <div class="feature"><span class="ic">🔗</span><h3>Discord, properly wired in</h3><p>Login, slash commands, role sync, event sign-ups — the site and your server stay in step instead of drifting apart.</p></div>
+    <div class="feature"><span class="ic">📱</span><h3>Works on phones</h3><p>Installs like an app, and there's a proper API with tokens if someone wants to build their own client.</p></div>
+    <div class="feature"><span class="ic">🚀</span><h3>Game modules</h3><p>Optional per-game extras you can switch on — first up is a Star Citizen hangar import — with room for more.</p></div>
   </div>
 
-  <h2 id="cost">Built to cost you nothing to run</h2>
+  <h2 id="cost">It costs about nothing to run</h2>
   <div class="split">
     <div class="card accent">
-      <div class="big-num">$0<span style="font-size:1rem;color:var(--muted)"> /month hosting</span></div>
-      <p>mustr runs entirely inside Cloudflare's free tier. The only guaranteed cost of running your instance is a
-        domain name from a registrar of your choice.</p>
-      <p><a href="/about">See the honest cost &amp; legal breakdown, with a live estimator &rarr;</a></p>
+      <div class="big-num">~$0<span style="font-size:1rem;color:var(--muted)"> /month to host</span></div>
+      <p>It runs inside Cloudflare's free tier. The only thing you're guaranteed to pay for is a domain name from a
+        registrar. I'm not saying that to sound clever — I just didn't want a hosting bill either.</p>
+      <p><a href="/about">The honest cost &amp; legal breakdown, with a live estimator &rarr;</a></p>
     </div>
     <div class="card">
-      <h3>You own it</h3>
-      <p>It's <strong>self-hosted</strong> — your instance, your database, your Discord app. No middleman holds your
-        community's data, and there's no monthly bill that can be raised on you.</p>
-      <p class="small">Storage for uploaded images is the one thing that grows over time; the free ceiling is 10&nbsp;GB
-        (thousands of pictures).</p>
+      <h3>It's yours</h3>
+      <p>Self-hosted — your instance, your database, your Discord app. Nobody's holding your community's data hostage,
+        and there's no monthly bill I can quietly raise on you later.</p>
+      <p class="small">Uploaded images are the one thing that grows over time; the free ceiling is 10&nbsp;GB, which is
+        a lot of screenshots.</p>
     </div>
   </div>
 
-  <h2 id="story">Two decades in the making</h2>
-  <p class="section-lede">mustr is new — but the idea behind it isn't.</p>
+  <h2 id="story">Yes, I've been doing this a while</h2>
+  <p class="section-lede">mustr is new. The person who made it, less so.</p>
   <div class="timeline">
-    <div class="tl"><div class="yr">2003</div><h4>ClanTek</h4><p>It started as ClanTek, a community-management project for gaming clans — built when running an org online meant forums and hand-kept rosters.</p></div>
-    <div class="tl"><div class="yr">20+ years</div><h4>Hard-won lessons</h4><p>Two decades of what gaming communities actually need to stay organized — and what only gets in the way.</p></div>
-    <div class="tl"><div class="yr">2026</div><h4>mustr</h4><p>A ground-up rebuild for the modern web: Discord-native, self-hosted, installable, and free to run — the same idea, done right.</p></div>
+    <div class="tl"><div class="yr">2003</div><h4>ClanTek</h4><p>It started as ClanTek, a clan site I built back when "responsive design" meant the server responded at all.</p></div>
+    <div class="tl"><div class="yr">20+ years</div><h4>A lot of gaming later</h4><p>Two decades of running and building for gaming communities — mostly learning which features people actually use and which just get in the way.</p></div>
+    <div class="tl"><div class="yr">2026</div><h4>mustr</h4><p>A full rebuild for the modern web: Discord-native, self-hosted, installable. Same idea, far fewer &lt;font&gt; tags.</p></div>
   </div>
 
   <h2 id="pricing">Pricing</h2>
-  <p class="section-lede">Simple and honest: no subscriptions, no per-seat fees, no upsells.</p>
+  <p class="section-lede">Buy it once. No subscription — honestly, I'd only forget to cancel it too.</p>
   <div class="pricing">
     <div class="price-card">
       <div class="hero-eyebrow" style="color:var(--accent)">One-time</div>
-      <div class="price-tag">A single purchase &mdash; that's it</div>
-      <p class="price-sub">Final pricing is being set for the 2026 launch.</p>
+      <div class="price-tag">Pay once. That's the whole model.</div>
+      <p class="price-sub">Still settling on the number for the 2026 launch.</p>
       <ul class="price-list">
-        <li>One-time cost &mdash; never a recurring charge</li>
-        <li>Your own self-hosted instance</li>
-        <li>Every feature included &mdash; no paywalled modules</li>
-        <li>$0/month to run on Cloudflare's free tier</li>
+        <li>Pay once — no recurring anything</li>
+        <li>Your own self-hosted instance, not a seat on mine</li>
+        <li>Every feature included — I didn't wall things off to sell them back to you</li>
+        <li>~$0/month to run, on Cloudflare's free tier</li>
       </ul>
     </div>
   </div>
 
   <div class="cta-band" id="get">
-    <h2>Interested in mustr for your org?</h2>
-    <p class="section-lede" style="margin-inline:auto">Join our Discord and we'll help you get your community set up.</p>
-    <a class="cta-btn" href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join our Discord</a>
-    <p class="cta-note">You're already exploring a live mustr instance — poke around the
-      <a href="/">site</a> to see it in action.</p>
+    <h2>Want it for your org?</h2>
+    <p class="section-lede" style="margin-inline:auto">Hop in the Discord and I'll help you get set up.</p>
+    <a class="cta-btn" href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join the Discord</a>
+    <p class="cta-note">You're already on a live one — click around the <a href="/">site</a> and kick the tires.</p>
   </div>
 </div>
 

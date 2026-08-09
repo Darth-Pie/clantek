@@ -94,7 +94,7 @@ export function newNavId(prefix = 'n'): string {
  * client <Link>/<NavLink> lands on the SPA's 404 and only "recovers" on a manual
  * refresh (which finally issues the real HTTP request the Worker answers).
  */
-const SERVER_SERVED_EXACT = new Set(['/about', '/product', '/legal', '/setup']);
+const SERVER_SERVED_EXACT = new Set(['/about', '/product', '/legal', '/setup', '/bot']);
 export function isServerServedPath(href: string): boolean {
   const path = (href.split(/[?#]/)[0] || '').replace(/\/+$/, '');
   if (!path) return false; // '/' and '' are the SPA home

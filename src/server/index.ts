@@ -46,6 +46,7 @@ import setupRoutes from './routes/setup';
 import { aboutPageHtml } from './marketing/about';
 import { productPageHtml } from './marketing/product';
 import { setupGuideHtml } from './marketing/setup-guide';
+import { botTrustHtml } from './marketing/bot-trust';
 import { loadThemeAccent } from './marketing/palette';
 import settings from './routes/settings';
 import rolesRoutes from './routes/roles';
@@ -556,6 +557,16 @@ app.get('/setup', async (c, next) => {
   if (!isMarketingHost(new URL(c.req.url).hostname)) return next();
   const accent = await loadThemeAccent(c.env);
   return c.html(setupGuideHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
+});
+
+/**
+ * The "what the bot can & can't do" trust page. Unlike /product and /setup this
+ * is NOT host-gated — it's accurate on every install and is meant to be linked
+ * as the Discord app's Privacy Policy URL, so a buyer's own members can read it.
+ */
+app.get('/bot', async (c) => {
+  const accent = await loadThemeAccent(c.env);
+  return c.html(botTrustHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
 });
 
 app.all('*', async (c) => {

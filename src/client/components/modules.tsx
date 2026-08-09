@@ -12,6 +12,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { sanitizeHtml, sanitizePageHtml, excerptFromHtml } from '../lib/richtext';
+import { isServerServedPath } from '../../shared/nav';
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
 import { isAllowedEmbedSrc } from '../../shared/embeds';
@@ -29,6 +30,15 @@ const num = (c: Config, k: string, d: number): number => {
 /** A link that stays inside the SPA for internal paths and opens externally otherwise. */
 function SmartLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
   if (href.startsWith('/')) {
+    // Worker-served pages (/about, /product, …) aren't SPA routes — a client
+    // <Link> lands on the router's 404 until a refresh; use a real navigation.
+    if (isServerServedPath(href)) {
+      return (
+        <a href={href} className={className}>
+          {children}
+        </a>
+      );
+    }
     return (
       <Link to={href} className={className}>
         {children}
@@ -591,7 +601,7 @@ function MediaGalleryModule({ config }: { config: Config }) {
 function HeroCta({ href, label, primary }: { href: string; label: string; primary: boolean }) {
   const cls = primary ? 'hero-btn hero-btn-primary' : 'hero-btn hero-btn-secondary';
   const external = /^https?:\/\//i.test(href);
-  const serverRoute = href.startsWith('/api/') || href.startsWith('/media/');
+  const serverRoute = isServerServedPath(href);
   if (external) {
     return (
       <a className={cls} href={href} target="_blank" rel="noopener noreferrer">

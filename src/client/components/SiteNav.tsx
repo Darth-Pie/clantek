@@ -21,7 +21,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useSession } from '../lib/session';
 import { canAccessAdmin } from '../lib/adminSections';
-import { BUILTIN_TARGETS, navItemHref, navItemLabel, type NavItem } from '../../shared/nav';
+import { BUILTIN_TARGETS, isServerServedPath, navItemHref, navItemLabel, type NavItem } from '../../shared/nav';
 
 /** Close the mobile menu after a real navigation (not a category toggle). */
 type NavProps = { items: NavItem[]; onNavigate: () => void; publicSlugs?: Set<string> };
@@ -63,9 +63,14 @@ function Leaf({ item, onNavigate }: { item: NavItem; onNavigate: () => void }) {
   if (!href) return null;
   const label = navItemLabel(item);
   const external = item.kind === 'url' && /^https?:\/\//i.test(href);
-  // A built-in that the Worker serves directly (e.g. /about) isn't an SPA route,
-  // so it needs a real navigation — a client <Link> would 404 in the router.
-  const serverRoute = item.kind === 'builtin' && !!item.target && !!BUILTIN_TARGETS[item.target]?.serverRoute;
+  // A path the Worker serves directly (e.g. /about, /product) isn't an SPA route,
+  // so it needs a real navigation — a client <Link> would 404 in the router until
+  // a manual refresh. This covers builtins flagged serverRoute AND free-form URL
+  // links an admin points at one of those Worker-served pages.
+  const serverRoute =
+    !external &&
+    ((item.kind === 'builtin' && !!item.target && !!BUILTIN_TARGETS[item.target]?.serverRoute) ||
+      isServerServedPath(href));
 
   if (external) {
     return (

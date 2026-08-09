@@ -42,6 +42,7 @@ import ranks from './routes/ranks';
 import members from './routes/members';
 import bansRoutes from './routes/bans';
 import training from './routes/training';
+import setupRoutes from './routes/setup';
 import { aboutPageHtml } from './marketing/about';
 import { productPageHtml } from './marketing/product';
 import settings from './routes/settings';
@@ -420,6 +421,7 @@ app.route('/api/hangar', hangarRoutes);
 app.route('/api/sc', scVerifyRoutes);
 app.route('/api/orgchart', orgChartRoutes);
 app.route('/api/auth/tokens', tokensRoutes);
+app.route('/api/setup', setupRoutes);
 
 app.get('/api/health', (c) => c.json({ ok: true, service: 'mustr' }));
 

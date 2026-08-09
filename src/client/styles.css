@@ -2281,6 +2281,194 @@ label.check {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- First-run setup wizard (/setup) --- */
+.setup-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(1rem, 5vw, 4rem) 1rem;
+  background:
+    radial-gradient(900px 400px at 80% -10%, color-mix(in srgb, var(--color-accent, #5b8cff) 18%, transparent), transparent 60%),
+    var(--color-bg, #0f1115);
+}
+.setup-card {
+  width: 100%;
+  max-width: 680px;
+  background: var(--color-surface, #171a21);
+  border: 1px solid var(--color-border, #262b36);
+  border-radius: 16px;
+  padding: clamp(1.4rem, 4vw, 2.4rem);
+  box-shadow: 0 30px 80px -50px rgba(0, 0, 0, 0.7);
+}
+.setup-brand {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin-bottom: 1rem;
+  color: var(--color-text);
+}
+.setup-brand span {
+  color: var(--color-accent, #5b8cff);
+}
+.setup-steps {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  font-size: 0.82rem;
+}
+.setup-steps li {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-border) 50%, transparent);
+  color: var(--color-muted);
+}
+.setup-steps li.on {
+  background: var(--color-accent, #5b8cff);
+  color: #fff;
+  font-weight: 700;
+}
+.setup-steps li.done {
+  color: var(--color-text);
+}
+.setup-step h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem;
+}
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+.setup-field input {
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg, #0f1115);
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 400;
+}
+.setup-field input:focus {
+  outline: none;
+  border-color: var(--color-accent, #5b8cff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #5b8cff) 25%, transparent);
+}
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem;
+}
+@media (max-width: 560px) {
+  .setup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.setup-grid .setup-span {
+  grid-column: 1 / -1;
+}
+.setup-urls {
+  margin-top: 1.4rem;
+  display: grid;
+  gap: 0.7rem;
+}
+.setup-copy label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  margin-bottom: 0.25rem;
+}
+.setup-copy-row {
+  display: flex;
+  gap: 0.4rem;
+}
+.setup-copy-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg, #0f1115);
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+}
+.setup-copy-row button {
+  flex: none;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 600;
+}
+.setup-actions {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-top: 1.6rem;
+}
+.setup-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.4rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+.setup-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.setup-btn.primary {
+  background: var(--color-accent, #5b8cff);
+  color: #fff;
+  border-color: transparent;
+  margin-top: 1.2rem;
+}
+.setup-actions .setup-btn.primary {
+  margin-top: 0;
+}
+.setup-note {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-accent, #5b8cff) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent, #5b8cff) 30%, transparent);
+  font-size: 0.9rem;
+}
+.setup-note.warn {
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  border-color: color-mix(in srgb, #f59e0b 40%, transparent);
+}
+.setup-error {
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, #ef4444 14%, transparent);
+  border: 1px solid color-mix(in srgb, #ef4444 40%, transparent);
+  font-size: 0.9rem;
+}
+.setup-card .muted {
+  color: var(--color-muted);
+}
+.setup-card .small {
+  font-size: 0.85rem;
+}
+
 /* --- Analytics & Usage dashboard (Settings → Analytics) --- */
 .analytics-verdict {
   border: 1px solid var(--color-border);

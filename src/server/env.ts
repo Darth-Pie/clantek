@@ -21,6 +21,13 @@ export interface Env {
   DISCORD_BOT_TOKEN: string;
   SESSION_SECRET: string;
 
+  // Optional. Gates the first-run setup wizard (/setup) on a brand-new install:
+  // the buyer sets this as a secret in the Cloudflare dashboard, and /api/setup/*
+  // refuses to do anything until it's presented. Irrelevant once the install is
+  // claimed (a god admin exists) — setup permanently closes. Absent → the wizard
+  // tells the operator to set it before they can proceed.
+  SETUP_TOKEN?: string;
+
   // Optional. Enables the live usage dashboard's request/query-rate gauges by
   // reading Cloudflare's GraphQL Analytics API. The account id is not secret
   // (it's a var); the token is a read-only "Account Analytics: Read" secret set

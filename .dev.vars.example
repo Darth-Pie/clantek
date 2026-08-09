@@ -1,16 +1,26 @@
-# Copy to .dev.vars for local development. .dev.vars is gitignored.
-# For production, set each with:  npx wrangler secret put NAME
+# ─────────────────────────────────────────────────────────────────────────
+# mustr — deploy-time secrets.
 #
-# Only genuine secrets belong here. DISCORD_CLIENT_ID and DISCORD_PUBLIC_KEY
-# are public values and live in wrangler.jsonc instead.
+# The "Deploy to Cloudflare" button reads this file to know what to prompt you
+# for during setup. For LOCAL development, copy this file to .dev.vars (which is
+# gitignored) and fill in the values. In production, the deploy flow stores
+# these as encrypted Worker secrets — you never commit real values.
+# ─────────────────────────────────────────────────────────────────────────
 
-# Discord application → OAuth2 tab → Client Secret.
-DISCORD_CLIENT_SECRET=
+# REQUIRED — a long random password YOU invent. It unlocks the one-time setup
+# wizard the first time your site loads, so a random passer-by can't claim your
+# site before you do. You'll paste it once in the wizard, then it's done.
+# Generate one with:  openssl rand -base64 24
+SETUP_TOKEN=
 
-# Discord application → Bot tab → Token.
-# Needed to add/remove Discord roles from the admin portal.
-DISCORD_BOT_TOKEN=
-
-# 32+ random bytes, used to sign the OAuth state parameter.
-# Generate with:  openssl rand -base64 32
+# REQUIRED — 32+ random bytes used to sign login/session cookies.
+# Generate one with:  openssl rand -base64 32
 SESSION_SECRET=
+
+# OPTIONAL — leave these blank and enter them in the setup wizard instead
+# (recommended; the wizard walks you through where to find them). They come
+# from your Discord application:
+#   Client Secret  →  Discord app → OAuth2 → Reset Secret
+#   Bot Token      →  Discord app → Bot → Reset Token
+DISCORD_CLIENT_SECRET=
+DISCORD_BOT_TOKEN=

@@ -177,9 +177,10 @@ function UnlockStep({
 
   return (
     <div className="setup-step">
-      <h1>Welcome — let’s set up your site</h1>
+      <h1>Welcome — let’s get you set up</h1>
       <p className="muted">
-        This one-time wizard configures your instance and makes you the owner. It locks itself once complete.
+        This one-time wizard configures your instance and makes you the owner, then locks itself for good. Use the
+        Discord account you actually want in charge — there’s no take-backs button.
       </p>
       {!status.tokenConfigured ? (
         <div className="setup-note warn">

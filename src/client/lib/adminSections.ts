@@ -26,6 +26,8 @@ export interface AdminItem {
   key: string;
   label: string;
   tabs: AdminTab[];
+  /** Only shown on the mustr.gg showcase host — never in a buyer's install. */
+  mustrOnly?: boolean;
 }
 
 export interface AdminGroup {
@@ -96,19 +98,26 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         ],
       },
       { key: 'logs', label: 'Logs', tabs: [{ key: 'audit', label: 'Logs', permission: 'audit.view' }] },
+      {
+        key: 'mustrgg',
+        label: 'mustr.gg',
+        mustrOnly: true,
+        tabs: [{ key: 'mustrgg', label: 'mustr.gg', permission: 'settings.manage' }],
+      },
     ],
   },
 ];
 
 type Can = (permission: Permission) => boolean;
 
-/** The tree pruned to what a viewer may see: tabs → items → groups they can reach. */
-export function visibleAdminGroups(can: Can): AdminGroup[] {
+/** The tree pruned to what a viewer may see: tabs → items → groups they can reach.
+ *  `onMustrHost` gates mustr.gg-only items (hidden everywhere else). */
+export function visibleAdminGroups(can: Can, onMustrHost = false): AdminGroup[] {
   return ADMIN_GROUPS.map((g) => ({
     ...g,
     items: g.items
       .map((i) => ({ ...i, tabs: i.tabs.filter((t) => can(t.permission)) }))
-      .filter((i) => i.tabs.length > 0),
+      .filter((i) => i.tabs.length > 0 && (!i.mustrOnly || onMustrHost)),
   })).filter((g) => g.items.length > 0);
 }
 

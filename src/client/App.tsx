@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { MorphIcon } from 'morphicons/react';
 import { Menu, X } from 'lucide';
 import { useSession } from './lib/session';
@@ -18,6 +18,7 @@ import News from './pages/News';
 import NewsPost from './pages/NewsPost';
 import Events from './pages/Events';
 import Setup, { fetchSetupStatus, type SetupStatus } from './pages/Setup';
+import { decorateWordmark, wordmarkEnabled, isMustrHost } from './lib/wordmark';
 import { api } from './lib/api';
 import { sanitizeHtml } from './lib/richtext';
 import type { FooterConfig } from '../shared/footer';
@@ -94,7 +95,10 @@ function PublicOr({
 export default function App() {
   const { viewer, siteName, loading } = useSession();
   const { branding } = useBranding();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  // mustr.gg-only: auto-style the "mustr" wordmark in page copy (off by default).
+  const [wordmarkOn, setWordmarkOn] = useState(false);
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   // Slugs of pages a logged-out visitor may open ('home' included when the home
   // page is public). Passed to SiteNav so it can hide menu links that would just
@@ -124,6 +128,22 @@ export default function App() {
   useEffect(() => {
     void fetchSetupStatus().then(setSetupStatus);
   }, []);
+
+  // mustr.gg-only wordmark styling: check the toggle once, then decorate the
+  // content on every navigation (rAF for the sync render, a delayed pass for
+  // content that loads async). No-op on any other host.
+  useEffect(() => {
+    if (isMustrHost()) void wordmarkEnabled().then(setWordmarkOn);
+  }, []);
+  useEffect(() => {
+    if (!wordmarkOn) return;
+    const raf = requestAnimationFrame(() => decorateWordmark());
+    const t = setTimeout(() => decorateWordmark(), 500);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
+  }, [wordmarkOn, location.pathname]);
 
   // The site footer is public (shows on the login page too) and rarely changes,
   // so load it once on mount regardless of auth.

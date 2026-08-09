@@ -31,9 +31,11 @@ import {
   ScrollText,
   UserPlus,
   GraduationCap,
+  Rocket,
 } from 'lucide';
 import { useSession } from '../lib/session';
 import { visibleAdminGroups } from '../lib/adminSections';
+import { isMustrHost } from '../lib/wordmark';
 import { getRecent } from '../lib/recent';
 import UsageBar from '../components/UsageBar';
 import MorphingTabs from '../components/MorphingTabs';
@@ -57,6 +59,7 @@ import OrgChartDesigner from './OrgChartDesigner';
 import ApplicantsAdmin from './ApplicantsAdmin';
 import BansAdmin from './BansAdmin';
 import TrainingAdmin from './TrainingAdmin';
+import MustrGgAdmin from './MustrGgAdmin';
 import AuditLog from './AuditLog';
 
 /** Sidebar item key → an icon, so the rail reads like a real nav rail. */
@@ -74,6 +77,7 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
   analytics: Gauge,
   appearance: Palette,
   logs: ScrollText,
+  mustrgg: Rocket,
 };
 
 /** Tab key → its component. Every tab key in adminSections.ts needs an entry. */
@@ -99,6 +103,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   seo: () => <SeoAdmin />,
   footer: () => <FooterAdmin />,
   audit: () => <AuditLog />,
+  mustrgg: () => <MustrGgAdmin />,
 };
 
 export default function Admin() {
@@ -138,7 +143,7 @@ export default function Admin() {
     };
   }, []);
 
-  const groups = visibleAdminGroups(can);
+  const groups = visibleAdminGroups(can, isMustrHost());
   if (groups.length === 0) {
     return <div className="empty">You don’t have access to any admin tools.</div>;
   }

@@ -65,6 +65,17 @@ input {
   font-weight: 800;
 }
 
+/* mustr.gg-only auto-wordmark (lib/wordmark.ts wraps each "mustr" in copy):
+   lead letter bold in the theme's accent colour, the tail in the muted/secondary
+   colour. Both follow whatever theme is active. */
+.mustr-wm {
+  color: var(--color-muted);
+}
+.mustr-wm-lead {
+  color: var(--color-accent);
+  font-weight: 800;
+}
+
 /* Reusable number stepper (components/NumberField) — a − / + input that replaces
    the native number spinners. The marketing /about page mirrors this look with
    its own inline rules (it's outside the React bundle). */

@@ -166,6 +166,35 @@ settings.put('/demo', requirePermission('settings.manage'), async (c) => {
   return c.json({ ok: true, demo: clean });
 });
 
+/* Wordmark auto-styling (mustr.gg-only cosmetic). GET is public so the client
+ * decorator can read it on logged-out pages; PUT is admin-gated. */
+settings.get('/wordmark', async (c) => {
+  const row = await db(c.env).query.settings.findFirst({ where: eq(s.settings.key, 'wordmark') });
+  const v = row?.value as { enabled?: unknown } | undefined;
+  return c.json({ wordmark: { enabled: !!(v && typeof v === 'object' && v.enabled === true) } });
+});
+
+settings.put('/wordmark', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ wordmark?: { enabled?: unknown } }>();
+  const clean = { enabled: body.wordmark?.enabled === true };
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: 'wordmark', value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  await db(c.env).insert(s.auditLog).values({
+    actorId: viewer.id,
+    action: 'settings.wordmark',
+    targetType: 'settings',
+    targetId: 'wordmark',
+    meta: clean,
+  });
+  return c.json({ ok: true, wordmark: clean });
+});
+
 settings.put('/page-access', requirePermission('pages.manage'), async (c) => {
   const body = await c.req.json<{ pageAccess?: unknown }>();
   const clean = cleanPageAccess(body.pageAccess);

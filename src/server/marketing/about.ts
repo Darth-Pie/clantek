@@ -20,7 +20,7 @@ export function aboutPageHtml(): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>mustr — Honest hosting &amp; costs</title>
-<meta name="description" content="How mustr runs on Cloudflare's free tier, what could ever cost money, and the terms-of-service facts — with a live estimator." />
+<meta name="description" content="How mustr runs on Cloudflare's free tier, what could ever cost money, and how it uses Cloudflare's products — with a live estimator." />
 <style>
   :root{
     --bg:#0b0e14; --panel:#121722; --panel2:#0f1420; --text:#e6e9ef; --muted:#9aa4b2;
@@ -162,7 +162,7 @@ export function aboutPageHtml(): string {
       rather over-explain this than have you find out the hard way.</p>
     <div class="hero-cta">
       <a class="hero-btn hero-btn-primary" href="#estimator">Estimate your cost &darr;</a>
-      <a class="hero-btn hero-btn-secondary" href="#legal">Is it legal?</a>
+      <a class="hero-btn hero-btn-secondary" href="#terms">How it uses Cloudflare</a>
     </div>
     <div class="hero-chips">
       <span class="hero-chip"><b>$0</b><span class="u">/mo to Cloudflare</span></span>
@@ -245,27 +245,23 @@ export function aboutPageHtml(): string {
       premium ones like <code>.gg</code> cost more). Pointing its DNS at Cloudflare is free.</p>
   </div>
 
-  <h2 id="legal">Is it legal? (What Cloudflare's terms actually say)</h2>
+  <h2 id="terms">How mustr uses Cloudflare</h2>
   <div class="card">
-    <p>Yes — and Cloudflare rewrote the relevant rule in 2023 to make this kind of use plainly allowed.</p>
-    <h3>The clause people remember — old "Section 2.8"</h3>
-    <p>Cloudflare's agreement once limited the service to serving "HTML" and discouraged a "disproportionate" amount of
-      images/audio/video. <strong>On May 16, 2023 Cloudflare removed that construct</strong> — in their words they "got rid of
-      the antiquated HTML vs. non-HTML construct" and moved the limit to a <strong>CDN-only</strong> section. They stated
-      customers "can serve video and other large files using the CDN so long as that content is hosted by a Cloudflare
-      service like Stream, Images, or <strong>R2</strong>," and that "this restriction only applies to use of our CDN."</p>
-    <h3>Why mustr is clearly within the rules</h3>
+    <p>mustr is built to use Cloudflare's products the way they're meant to be used — which is also exactly what keeps
+      it on the free tier.</p>
     <ul class="tight">
-      <li><strong>Images live in R2</strong> — Cloudflare's own object-storage product, built to store and serve files.</li>
+      <li><strong>Images live in R2</strong> — Cloudflare's object-storage product, built to store and serve files.</li>
       <li><strong>The app runs on Workers</strong> — the intended way to run an application on Cloudflare.</li>
-      <li><strong>No self-hosted video</strong> — the only remaining content limit (video must be on Stream) doesn't apply, because mustr embeds all video from YouTube and stores none.</li>
-      <li><strong>The free tiers are official, documented offerings</strong> — using them, including for a business, is ordinary and expected.</li>
+      <li><strong>No self-hosted video</strong> — mustr embeds every video from YouTube and stores none, so it stays
+        clear of Cloudflare's CDN content rules (those apply to video and other large files served through the cache).</li>
+      <li><strong>The free tiers are official, documented offerings</strong> — using them, including for a business, is
+        ordinary and expected.</li>
     </ul>
-    <h3>One caveat: payments on a free-plan site</h3>
-    <p>Cloudflare's terms restrict <strong>collecting credit-card information on a web property receiving Free Services</strong>.
-      mustr collects no payment data, so an ordinary install is compliant. If you later add paid memberships, use a
-      <strong>hosted checkout</strong> (Stripe, PayPal) where cards are entered on the processor's page — the standard, compliant
-      approach — rather than collecting card details on the site itself.</p>
+    <h3>One thing worth knowing: payments</h3>
+    <p>Cloudflare asks that you don't collect credit-card details directly on a site using its Free plan. mustr
+      collects no payment data, so a normal install is fine. If you add paid memberships down the road, use a
+      <strong>hosted checkout</strong> (Stripe, PayPal) where cards are entered on the processor's own page — the
+      standard approach anyway.</p>
   </div>
 
   <h2>Sources</h2>
@@ -277,11 +273,9 @@ export function aboutPageHtml(): string {
     <a href="https://blog.cloudflare.com/updated-tos" target="_blank" rel="noopener noreferrer">Cloudflare blog: "Updated Terms of Service" (May 16, 2023) &nearr;</a>
   </div>
 
-  <p class="disclaimer">This page analyzes Cloudflare's published pricing and Terms of Service as of 2026-08-08 and
-    reflects Cloudflare's own public statements about permitted use. It is <strong>not legal advice</strong> and is not a
-    guarantee — Cloudflare can change its terms, and only a licensed attorney can give a binding opinion. For a
-    definitive assurance, have counsel review Cloudflare's Subscription Agreement, Service-Specific Terms, and
-    Acceptable Use Policy. mustr is an independent product and is not affiliated with or endorsed by Cloudflare.</p>
+  <p class="disclaimer">These figures reflect Cloudflare's published pricing and terms as of 2026-08-08; Cloudflare
+    can change them, so the linked sources above are the final word. mustr is an independent product and isn't
+    affiliated with or endorsed by Cloudflare.</p>
 </div>
 
 <footer class="foot"><div class="row">

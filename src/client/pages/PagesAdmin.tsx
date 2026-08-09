@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import PageRenderer from '../components/PageRenderer';
 import RichTextEditor from '../components/RichTextEditor';
+import NumberField from '../components/NumberField';
 import {
   HOME_SLUG,
   MODULE_SPECS,
@@ -787,12 +788,12 @@ function ModuleEditor(props: {
             />
             <label className="inline-field">
               Show up to
-              <input
-                type="number"
+              <NumberField
                 min={1}
                 max={50}
                 value={typeof cfg.limit === 'number' ? cfg.limit : 5}
-                onChange={(e) => props.onPatchConfig(rowId, colId, m.id, { limit: Number(e.target.value) })}
+                ariaLabel="Items to show"
+                onChange={(v) => props.onPatchConfig(rowId, colId, m.id, { limit: Number(v) })}
               />
             </label>
           </>

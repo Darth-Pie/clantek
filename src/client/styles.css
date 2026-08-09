@@ -65,6 +65,65 @@ input {
   font-weight: 800;
 }
 
+/* Reusable number stepper (components/NumberField) — a − / + input that replaces
+   the native number spinners. The marketing /about page mirrors this look with
+   its own inline rules (it's outside the React bundle). */
+.stepper {
+  display: inline-flex;
+  align-items: stretch;
+}
+.stepper input[type='number'] {
+  width: 4rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  position: relative;
+  z-index: 1;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.stepper input[type='number']::-webkit-outer-spin-button,
+.stepper input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.step-btn {
+  flex: none;
+  width: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.step-btn.step-down {
+  border-radius: 8px 0 0 8px;
+}
+.step-btn.step-up {
+  border-radius: 0 8px 8px 0;
+}
+.step-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  border-color: var(--color-accent);
+}
+.step-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.step-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* --- Header logo: oversized + overhanging at the top, docked once scrolled --- */
 .topbar.has-logo .brand {
   position: relative;

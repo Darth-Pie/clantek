@@ -324,9 +324,9 @@ export function productPageHtml(accent = '#a56bf0'): string {
 
   <div class="cta-band" id="get">
     <h2>Want it for your org?</h2>
-    <p class="section-lede" style="margin-inline:auto">Read the step-by-step <a href="/setup">setup guide</a>, or hop in the Discord and I'll help you get set up.</p>
-    <a class="cta-btn" href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join the Discord</a>
-    <p class="cta-note">You're already on a live one — click around the <a href="/">site</a> and kick the tires. New here? Start with the <a href="/setup">setup guide</a>.</p>
+    <p class="section-lede" style="margin-inline:auto">Deploy your own free copy in about 45 minutes — the button creates everything, and the <a href="/setup">setup guide</a> walks you through it.</p>
+    <a class="cta-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/clantek" target="_blank" rel="noopener noreferrer">&#9889; Deploy to Cloudflare</a>
+    <p class="cta-note">New here? Start with the <a href="/setup">setup guide</a>. Questions? <a href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join the Discord</a>.</p>
   </div>
 </div>
 

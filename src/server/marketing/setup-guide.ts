@@ -143,6 +143,10 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
   .cta-band h2{ justify-content:center; border:0; } .cta-band h2::before{ display:none; }
   .cta-btn{ display:inline-flex; align-items:center; gap:.5rem; padding:.9rem 1.9rem; border-radius:12px; font-weight:700; font-size:1.05rem; text-decoration:none;
     background:var(--accent); color:#0a0d18; margin-top:.6rem; box-shadow:0 10px 30px color-mix(in srgb,var(--accent) 40%,transparent); }
+  .deploy-btn{ display:inline-flex; align-items:center; gap:.5rem; padding:.85rem 1.9rem; border-radius:12px;
+    font-weight:800; font-size:1.1rem; text-decoration:none; background:var(--accent); color:#0a0d18;
+    box-shadow:0 12px 34px color-mix(in srgb,var(--accent) 44%,transparent); }
+  .deploy-btn:hover{ filter:brightness(1.06); }
 
   footer.foot{ border-top:1px solid var(--border); margin-top:2.5rem; }
   footer.foot .row{ max-width:860px; margin:0 auto; padding:1.2rem 1.1rem; display:flex; gap:1rem; flex-wrap:wrap; color:var(--muted); font-size:.9rem; }
@@ -276,7 +280,7 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
       <p>By the end your notepad has <b>five things</b>: Application ID, Public Key, Client Secret, Bot Token, Server ID.
         Don't invite the bot yet — it has nothing to join until mustr is running.</p>
       <div class="note tip"><span class="lbl">Two URLs you'll need soon.</span> The portal also wants a "redirect URL" and
-        an "interactions endpoint URL." <b>Don't guess them.</b> The setup wizard (Step 7) shows you the exact ones and
+        an "interactions endpoint URL." <b>Don't guess them.</b> The setup wizard (Step 6) shows you the exact ones and
         where they go. We'll come back here then.</div>
     </div>
   </div>
@@ -284,77 +288,55 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
   <div class="step">
     <div class="step-num">4</div>
     <div class="step-body">
-      <h3>Put mustr on Cloudflare</h3>
-      <p>This is the one step that depends on how you got your copy of mustr — and for the 2026 launch I'm finalizing the
-        smoothest version of it (aiming for a near one-click "Deploy to Cloudflare").</p>
-      <div class="note warn"><span class="lbl">For now, this one's hands-on with me.</span> Until the one-click deploy is
-        locked, hop into the Discord and I'll walk you through putting mustr on your Cloudflare — it's a short, guided set
-        of clicks, no terminal. When it's done you'll have mustr running at a temporary Cloudflare address (something like
-        <code>mustr.your-name.workers.dev</code>) that we make pretty in Step 6.
-        <a class="dbtn" href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join the Discord &rarr;</a></div>
+      <h3>Deploy mustr to Cloudflare</h3>
+      <p>This is the magic button — it builds everything for you. No terminal, no config files.</p>
+      <p style="text-align:center;margin:1.2rem 0">
+        <a class="deploy-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/clantek" target="_blank" rel="noopener noreferrer">&#9889; Deploy to Cloudflare</a>
+      </p>
+      <ol>
+        <li>Click it, sign in with your Cloudflare account from Step 2, and let it connect your GitHub — it makes you your <em>own</em> copy of mustr.</li>
+        <li>On the setup screen, Cloudflare <b>creates your database and file storage automatically</b> and asks you to invent two passwords. Make both long and random (mash the keyboard):
+          <ul>
+            <li><code>SETUP_TOKEN</code> — unlocks the setup wizard in a moment. <b>Keep this one</b>; you'll paste it in Step 6.</li>
+            <li><code>SESSION_SECRET</code> — mustr uses it to keep logins secure. Set it and forget it.</li>
+          </ul>
+        </li>
+        <li>Hit deploy and wait a minute. When it finishes, mustr is <b>live</b> at a temporary address like <code>mustr.your-name.workers.dev</code>.</li>
+      </ol>
+      <div class="note tip"><span class="lbl">That's the hard part, done.</span> One button built your app, its database, and its storage. Everything from here is just filling in your details.</div>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">5</div>
     <div class="step-body">
-      <h3>Hand mustr its settings</h3>
-      <p>Give mustr the five values from Step 3, plus one you invent here. These are labeled boxes — "secrets" and
-        "variables" — inside your mustr app's settings on Cloudflare. Paste each value into the matching box:</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Box name</th><th>What you paste</th></tr></thead>
-        <tbody>
-          <tr><td><code>DISCORD_CLIENT_ID</code></td><td>Application ID</td></tr>
-          <tr><td><code>DISCORD_PUBLIC_KEY</code></td><td>Public Key</td></tr>
-          <tr><td><code>DISCORD_CLIENT_SECRET</code></td><td>Client Secret</td></tr>
-          <tr><td><code>DISCORD_BOT_TOKEN</code></td><td>Bot Token</td></tr>
-          <tr><td><code>DISCORD_GUILD_ID</code></td><td>Server ID</td></tr>
-          <tr><td><code>SITE_URL</code></td><td>your domain, like <code>https://yourclan.gg</code></td></tr>
-          <tr><td><code>SITE_NAME</code></td><td>your clan / community name</td></tr>
-          <tr><td><code>SETUP_TOKEN</code></td><td><b>A password you invent</b> — long, random, just for you. It unlocks the one-time setup wizard. Keep it for Step 7.</td></tr>
-        </tbody>
-      </table></div>
-      <div class="note"><span class="lbl">Why the SETUP_TOKEN?</span> So that on the day your site first goes live, a random
-        passer-by can't beat you to the "I'm the owner" button. You type it once, claim ownership, and never need it again.</div>
+      <h3>Point your domain at mustr</h3>
+      <p>Right now mustr answers at that temporary <code>…workers.dev</code> address. Let's put it on <b>your</b> domain.</p>
+      <ol>
+        <li>In the Cloudflare dashboard, open <b>Workers &amp; Pages</b> &rarr; your new <b>mustr</b> worker &rarr; <b>Settings</b> &rarr; <b>Domains &amp; Routes</b>.</li>
+        <li>Click <b>Add &rarr; Custom Domain</b>, type your domain (e.g. <code>yourclan.gg</code>), and confirm. Cloudflare sorts out the DNS and the security certificate for you — it already runs your domain from Step 2.</li>
+      </ol>
+      <p>Give it a minute, then open your domain in a browser. You should see mustr's <b>setup wizard</b> waiting. On to the fun part.</p>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">6</div>
     <div class="step-body">
-      <h3>Point your domain at mustr</h3>
-      <p>Right now mustr answers at that temporary <code>…workers.dev</code> address. This step attaches <b>your</b>
-        domain so people reach it at <code>yourclan.gg</code> instead.</p>
-      <div class="note warn"><span class="lbl">Pairs with Step 4 — I'll do this with you.</span> In Cloudflare it's a
-        "custom domain" setting on your app: a couple of clicks, no DNS knowledge needed (Cloudflare already runs your
-        domain from Step 2). We'll finish it together in the Discord until the deploy flow is one-click.
-        <a class="dbtn" href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join the Discord &rarr;</a></div>
-      <p>When it's done, open your domain in a browser. You should see mustr's <b>setup wizard</b> waiting. On to the fun part.</p>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-num">7</div>
-    <div class="step-body">
       <h3>Turn it on: the setup wizard</h3>
       <p>Where it all comes together — and mustr does the hand-holding from here.</p>
       <ol>
         <li>Visit your domain. You'll get a <b>"Let's set up mustr"</b> screen.</li>
-        <li><b>Unlock:</b> paste the <code>SETUP_TOKEN</code> you invented in Step 5. This proves you're the owner. (It also quietly builds your database the first time — nothing for you to do.)</li>
-        <li><b>Identity:</b> confirm your site name and Discord details. This screen <b>shows you the redirect URL and
-          interactions URL</b> — that loose end from Step 3. Copy each, paste them where the screen tells you in the
-          Developer Portal (it names the exact field), then come back. Use the <b>"Check my Discord settings"</b> button —
-          green means good; if not, it tells you which value is off.</li>
-        <li><b>Claim ownership:</b> click <b>"Sign in with Discord."</b> Because you're holding the keys, mustr makes
-          <em>you</em> the top-rank owner with full control. Then the wizard locks itself forever — there's no take-backs
-          button, so it's just you now.</li>
+        <li><b>Unlock:</b> paste the <code>SETUP_TOKEN</code> you invented in Step 4. This proves you're the owner. (It also quietly builds your database tables the first time — nothing for you to do.)</li>
+        <li><b>Identity &amp; Discord:</b> enter your site name and the <b>five values from Step 3</b> (Application ID, Public Key, Client Secret, Bot Token, Server ID). The screen also <b>shows you the redirect URL and interactions URL</b> — that loose end from Step 3. Copy each, paste them where it tells you in the Developer Portal, then come back and hit <b>"Check my Discord settings."</b> Green means good.</li>
+        <li><b>Claim ownership:</b> click <b>"Sign in with Discord."</b> Because you're holding the keys, mustr makes <em>you</em> the top-rank owner with full control. Then the wizard locks itself forever — there's no take-backs button, so it's just you now.</li>
       </ol>
       <p>That's it. You're the owner of a live mustr site.</p>
     </div>
   </div>
 
   <div class="step">
-    <div class="step-num">8</div>
+    <div class="step-num">7</div>
     <div class="step-body">
       <h3>Your first hour as an owner</h3>
       <p>You're in. A sane order to get your community actually using it:</p>
@@ -397,16 +379,17 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
   <h2 id="trouble">If something's stuck</h2>
   <ul class="trouble">
     <li><b>My domain doesn't load mustr yet.</b><span>Step 2's nameserver handoff can take a few hours. If Cloudflare hasn't emailed you that it's active, it's still cooking.</span></li>
-    <li><b>The wizard says my Discord settings are wrong.</b><span>You almost certainly pasted one of the five values into the wrong box, or missed the redirect/interactions URLs in Step 7. Re-check against your notepad.</span></li>
+    <li><b>The wizard says my Discord settings are wrong.</b><span>You almost certainly pasted one of the five values into the wrong box, or missed the redirect/interactions URLs in Step 6. Re-check against your notepad.</span></li>
     <li><b>I can't sign in / it says I'm not in the server.</b><span>Sign in with the Discord account that's actually a member of the server you set as <code>DISCORD_GUILD_ID</code>.</span></li>
-    <li><b>The bot isn't responding to buttons.</b><span>Make sure you pasted the interactions URL the wizard gave you into the Developer Portal, and that the bot is invited (Step 8).</span></li>
+    <li><b>The bot isn't responding to buttons.</b><span>Make sure you pasted the interactions URL the wizard gave you into the Developer Portal, and that the bot is invited (Step 7).</span></li>
     <li><b>"Server Members Intent" nag.</b><span>Go back to Step 3, sub-step 5, and flip that toggle on.</span></li>
   </ul>
 
   <div class="cta-band">
-    <h2>Stuck, or ready to get deployed?</h2>
-    <p class="section-lede" style="margin-inline:auto">Hop in the Discord — for the 2026 launch I'm getting people set up personally.</p>
-    <a class="cta-btn" href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join the Discord</a>
+    <h2>Ready to run your own?</h2>
+    <p class="section-lede" style="margin-inline:auto">The button back in Step 4 is the whole install — no terminal, no bill. Questions along the way? The community's in Discord.</p>
+    <a class="deploy-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/clantek" target="_blank" rel="noopener noreferrer">&#9889; Deploy to Cloudflare</a>
+    <p class="cta-note"><a href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join the Discord</a> if you get stuck.</p>
   </div>
 </div>
 

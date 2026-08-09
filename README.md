@@ -1,187 +1,89 @@
-# mustr
+<div align="center">
 
-Clan management for gaming communities — rosters, ranks, medals, match records,
-and news, with Discord as both the login and the control surface.
+<img src="src/client/public/assets/og.png" alt="mustr" width="640" />
 
-A ground-up rewrite of the original 2003 PHP/MySQL clan-management site. No MySQL server, no
-license checks, no HTML pasted into a textarea.
+### Community tools for gaming orgs — minus the busywork.
 
-## Stack
+Roster, ranks, roles, events, training, and a real website — all synced with Discord,
+running on Cloudflare's free tier for about nothing.
 
-| Layer | Technology |
-|---|---|
-| Runtime | Cloudflare Workers |
-| Database | Cloudflare D1 (SQLite) via Drizzle ORM |
-| Files | Cloudflare R2 |
-| API | Hono |
-| Admin UI | React 19 + Vite |
-| Identity | Discord OAuth2 — no passwords |
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/clantek)
 
-Runs within Cloudflare's free tier for a clan-sized site.
+**[Live demo](https://mustr.gg)** · **[What it does](https://mustr.gg/product)** · **[Setup guide](https://mustr.gg/setup)** · **[About the bot](https://mustr.gg/bot)**
 
-## How ranks and roles differ
+`Free · Self-hosted · FSL-1.1-MIT · New in 2026`
 
-The original gated every action on `member.rank >= auth.<action>` — one linear
-ladder, so "trusted member who isn't an officer" was impossible to express.
-Those are two concepts here:
+</div>
 
-- **Rank** — ladder position (Recruit → General). One per member, ordered,
-  fully admin-defined. Add, rename, reorder, and delete at will.
-- **Role** — a bundle of permissions, optionally mirrored to a Discord role.
-  Many per member. Granting one here can grant the Discord role too, which is
-  how website roles end up gating Discord channels.
+---
 
-**God status** (`users.is_god`) bypasses every permission check. It is seeded
-directly in `src/db/seed.sql` and is deliberately not assignable through the
-UI — it's the recovery hatch that prevents anyone from locking themselves out.
+## What is mustr?
 
-## Setup
+**mustr** is a self-hosted community site for gaming organizations. You run your own copy
+on your own Cloudflare account — **your data, your server, no monthly bill, no company in
+the middle**. It keeps your website and your Discord in sync, so you stop updating six
+things by hand.
 
-### 1. Install
+It's the modern rebuild of **ClanTek**, a clan site first built back in 2003.
 
-```bash
-npm install
-```
+## What it does
 
-### 2. Create the Discord application
+- 🪖 **Roster, ranks & roles** — a rank ladder and roles that stay in **two-way sync with Discord** (promote on the site, Discord roles and nicknames update themselves)
+- 📅 **Events wired to Discord** — sign-up slots, RSVPs on the site *or* in Discord, one shared list
+- 🎖️ **Medals & service records** — recognize the people who show up
+- 🎓 **Training** — embed Google Slides, mark courses required per rank, track who's completed them
+- 🖼️ **Galleries & media** — image galleries with a lightbox + embedded YouTube/Twitch (no video-hosting bills)
+- 🕸️ **Org chart** — a drag-and-drop leadership tree
+- 🤝 **Apply-to-join & bans** — approve applicants, keep a real ban list
+- 🧩 **Build your own pages** — drag-and-drop modules, a dozen themes, your own logo & colors
+- 📜 **Audit log** — every promotion, demotion, and medal logged with a reason
+- 🚀 **Game modules** — optional per-game extras (first up: a Star Citizen hangar import)
 
-At <https://discord.com/developers/applications> → **New Application**.
+**[→ See it all in action](https://mustr.gg/product)**
 
-- **OAuth2** → add redirect URI `http://localhost:8787/api/auth/callback` for
-  local dev, and `https://mustr.gg/api/auth/callback` for production.
-- **Bot** → add a bot, copy the token.
-- **General Information** → copy the Public Key.
+## Deploy your own
 
-Invite the bot to your server with the `bot` and `applications.commands` scopes
-and the **Manage Roles** permission.
+You'll need a **Cloudflare account** (free), a **domain name** (~$10–15/yr from any
+registrar), a **Discord server** you admin, and about **45 minutes**.
 
-> **The one that bites everyone:** in Server Settings → Roles, drag the bot's
-> role **above** every role it needs to manage. Discord returns `50013 Missing
-> Permissions` otherwise, even for an administrator bot.
+1. Click **[Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/clantek)**. It forks this repo into your GitHub, then **creates your Worker, database (D1), and file storage (R2) automatically** and asks you to invent a `SETUP_TOKEN` and a `SESSION_SECRET`.
+2. Attach your domain (Cloudflare dashboard → your worker → **Settings → Domains & Routes**).
+3. Open your site — the **first-run setup wizard** walks you through connecting Discord and claiming ownership.
 
-### 3. Create the Cloudflare resources
+The full, no-jargon walkthrough lives at **[mustr.gg/setup](https://mustr.gg/setup)**.
 
-```bash
-npx wrangler d1 create clantek
-```
+> **Heads up:** mustr is self-hosted and **support-free by design**. It's built to not need
+> me — the setup guide and the code are your manual. That's the trade for "free, forever,
+> nobody can rug-pull it."
 
-Copy the printed `database_id` into `wrangler.jsonc`, then:
+## About the bot
 
-```bash
-npx wrangler r2 bucket create clantek-media
-```
+mustr's Discord bot asks for **only** the handful of permissions it actually uses (**never
+Administrator**), and it **cannot read your messages** — it uses Discord's HTTP interactions,
+never the message gateway. The plain-English rundown a wary member can read:
+**[mustr.gg/bot](https://mustr.gg/bot)**.
 
-### 4. Configure
+## Cost
 
-```bash
-cp .dev.vars.example .dev.vars
-```
+It runs inside Cloudflare's free tier. The only guaranteed cost is your domain name. The
+[honest cost & terms breakdown, with a live estimator](https://mustr.gg/about) has the receipts.
 
-Fill in `.dev.vars` (gitignored). `DISCORD_CLIENT_ID` and `DISCORD_PUBLIC_KEY`
-are public values and already live in the `vars` block of `wrangler.jsonc`; set
-`DISCORD_GUILD_ID` there too (Developer Mode on → right-click your server → Copy
-Server ID).
+## Built with
 
-Generate a session secret with:
-
-```bash
-openssl rand -base64 32
-```
-
-### 5. Initialize the database
-
-```bash
-npm run db:generate
-npm run db:migrate:local
-npm run db:seed:local
-```
-
-The seed creates ten ranks, five roles, default theme tokens, and the founder
-account. Edit the Discord ID in `src/db/seed.sql` before seeding if you are not
-the original owner.
-
-### 6. Register slash commands
-
-```bash
-npm run discord:register
-```
-
-### 7. Run
-
-```bash
-npm run dev
-```
-
-Vite serves the UI on `:5173` and proxies `/api` to `wrangler dev` on `:8787`.
-
-## Deploying
-
-```bash
-npx wrangler secret put DISCORD_CLIENT_SECRET
-npx wrangler secret put DISCORD_BOT_TOKEN
-npx wrangler secret put SESSION_SECRET
-npm run db:migrate:remote
-npm run db:seed:remote
-npm run deploy
-```
-
-Then set the **Interactions Endpoint URL** on your Discord application to
-`https://mustr.gg/api/discord/interactions`. Discord probes it
-with a deliberately invalid signature on save — rejecting that is what proves
-the endpoint is genuine.
-
-For CI deploys, add `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as
-repository secrets; `.github/workflows/deploy.yml` handles the rest.
-
-## Discord commands
-
-| Command | Requires |
-|---|---|
-| `/roster` | any member |
-| `/whois <member>` | any member |
-| `/promote <member>` | `roster.promote`, and you must outrank the target |
-
-Commands run the same permission checks as the web portal — one identity, one
-permission model, two surfaces.
-
-### A limitation worth knowing up front
-
-Workers serve Discord over **HTTP interactions**, not a gateway WebSocket. That
-covers slash commands and button clicks, but Workers cannot passively observe
-Discord events (someone joining, or a role changed by hand in Discord's UI).
-`reconcileMember()` in `src/server/discord/sync.ts` pulls Discord back into line
-on demand or on a cron, which covers most of the gap without a second host.
-
-## Layout
-
-```
-src/
-  db/schema.ts          Drizzle schema — the whole data model
-  db/seed.sql           Ranks, roles, permissions, founder account, theme
-  shared/permissions.ts Permission vocabulary + can() / outranks()
-  server/
-    index.ts            Worker entry, OAuth, interactions endpoint
-    auth/               Discord OAuth2 and session handling
-    discord/            REST client, slash commands, role sync
-    routes/             API routers
-  client/               React admin (Vite)
-scripts/
-  register-commands.ts  Pushes slash commands to Discord
-```
-
-## About the 2003 original
-
-The original PHP source is archived separately, outside this repo. It is
-deliberately not copied here: `dump.php` contains live MySQL credentials and
-`ctbd.php` contains a hardcoded password, and neither should gain a second copy
-on disk.
-
-What carried forward: the rank ladder with time and win requirements, medals
-awarded per game, match records, and the audit log. What did not: the
-`license_check` phone-home, Zend Encoder obfuscation, and the `templates` /
-`header` tables of `<font>` attributes and IE scrollbar colors — those are CSS
-custom properties now, edited with a live preview.
+[Cloudflare Workers](https://developers.cloudflare.com/workers/) · **D1** (SQLite via Drizzle) ·
+**R2** · [Hono](https://hono.dev/) · **React 19** + **Vite** · **TypeScript**
 
 ## License
 
-MIT
+Source code: **[Functional Source License 1.1 (MIT Future)](LICENSE)** — free to run,
+self-host, modify, and read. It converts to the plain MIT license two years after each
+release. You may **not** sell a competing product or service built from it.
+
+The names **"mustr"** and **"ClanTek"**, the mustr wordmark, and the logo are reserved
+trademarks — run it and fork it freely, but a redistributed copy must use its **own** name.
+
+## Support
+
+mustr is free. If it saves your org some headaches,
+**[♥ support it on GitHub Sponsors](https://github.com/sponsors/Darth-Pie)** — entirely
+optional, and the whole thing works free forever either way.

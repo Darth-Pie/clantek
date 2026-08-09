@@ -88,6 +88,19 @@ export function newNavId(prefix = 'n'): string {
   return `${prefix}-${Date.now().toString(36)}${idSeq}`;
 }
 
+/**
+ * Paths the Worker serves as full HTML itself (marketing pages + raw endpoints),
+ * which are NOT React Router routes. A link to one must be a real navigation — a
+ * client <Link>/<NavLink> lands on the SPA's 404 and only "recovers" on a manual
+ * refresh (which finally issues the real HTTP request the Worker answers).
+ */
+const SERVER_SERVED_EXACT = new Set(['/about', '/product', '/legal', '/setup']);
+export function isServerServedPath(href: string): boolean {
+  const path = (href.split(/[?#]/)[0] || '').replace(/\/+$/, '');
+  if (!path) return false; // '/' and '' are the SPA home
+  return SERVER_SERVED_EXACT.has(path) || path.startsWith('/api/') || path.startsWith('/media/');
+}
+
 /** The href a link resolves to, or null for a category (which has no destination). */
 export function navItemHref(item: NavItem): string | null {
   if (item.type !== 'link' || !item.kind || !item.target) return null;

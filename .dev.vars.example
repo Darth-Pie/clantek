@@ -1,26 +1,21 @@
 # ─────────────────────────────────────────────────────────────────────────
 # mustr — deploy-time secrets.
 #
-# The "Deploy to Cloudflare" button reads this file to know what to prompt you
-# for during setup. For LOCAL development, copy this file to .dev.vars (which is
-# gitignored) and fill in the values. In production, the deploy flow stores
-# these as encrypted Worker secrets — you never commit real values.
+# The "Deploy to Cloudflare" button reads this file and asks you to fill in
+# EACH value during setup (they're all required), so this is kept to only what
+# is genuinely needed at deploy time. Everything Discord (client secret, bot
+# token) is entered later in the first-run setup wizard and stored in your
+# database — so it is intentionally NOT listed here.
+#
+# For LOCAL development, copy this file to .dev.vars (which is gitignored).
 # ─────────────────────────────────────────────────────────────────────────
 
-# REQUIRED — a long random password YOU invent. It unlocks the one-time setup
-# wizard the first time your site loads, so a random passer-by can't claim your
-# site before you do. You'll paste it once in the wizard, then it's done.
+# A long random password YOU invent. It unlocks the one-time setup wizard the
+# first time your site loads, so a random passer-by can't claim your site
+# before you do. You paste it once in the wizard, then it's done.
 # Generate one with:  openssl rand -base64 24
 SETUP_TOKEN=
 
-# REQUIRED — 32+ random bytes used to sign login/session cookies.
+# 32+ random bytes used to sign login/session cookies.
 # Generate one with:  openssl rand -base64 32
 SESSION_SECRET=
-
-# OPTIONAL — leave these blank and enter them in the setup wizard instead
-# (recommended; the wizard walks you through where to find them). They come
-# from your Discord application:
-#   Client Secret  →  Discord app → OAuth2 → Reset Secret
-#   Bot Token      →  Discord app → Bot → Reset Token
-DISCORD_CLIENT_SECRET=
-DISCORD_BOT_TOKEN=

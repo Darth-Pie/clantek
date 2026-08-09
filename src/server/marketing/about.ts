@@ -112,8 +112,23 @@ export function aboutPageHtml(): string {
     background:var(--panel2); color:var(--text); font-size:1rem; }
   .field input[type=number]:focus{ outline:none; border-color:var(--accent);
     box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent); }
+  /* Drop the cramped native number spinners in favour of the custom steppers below. */
+  input[type=number]{ -moz-appearance:textfield; appearance:textfield; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .stepper{ display:flex; align-items:stretch; }
+  .stepper input[type=number]{ flex:1 1 auto; width:auto; min-width:0; text-align:center;
+    border-radius:0; border-left:0; border-right:0; position:relative; z-index:1; }
+  .stepper .step-btn{ flex:none; width:2.9rem; display:flex; align-items:center; justify-content:center;
+    font-size:1.35rem; font-weight:700; line-height:1; cursor:pointer; user-select:none;
+    background:var(--panel); color:var(--text); border:1px solid var(--border); transition:background .12s ease, border-color .12s ease; }
+  .stepper .step-down{ border-radius:10px 0 0 10px; }
+  .stepper .step-up{ border-radius:0 10px 10px 0; }
+  .stepper .step-btn:hover{ background:color-mix(in srgb,var(--accent) 22%,transparent); border-color:var(--accent); }
+  .stepper .step-btn:active{ transform:translateY(1px); }
+  .stepper .step-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:-2px; z-index:2; }
   .adv summary{ cursor:pointer; color:var(--muted); font-size:.85rem; }
-  .adv input[type=number]{ max-width:8rem; }
+  .adv .stepper{ max-width:12rem; }
   .result{ background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:1.1rem; }
   .verdict{ font-size:1.15rem; font-weight:700; margin-bottom:.8rem; display:flex; gap:.5rem; align-items:baseline; flex-wrap:wrap; }
   .verdict .price{ font-weight:800; }
@@ -308,6 +323,36 @@ export function aboutPageHtml(): string {
       '<p class="small muted" style="margin:.6rem 0 0">At '+fmt(images)+' images (~'+avg+'&nbsp;MB each) and '+
       fmt(members)+' members. Daily requests &amp; database reads for a community this size stay well under the free limits.</p>';
   }
+  // Replace each number field's native spinner with a custom − / + stepper.
+  function enhance(id){
+    var input = el(id); if(!input) return;
+    var wrap = document.createElement('div'); wrap.className = 'stepper';
+    input.parentNode.insertBefore(wrap, input);
+    function mkBtn(cls, label, sym){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'step-btn ' + cls; b.textContent = sym;
+      b.setAttribute('aria-label', label + ' ' + (input.getAttribute('aria-label') || id));
+      b.tabIndex = -1;
+      return b;
+    }
+    var dec = mkBtn('step-down', 'Decrease', '−');
+    var inc = mkBtn('step-up', 'Increase', '+');
+    wrap.appendChild(dec); wrap.appendChild(input); wrap.appendChild(inc);
+    function bump(dir){
+      var step = parseFloat(input.step) || 1;
+      var min = input.min !== '' ? parseFloat(input.min) : -Infinity;
+      var max = input.max !== '' ? parseFloat(input.max) : Infinity;
+      var cur = parseFloat(input.value); if(!isFinite(cur)) cur = isFinite(min) ? min : 0;
+      var next = Math.min(max, Math.max(min, cur + dir * step));
+      var dp = (String(step).split('.')[1] || '').length; // keep 0.05-style precision
+      input.value = dp ? next.toFixed(dp) : String(Math.round(next));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    dec.addEventListener('click', function(){ bump(-1); });
+    inc.addEventListener('click', function(){ bump(1); });
+  }
+  ['members','images','avg','perMember'].forEach(enhance);
+
   ['members','images','avg','perMember'].forEach(function(id){
     el(id).addEventListener('input', render);
   });

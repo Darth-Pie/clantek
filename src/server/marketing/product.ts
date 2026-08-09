@@ -131,7 +131,7 @@ export function productPageHtml(): string {
 </head>
 <body>
 <header class="top"><div class="row">
-  <a class="brand" href="/">mu<span>str</span></a>
+  <a class="brand" href="/"><span>m</span>ustr</a>
   <div class="top-links">
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>

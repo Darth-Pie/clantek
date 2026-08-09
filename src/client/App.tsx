@@ -223,7 +223,10 @@ export default function App() {
               }}
             />
           ) : (
-            <span className="brand-name">{siteName}</span>
+            <span className="brand-name">
+              <span className="brand-lead">{(siteName || '').slice(0, 1)}</span>
+              {(siteName || '').slice(1)}
+            </span>
           )}
         </Link>
 

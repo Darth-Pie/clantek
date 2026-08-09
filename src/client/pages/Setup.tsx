@@ -126,7 +126,7 @@ export default function Setup({ status: initial }: { status: SetupStatus }) {
     <div className="setup-wrap">
       <div className="setup-card">
         <div className="setup-brand">
-          mu<span>str</span> · setup
+          <span>m</span>ustr · setup
         </div>
         <ol className="setup-steps" aria-label="Setup progress">
           <li className={step === 'unlock' ? 'on' : 'done'}>1 · Unlock</li>

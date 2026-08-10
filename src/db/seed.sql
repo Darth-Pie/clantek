@@ -64,20 +64,26 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission) VALUES
 /* ------------------------------------------------------------------ *
  * Founder account.
  *
- * Seeded ahead of first login so there is never a bootstrap window where
- * nobody can administer the site. The username and avatar below are
- * placeholders — they are overwritten with real Discord data the first
- * time this account signs in.
+ * NOTE: this is the *manual CLI seed* path (npm run db:seed:*), used to
+ * bootstrap a god account from the command line. Productized installs do NOT
+ * use this file — they run seed-fresh.sql (no founder) and mint the first
+ * owner through the setup wizard's Discord claim instead. So there is no need
+ * to touch this unless you deliberately want a CLI-seeded god.
  *
- * is_god = 1 bypasses every permission check and is not assignable from
- * the UI. To hand it to someone else, change it here and re-run.
+ * Replace YOUR_DISCORD_USER_ID below with your own Discord user ID (enable
+ * Developer Mode in Discord → right-click your name → Copy User ID). Seeded
+ * ahead of first login so there is never a bootstrap window where nobody can
+ * administer the site. The username/avatar are placeholders — overwritten with
+ * real Discord data the first time this account signs in.
+ *
+ * is_god = 1 bypasses every permission check and is not assignable from the UI.
  * ------------------------------------------------------------------ */
 
 INSERT OR IGNORE INTO users (discord_id, username, global_name, rank_id, is_god, status)
-VALUES ('161833822307090432', 'founder', 'Founder', 10, 1, 'active');
+VALUES ('YOUR_DISCORD_USER_ID', 'founder', 'Founder', 10, 1, 'active');
 
 INSERT OR IGNORE INTO user_roles (user_id, role_id)
-SELECT id, 1 FROM users WHERE discord_id = '161833822307090432';
+SELECT id, 1 FROM users WHERE discord_id = 'YOUR_DISCORD_USER_ID';
 
 /* ------------------------------------------------------------------ *
  * Site settings. Theme values are CSS custom properties applied at the

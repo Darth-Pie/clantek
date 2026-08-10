@@ -7,7 +7,7 @@
 Roster, ranks, roles, events, training, and a real website — all synced with Discord,
 running on Cloudflare's free tier for about nothing.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/clantek)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/mustr)
 
 **[Live demo](https://mustr.gg)** · **[What it does](https://mustr.gg/product)** · **[Setup guide](https://mustr.gg/setup)** · **[About the bot](https://mustr.gg/bot)**
 
@@ -46,7 +46,7 @@ It's the modern rebuild of **ClanTek**, a clan site first built back in 2003.
 You'll need a **Cloudflare account** (free), a **domain name** (~$10–15/yr from any
 registrar), a **Discord server** you admin, and about **45 minutes**.
 
-1. Click **[Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/clantek)**. It forks this repo into your GitHub, then **creates your Worker, database (D1), and file storage (R2) automatically** and asks you to invent a `SETUP_TOKEN` and a `SESSION_SECRET`.
+1. Click **[Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/mustr)**. It forks this repo into your GitHub, then **creates your Worker, database (D1), and file storage (R2) automatically** and asks you to invent a `SETUP_TOKEN` and a `SESSION_SECRET`.
 2. Attach your domain (Cloudflare dashboard → your worker → **Settings → Domains & Routes**).
 3. Open your site — the **first-run setup wizard** walks you through connecting Discord and claiming ownership.
 

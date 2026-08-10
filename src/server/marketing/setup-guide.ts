@@ -291,7 +291,7 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
       <h3>Deploy mustr to Cloudflare</h3>
       <p>This is the magic button — it builds everything for you. No terminal, no config files.</p>
       <p style="text-align:center;margin:1.2rem 0">
-        <a class="deploy-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/clantek" target="_blank" rel="noopener noreferrer">&#9889; Deploy to Cloudflare</a>
+        <a class="deploy-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/mustr" target="_blank" rel="noopener noreferrer">&#9889; Deploy to Cloudflare</a>
       </p>
       <ol>
         <li>Click it, sign in with your Cloudflare account from Step 2, and let it connect your GitHub — it makes you your <em>own</em> copy of mustr.</li>
@@ -388,7 +388,7 @@ export function setupGuideHtml(accent = '#a56bf0'): string {
   <div class="cta-band">
     <h2>Ready to run your own?</h2>
     <p class="section-lede" style="margin-inline:auto">The button back in Step 4 is the whole install — no terminal, no bill. Questions along the way? The community's in Discord.</p>
-    <a class="deploy-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/clantek" target="_blank" rel="noopener noreferrer">&#9889; Deploy to Cloudflare</a>
+    <a class="deploy-btn" href="https://deploy.workers.cloudflare.com/?url=https://github.com/Darth-Pie/mustr" target="_blank" rel="noopener noreferrer">&#9889; Deploy to Cloudflare</a>
     <p class="cta-note"><a href="https://discord.gg/abtYKysKw" target="_blank" rel="noopener noreferrer">Join the Discord</a> if you get stuck.</p>
   </div>
 </div>

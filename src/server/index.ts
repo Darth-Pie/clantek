@@ -542,7 +542,14 @@ function isMarketingHost(host: string): boolean {
   return h === 'mustr.gg' || h === 'www.mustr.gg' || h === 'localhost' || h.endsWith('.localhost') || h.startsWith('127.');
 }
 app.get('/product', async (c, next) => {
-  if (!isMarketingHost(new URL(c.req.url).hostname)) return next();
+  const host = new URL(c.req.url).hostname;
+  if (!isMarketingHost(host)) {
+    // The app at app.mustr.gg (any *.mustr.gg host) bounces /product to the
+    // marketing apex so a stray link resolves. A buyer's own host falls through
+    // to the app instead, so its members never see the "buy mustr" page.
+    if (host.toLowerCase().endsWith('.mustr.gg')) return c.redirect('https://mustr.gg/product', 302);
+    return next();
+  }
   const accent = await loadThemeAccent(c.env);
   return c.html(productPageHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
 });
@@ -554,7 +561,11 @@ app.get('/product', async (c, next) => {
  * that only ever runs on an unclaimed buyer install, never on mustr.gg.)
  */
 app.get('/setup', async (c, next) => {
-  if (!isMarketingHost(new URL(c.req.url).hostname)) return next();
+  const host = new URL(c.req.url).hostname;
+  if (!isMarketingHost(host)) {
+    if (host.toLowerCase().endsWith('.mustr.gg')) return c.redirect('https://mustr.gg/setup', 302);
+    return next();
+  }
   const accent = await loadThemeAccent(c.env);
   return c.html(setupGuideHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
 });

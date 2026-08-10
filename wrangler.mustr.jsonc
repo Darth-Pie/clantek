@@ -23,7 +23,12 @@
   // the Worker runs (see run_worker_first below). The redirect in
   // src/server/index.ts still covers any /api or /media path requested on www.
   // Cookies and OAuth stay on the single apex host; nobody actually browses www.
+  // app.mustr.gg is the app's future permanent home (the apex + www move to the
+  // static marketing site in the domain split). Added additively first so the
+  // app answers at app.mustr.gg with zero downtime; the apex routes below are
+  // removed only once the marketing site is live on them (Phase C).
   "routes": [
+    { "pattern": "app.mustr.gg", "custom_domain": true },
     { "pattern": "mustr.gg", "custom_domain": true },
     { "pattern": "www.mustr.gg", "custom_domain": true }
   ],

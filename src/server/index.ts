@@ -527,6 +527,11 @@ app.get('/legal', async (c) => {
  * marketing — like /legal, it isn't part of a buyer's deployment.
  */
 app.get('/about', async (c) => {
+  const host = new URL(c.req.url).hostname;
+  // On app.mustr.gg (any *.mustr.gg non-marketing host) bounce to the marketing
+  // apex, whose /about carries the full site nav. Buyers (non-*.mustr.gg) still
+  // serve their own copy to their members.
+  if (!isMarketingHost(host) && host.toLowerCase().endsWith('.mustr.gg')) return c.redirect('https://mustr.gg/about', 302);
   const accent = await loadThemeAccent(c.env);
   return c.html(aboutPageHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
 });
@@ -576,6 +581,8 @@ app.get('/setup', async (c, next) => {
  * as the Discord app's Privacy Policy URL, so a buyer's own members can read it.
  */
 app.get('/bot', async (c) => {
+  const host = new URL(c.req.url).hostname;
+  if (!isMarketingHost(host) && host.toLowerCase().endsWith('.mustr.gg')) return c.redirect('https://mustr.gg/bot', 302);
   const accent = await loadThemeAccent(c.env);
   return c.html(botTrustHtml(accent), 200, { 'Cache-Control': 'public, max-age=300' });
 });

@@ -12,25 +12,15 @@
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
 
-  // The site's primary hostname. Declaring it here keeps the custom domain
-  // reproducible — a fresh deploy (or the CI pipeline) re-asserts it rather
-  // than depending on a one-off dashboard binding. Requires the mustr.gg
-  // zone to be on this Cloudflare account (it is).
-  // The apex is canonical. `www` is bound here purely so custom_domain
-  // auto-provisions its DNS record + TLS cert; the actual www→apex 301 is a
-  // Cloudflare *Redirect Rule* (edge phase), because a worker-level redirect is
-  // bypassed for page loads — the static-assets layer answers navigations before
-  // the Worker runs (see run_worker_first below). The redirect in
-  // src/server/index.ts still covers any /api or /media path requested on www.
-  // Cookies and OAuth stay on the single apex host; nobody actually browses www.
-  // app.mustr.gg is the app's future permanent home (the apex + www move to the
-  // static marketing site in the domain split). Added additively first so the
-  // app answers at app.mustr.gg with zero downtime; the apex routes below are
-  // removed only once the marketing site is live on them (Phase C).
+  // The app's permanent home. Phase C of the marketing/app split: the apex
+  // `mustr.gg` + `www` now serve the static marketing site (Cloudflare Pages
+  // project `mustr-site`); those custom domains are detached from this Worker in
+  // the dashboard. The app is single-host on app.mustr.gg — OAuth redirect_uri +
+  // cookies are already request-derived, so no code change was needed. Old
+  // mustr.gg/media + /api links are 302'd to app.mustr.gg by redirects on the
+  // marketing site.
   "routes": [
-    { "pattern": "app.mustr.gg", "custom_domain": true },
-    { "pattern": "mustr.gg", "custom_domain": true },
-    { "pattern": "www.mustr.gg", "custom_domain": true }
+    { "pattern": "app.mustr.gg", "custom_domain": true }
   ],
 
   // One canonical URL. With the custom domain above, the *.workers.dev
@@ -94,7 +84,7 @@
     // Canonical public origin, used to turn stored relative media URLs
     // (/media/events/…) into absolute ones for Discord embeds, which a bot
     // context can't derive from a request. Must match the custom domain above.
-    "SITE_URL": "https://mustr.gg",
+    "SITE_URL": "https://app.mustr.gg",
 
     // Application ID — public; it appears in every bot invite URL.
     "DISCORD_CLIENT_ID": "1533902498065023286",

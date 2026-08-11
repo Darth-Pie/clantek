@@ -167,6 +167,24 @@ export default function ModulesAdmin() {
                 <span>{sc.verifyEnabled ? 'On' : 'Off'}</span>
               </label>
             </div>
+            <div className="module-row">
+              <div className="module-info">
+                <span className="module-name">CCU upgrade planner</span>
+                <span className="muted small">
+                  Members lay out ship upgrade chains on top of their imported hangar. Touches RSI
+                  only through the hangar, so it turns off with it.
+                </span>
+              </div>
+              <label className="module-toggle">
+                <input
+                  type="checkbox"
+                  checked={sc.ccuEnabled}
+                  disabled={busy || !sc.hangarEnabled}
+                  onChange={(e) => void saveSc({ ...sc, ccuEnabled: e.target.checked })}
+                />
+                <span>{!sc.hangarEnabled ? 'Off (needs hangar)' : sc.ccuEnabled ? 'On' : 'Off'}</span>
+              </label>
+            </div>
           </div>
         </div>
       )}

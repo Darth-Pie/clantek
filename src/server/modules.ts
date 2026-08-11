@@ -61,6 +61,12 @@ export interface ScConfig {
    */
   hangarEnabled: boolean;
   verifyEnabled: boolean;
+  /**
+   * The CCU planner. Touches no RSI service of its own — it reads the already
+   * imported hangar — but it rides on `hangarEnabled`, since a plan built from
+   * hangar items is meaningless once the hangar is gone.
+   */
+  ccuEnabled: boolean;
 }
 
 export async function loadScConfig(env: Env, database?: DB): Promise<ScConfig> {
@@ -77,6 +83,7 @@ export async function loadScConfig(env: Env, database?: DB): Promise<ScConfig> {
     // Absent (older config) or true ⇒ on; only an explicit false disables.
     hangarEnabled: stored.hangarEnabled !== false,
     verifyEnabled: stored.verifyEnabled !== false,
+    ccuEnabled: stored.ccuEnabled !== false,
   };
 }
 
@@ -86,5 +93,6 @@ export function cleanScConfig(raw: unknown): ScConfig {
     orgSid: (typeof o.orgSid === 'string' ? o.orgSid : '').trim().slice(0, 20),
     hangarEnabled: o.hangarEnabled !== false,
     verifyEnabled: o.verifyEnabled !== false,
+    ccuEnabled: o.ccuEnabled !== false,
   };
 }

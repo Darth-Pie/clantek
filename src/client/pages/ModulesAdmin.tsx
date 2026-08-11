@@ -1,13 +1,20 @@
 /**
  * Settings → Modules — turn optional per-install features on or off.
  *
- * Star Citizen is the first: enabling it surfaces the hangar import + display on
- * member profiles. Everything defaults off so a fresh install stays lean.
+ * Two tiers, deliberately separated. The top is a card per module: name, one
+ * sentence, and a switch — the whole "what does this install run" answer
+ * readable at a glance, without settings for modules you don't use in the way.
+ * Below that, each module's option sets are accordions, collapsed by default
+ * apart from the first of each, so the page stays short as more modules land.
+ *
+ * A module's settings only render while it's on. There's no point showing an
+ * org SID field for a module whose routes are all 404ing.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import Switch from '../components/Switch';
 import {
   clearModulesCache,
   clearScConfigCache,
@@ -28,17 +35,50 @@ const MODULES: ModuleDef[] = [
     key: 'starcitizen',
     label: 'Star Citizen',
     description:
-      'Lets members import their RSI hangar (via a bookmarklet) and shows it, categorised and searchable, at the bottom of their profile.',
+      'Members import their RSI hangar, verify their account, and plan ship upgrades — all from their own profile.',
   },
   {
     key: 'gallery',
     label: 'Gallery',
     description:
-      'Adds a Gallery page of photo and video albums, each shown to everyone, to members, or to one role. Manage albums under Content → Gallery.',
+      'A Gallery page of photo and video albums, each shown to everyone, to members, or to one role.',
   },
 ];
 
 const NO_MODULES: ModuleFlags = { starcitizen: false, gallery: false };
+
+/**
+ * One collapsible option set. `<details>` gives us the open/close behaviour,
+ * keyboard support and find-in-page for free, but its open state is owned by
+ * the DOM — so it's mirrored into React state here. Without that, any re-render
+ * (every `busy` flip during a save) would snap the panel back to `initialOpen`
+ * and close a section the reader had just opened.
+ */
+function OptionSet({
+  title,
+  hint,
+  initialOpen = false,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  initialOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(initialOpen);
+  return (
+    <details className="option-set" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary>
+        <span className="option-set-title">{title}</span>
+        {hint && <span className="muted small option-set-hint">{hint}</span>}
+        <span className="option-set-caret" aria-hidden>
+          ▾
+        </span>
+      </summary>
+      <div className="option-set-body">{children}</div>
+    </details>
+  );
+}
 
 export default function ModulesAdmin() {
   const [flags, setFlags] = useState<ModuleFlags | null>(null);
@@ -107,6 +147,11 @@ export default function ModulesAdmin() {
 
   if (!flags) return <div className="loading">Loading…</div>;
 
+  const scOpen = flags.starcitizen && sc;
+  const galOpen = flags.gallery && gal;
+  const heroCopyDirty =
+    !!gal && (heroTitleDraft.trim() !== gal.heroTitle || heroTaglineDraft.trim() !== gal.heroTagline);
+
   return (
     <section className="panel modules-admin">
       <header className="panel-head">
@@ -116,193 +161,192 @@ export default function ModulesAdmin() {
 
       <Alerts error={error} warning={warning} notice={notice} />
 
-      <ul className="modules-list">
+      <ul className="module-cards">
         {MODULES.map((m) => (
-          <li key={m.key} className="module-row">
-            <div className="module-info">
-              <span className="module-name">{m.label}</span>
-              <span className="muted small">{m.description}</span>
-            </div>
-            <label className="module-toggle">
-              <input
-                type="checkbox"
+          <li key={m.key} className={flags[m.key] ? 'module-card is-on' : 'module-card'}>
+            <div className="module-card-top">
+              <span className="module-card-name">{m.label}</span>
+              <Switch
                 checked={!!flags[m.key]}
                 disabled={busy}
-                onChange={(e) => void toggle(m.key, e.target.checked)}
+                label={`${m.label} module`}
+                onChange={(v) => void toggle(m.key, v)}
               />
-              <span>{flags[m.key] ? 'On' : 'Off'}</span>
-            </label>
+            </div>
+            <p className="muted small">{m.description}</p>
           </li>
         ))}
       </ul>
 
-      {flags.starcitizen && sc && (
-        <div className="module-config">
-          <h3>Star Citizen settings</h3>
-          <label>
-            Org SID
-            <div className="module-config-row">
-              <input
-                type="text"
-                value={orgSidDraft}
-                placeholder="e.g. F919"
-                maxLength={20}
-                disabled={busy}
-                onChange={(e) => setOrgSidDraft(e.target.value)}
-              />
-              <button
-                type="button"
-                className="primary small"
-                disabled={busy || orgSidDraft.trim() === sc.orgSid}
-                onClick={() => void saveSc({ ...sc, orgSid: orgSidDraft.trim() })}
-              >
-                Save
-              </button>
-            </div>
-            <span className="muted small">
-              Your org’s RSI Spectrum Identification (the tag in your org URL{' '}
-              <code>/orgs/&lt;SID&gt;</code>). Used to confirm a member’s verified RSI account
-              actually lists your org.
-            </span>
-          </label>
-
-          <div className="module-killswitch">
-            <span className="module-killswitch-title muted small">
-              Feature kill switches — turn either off instantly (e.g. if RSI / Cloud Imperium
-              requests it). Turning the whole module off above disables both.
-            </span>
-            <div className="module-row">
-              <div className="module-info">
-                <span className="module-name">Hangar import &amp; display</span>
-                <span className="muted small">
-                  Members export their own hangar (client-side bookmarklet) and it shows on profiles.
-                  No server-side access to RSI.
-                </span>
-              </div>
-              <label className="module-toggle">
-                <input
-                  type="checkbox"
-                  checked={sc.hangarEnabled}
-                  disabled={busy}
-                  onChange={(e) => void saveSc({ ...sc, hangarEnabled: e.target.checked })}
-                />
-                <span>{sc.hangarEnabled ? 'On' : 'Off'}</span>
-              </label>
-            </div>
-            <div className="module-row">
-              <div className="module-info">
-                <span className="module-name">RSI account verification</span>
-                <span className="muted small">
-                  Reads a member’s public RSI profile to confirm account ownership + org membership.
-                  This is the only feature that fetches RSI server-side.
-                </span>
-              </div>
-              <label className="module-toggle">
-                <input
-                  type="checkbox"
-                  checked={sc.verifyEnabled}
-                  disabled={busy}
-                  onChange={(e) => void saveSc({ ...sc, verifyEnabled: e.target.checked })}
-                />
-                <span>{sc.verifyEnabled ? 'On' : 'Off'}</span>
-              </label>
-            </div>
-            <div className="module-row">
-              <div className="module-info">
-                <span className="module-name">CCU upgrade planner</span>
-                <span className="muted small">
-                  Members lay out ship upgrade chains on top of their imported hangar. Touches RSI
-                  only through the hangar, so it turns off with it.
-                </span>
-              </div>
-              <label className="module-toggle">
-                <input
-                  type="checkbox"
-                  checked={sc.ccuEnabled}
-                  disabled={busy || !sc.hangarEnabled}
-                  onChange={(e) => void saveSc({ ...sc, ccuEnabled: e.target.checked })}
-                />
-                <span>{!sc.hangarEnabled ? 'Off (needs hangar)' : sc.ccuEnabled ? 'On' : 'Off'}</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {flags.gallery && gal && (
-        <div className="module-config">
-          <h3>Gallery settings</h3>
-          <p className="muted small">
-            Albums live under <strong>Content → Gallery</strong>. Each album decides its own
-            audience, so a public album and a leadership-only one can sit side by side.
-          </p>
-
-          <div className="module-row">
-            <div className="module-info">
-              <span className="module-name">Scrolling hero</span>
-              <span className="muted small">
-                A drifting collage at the top of the gallery page, sampled from your{' '}
-                <strong>public</strong> albums only. With no public albums there’s nothing safe to
-                sample, so the hero simply doesn’t render.
-              </span>
-            </div>
-            <label className="module-toggle">
-              <input
-                type="checkbox"
-                checked={gal.heroEnabled}
-                disabled={busy}
-                onChange={(e) => void saveGallery({ ...gal, heroEnabled: e.target.checked })}
-              />
-              <span>{gal.heroEnabled ? 'On' : 'Off'}</span>
-            </label>
-          </div>
-
-          {gal.heroEnabled && (
+      {!scOpen && !galOpen ? (
+        <p className="muted small module-settings-empty">
+          Turn a module on to configure it — its settings appear here.
+        </p>
+      ) : (
+        <div className="module-settings">
+          {scOpen && sc && (
             <>
-              <label>
-                Hero heading
-                <input
-                  type="text"
-                  value={heroTitleDraft}
-                  placeholder="Gallery"
-                  maxLength={80}
-                  disabled={busy}
-                  onChange={(e) => setHeroTitleDraft(e.target.value)}
-                />
-              </label>
-              <label>
-                Hero tagline
-                <div className="module-config-row">
-                  <input
-                    type="text"
-                    value={heroTaglineDraft}
-                    placeholder="Moments from the org."
-                    maxLength={200}
+              <OptionSet
+                title="Star Citizen — org identity"
+                hint="Used by account verification"
+                initialOpen
+              >
+                <label className="option-field">
+                  Org SID
+                  <div className="module-config-row">
+                    <input
+                      type="text"
+                      value={orgSidDraft}
+                      placeholder="e.g. F919"
+                      maxLength={20}
+                      disabled={busy}
+                      onChange={(e) => setOrgSidDraft(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="primary small"
+                      disabled={busy || orgSidDraft.trim() === sc.orgSid}
+                      onClick={() => void saveSc({ ...sc, orgSid: orgSidDraft.trim() })}
+                    >
+                      Save
+                    </button>
+                  </div>
+                  <span className="muted small">
+                    Your org’s RSI Spectrum Identification (the tag in your org URL{' '}
+                    <code>/orgs/&lt;SID&gt;</code>). Used to confirm a member’s verified RSI account
+                    actually lists your org.
+                  </span>
+                </label>
+              </OptionSet>
+
+              <OptionSet title="Star Citizen — feature kill switches" hint="Turn any of these off instantly">
+                <p className="muted small">
+                  Each feature can be switched off on its own (e.g. if RSI / Cloud Imperium requests
+                  it). Turning the whole module off above disables all of them.
+                </p>
+                <div className="module-row">
+                  <div className="module-info">
+                    <span className="module-name">Hangar import &amp; display</span>
+                    <span className="muted small">
+                      Members export their own hangar (client-side bookmarklet) and it shows on
+                      profiles. No server-side access to RSI.
+                    </span>
+                  </div>
+                  <Switch
+                    checked={sc.hangarEnabled}
                     disabled={busy}
-                    onChange={(e) => setHeroTaglineDraft(e.target.value)}
+                    label="Hangar import and display"
+                    onChange={(v) => void saveSc({ ...sc, hangarEnabled: v })}
                   />
-                  <button
-                    type="button"
-                    className="primary small"
-                    disabled={
-                      busy ||
-                      (heroTitleDraft.trim() === gal.heroTitle &&
-                        heroTaglineDraft.trim() === gal.heroTagline)
-                    }
-                    onClick={() =>
-                      void saveGallery({
-                        ...gal,
-                        heroTitle: heroTitleDraft.trim(),
-                        heroTagline: heroTaglineDraft.trim(),
-                      })
-                    }
-                  >
-                    Save
-                  </button>
                 </div>
-                <span className="muted small">Leave either blank to use the built-in wording.</span>
-              </label>
+                <div className="module-row">
+                  <div className="module-info">
+                    <span className="module-name">RSI account verification</span>
+                    <span className="muted small">
+                      Reads a member’s public RSI profile to confirm account ownership + org
+                      membership. This is the only feature that fetches RSI server-side.
+                    </span>
+                  </div>
+                  <Switch
+                    checked={sc.verifyEnabled}
+                    disabled={busy}
+                    label="RSI account verification"
+                    onChange={(v) => void saveSc({ ...sc, verifyEnabled: v })}
+                  />
+                </div>
+                <div className="module-row">
+                  <div className="module-info">
+                    <span className="module-name">CCU upgrade planner</span>
+                    <span className="muted small">
+                      Members lay out ship upgrade chains on top of their imported hangar. Touches
+                      RSI only through the hangar, so it turns off with it.
+                    </span>
+                  </div>
+                  <Switch
+                    // Reads OFF whenever the hangar is off, even though the
+                    // stored ccuEnabled stays true — a switch painted "on" next
+                    // to the words "Off (needs hangar)" contradicts itself. The
+                    // stored value is preserved, so turning the hangar back on
+                    // restores whatever this was set to.
+                    checked={sc.ccuEnabled && sc.hangarEnabled}
+                    disabled={busy || !sc.hangarEnabled}
+                    label="CCU upgrade planner"
+                    stateText={!sc.hangarEnabled ? 'Off (needs hangar)' : undefined}
+                    onChange={(v) => void saveSc({ ...sc, ccuEnabled: v })}
+                  />
+                </div>
+              </OptionSet>
             </>
+          )}
+
+          {galOpen && gal && (
+            <OptionSet title="Gallery — page & hero" hint="Albums live under Content → Gallery" initialOpen>
+              <p className="muted small">
+                Each album decides its own audience, so a public album and a leadership-only one can
+                sit side by side.
+              </p>
+
+              <div className="module-row">
+                <div className="module-info">
+                  <span className="module-name">Scrolling hero</span>
+                  <span className="muted small">
+                    A drifting collage at the top of the gallery page, sampled from your{' '}
+                    <strong>public</strong> albums only. With no public albums there’s nothing safe
+                    to sample, so the hero simply doesn’t render.
+                  </span>
+                </div>
+                <Switch
+                  checked={gal.heroEnabled}
+                  disabled={busy}
+                  label="Scrolling hero"
+                  onChange={(v) => void saveGallery({ ...gal, heroEnabled: v })}
+                />
+              </div>
+
+              {gal.heroEnabled && (
+                <>
+                  <label className="option-field">
+                    Hero heading
+                    <input
+                      type="text"
+                      value={heroTitleDraft}
+                      placeholder="Gallery"
+                      maxLength={80}
+                      disabled={busy}
+                      onChange={(e) => setHeroTitleDraft(e.target.value)}
+                    />
+                  </label>
+                  <label className="option-field">
+                    Hero tagline
+                    <div className="module-config-row">
+                      <input
+                        type="text"
+                        value={heroTaglineDraft}
+                        placeholder="Moments from the org."
+                        maxLength={200}
+                        disabled={busy}
+                        onChange={(e) => setHeroTaglineDraft(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="primary small"
+                        disabled={busy || !heroCopyDirty}
+                        onClick={() =>
+                          void saveGallery({
+                            ...gal,
+                            heroTitle: heroTitleDraft.trim(),
+                            heroTagline: heroTaglineDraft.trim(),
+                          })
+                        }
+                      >
+                        Save
+                      </button>
+                    </div>
+                    <span className="muted small">Leave either blank to use the built-in wording.</span>
+                  </label>
+                </>
+              )}
+            </OptionSet>
           )}
         </div>
       )}

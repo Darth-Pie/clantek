@@ -5509,3 +5509,21 @@ a.org-box:hover {
   margin-top: 0;
   align-self: stretch;
 }
+
+/* Link that sits where a module row's toggle would — anchors don't pick up the
+   element-scoped button styles, so it borrows the ghost button's look. */
+.site-link {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.site-link:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}

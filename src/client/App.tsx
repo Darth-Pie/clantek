@@ -27,6 +27,12 @@ import type { FooterConfig } from '../shared/footer';
 // large and admin-only — load it on demand so the feed and roster stay light.
 const Admin = lazy(() => import('./pages/Admin'));
 
+// The gallery brings its own layout + lightbox libraries and their stylesheets.
+// Only visitors who actually open it should pay for that, so it loads on demand
+// the same way the admin panel does.
+const Gallery = lazy(() => import('./pages/Gallery'));
+const GalleryAlbum = lazy(() => import('./pages/GalleryAlbum'));
+
 /** Shown to a pending applicant who lands on a members-only area. */
 function PendingNotice() {
   const { viewer } = useSession();
@@ -310,6 +316,12 @@ export default function App() {
             }
           />
           <Route path="/p/:slug" element={<CustomPage />} />
+          {/* Public-capable and deliberately unwrapped: the gallery API filters
+              albums by audience, so whatever a visitor gets back is theirs to
+              see. Wrapping these in <Protected> would lock out the public
+              albums that are the whole point of the module. */}
+          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/gallery/:slug" element={<GalleryAlbum />} />
           <Route
             path="/events"
             element={

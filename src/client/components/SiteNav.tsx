@@ -20,6 +20,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useSession } from '../lib/session';
+import { useModules } from '../lib/modules';
 import { canAccessAdmin } from '../lib/adminSections';
 import { BUILTIN_TARGETS, isServerServedPath, navItemHref, navItemLabel, type NavItem } from '../../shared/nav';
 
@@ -28,6 +29,7 @@ type NavProps = { items: NavItem[]; onNavigate: () => void; publicSlugs?: Set<st
 
 function useVisibility(publicSlugs?: Set<string>) {
   const { viewer, can } = useSession();
+  const modules = useModules();
   const anon = !viewer;
 
   const roleOk = (roleId?: number): boolean =>
@@ -37,6 +39,9 @@ function useVisibility(publicSlugs?: Set<string>) {
     if (item.kind === 'builtin' && item.target) {
       const b = BUILTIN_TARGETS[item.target];
       if (!b) return false;
+      // A destination belonging to an optional module disappears with it, so
+      // turning the module off can't leave a link to a route that now 404s.
+      if (b.module && !modules[b.module]) return false;
       // Some built-ins (e.g. About) are reachable by anyone — always shown.
       if (b.public) return true;
       // A logged-out visitor sees other built-ins only when the destination is

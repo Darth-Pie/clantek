@@ -33,7 +33,9 @@
     "morphicons": "^1.4.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.0"
+    "react-photo-album": "^3.6.1",
+    "react-router-dom": "^7.1.0",
+    "yet-another-react-lightbox": "^3.32.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",

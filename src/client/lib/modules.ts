@@ -1,7 +1,8 @@
 /**
- * Which optional game modules are enabled, so UI (e.g. the hangar on a profile)
- * can show/hide itself. Fetched once and cached process-wide — the flags rarely
- * change and every profile page would otherwise re-request them.
+ * Which optional modules are enabled, so UI (e.g. the hangar on a profile, or
+ * the Gallery nav link) can show/hide itself. Fetched once and cached
+ * process-wide — the flags rarely change and every page would otherwise
+ * re-request them.
  */
 
 import { useEffect, useState } from 'react';
@@ -9,9 +10,10 @@ import { api } from './api';
 
 export interface ModuleFlags {
   starcitizen: boolean;
+  gallery: boolean;
 }
 
-const DEFAULT: ModuleFlags = { starcitizen: false };
+const DEFAULT: ModuleFlags = { starcitizen: false, gallery: false };
 
 let cache: ModuleFlags | null = null;
 let inflight: Promise<ModuleFlags> | null = null;
@@ -91,4 +93,51 @@ export function useScConfig(): ScConfig {
 export function clearScConfigCache() {
   scCache = null;
   scInflight = null;
+}
+
+/* ------------------------------------------------------------------ *
+ * Gallery module config — hero on/off plus its copy. Cached like the others so
+ * the gallery page and its admin agree without a reload.
+ * ------------------------------------------------------------------ */
+
+export interface GalleryConfig {
+  heroEnabled: boolean;
+  heroTitle: string;
+  heroTagline: string;
+}
+
+// Hero defaults ON while loading, matching the server default, so the page
+// doesn't visibly pop a hero in after the config lands.
+const GALLERY_DEFAULT: GalleryConfig = { heroEnabled: true, heroTitle: '', heroTagline: '' };
+
+let galleryCache: GalleryConfig | null = null;
+let galleryInflight: Promise<GalleryConfig> | null = null;
+
+function fetchGalleryConfig(): Promise<GalleryConfig> {
+  if (galleryCache) return Promise.resolve(galleryCache);
+  if (!galleryInflight) {
+    galleryInflight = api
+      .get<{ gallery: GalleryConfig }>('/settings/gallery')
+      .then((r) => (galleryCache = r.gallery))
+      .catch(() => GALLERY_DEFAULT);
+  }
+  return galleryInflight;
+}
+
+export function useGalleryConfig(): GalleryConfig {
+  const [cfg, setCfg] = useState<GalleryConfig>(galleryCache ?? GALLERY_DEFAULT);
+  useEffect(() => {
+    let live = true;
+    void fetchGalleryConfig().then((v) => live && setCfg(v));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return cfg;
+}
+
+/** Drop the gallery-config cache after an admin edits it. */
+export function clearGalleryConfigCache() {
+  galleryCache = null;
+  galleryInflight = null;
 }

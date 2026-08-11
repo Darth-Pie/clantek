@@ -1,10 +1,11 @@
 /**
- * Game modules — optional, per-install features an operator turns on in Settings.
+ * Optional modules — per-install features an operator turns on in Settings.
  *
- * Star Citizen is the first. Stored as one flags blob in settings['modules'];
- * everything defaults OFF so a fresh install ships lean. Resolved DB-over-nothing
- * (there's no env fallback — modules are purely an admin choice). Same shape as
- * the other settings-backed config so it reads consistently.
+ * Star Citizen (a game module) was the first; Gallery is the first that isn't
+ * game-specific. Stored as one flags blob in settings['modules']; everything
+ * defaults OFF so a fresh install ships lean. Resolved DB-over-nothing (there's
+ * no env fallback — modules are purely an admin choice). Same shape as the other
+ * settings-backed config so it reads consistently.
  */
 
 import { drizzle } from 'drizzle-orm/d1';
@@ -17,6 +18,7 @@ export const MODULES_KEY = 'modules';
 
 export interface ModuleFlags {
   starcitizen: boolean;
+  gallery: boolean;
 }
 
 type DB = ReturnType<typeof drizzle<typeof schema>>;
@@ -31,13 +33,13 @@ export async function loadModules(env: Env, database?: DB): Promise<ModuleFlags>
   } catch {
     // No settings row/table yet → everything off.
   }
-  return { starcitizen: stored.starcitizen === true };
+  return { starcitizen: stored.starcitizen === true, gallery: stored.gallery === true };
 }
 
 /** Sanitise an incoming flags payload to exactly the known booleans. */
 export function cleanModuleFlags(raw: unknown): ModuleFlags {
   const o = (raw ?? {}) as Record<string, unknown>;
-  return { starcitizen: o.starcitizen === true };
+  return { starcitizen: o.starcitizen === true, gallery: o.gallery === true };
 }
 
 /* ------------------------------------------------------------------ *
@@ -94,5 +96,52 @@ export function cleanScConfig(raw: unknown): ScConfig {
     hangarEnabled: o.hangarEnabled !== false,
     verifyEnabled: o.verifyEnabled !== false,
     ccuEnabled: o.ccuEnabled !== false,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Gallery module config — the few settings that only matter once the gallery is
+ * on. Its own settings key, so the module flags above stay pure booleans (same
+ * split as the SC config).
+ * ------------------------------------------------------------------ */
+
+export const GALLERY_KEY = 'gallery';
+
+export interface GalleryConfig {
+  /**
+   * The scroll-driven hero at the top of /gallery, which samples images from
+   * PUBLIC albums only. Off → the page opens straight into the album list.
+   * Defaults on; an operator with no public albums simply gets no hero, since
+   * the page hides it when there's nothing safe to sample.
+   */
+  heroEnabled: boolean;
+  /** Hero copy. Blank falls back to the page's built-in wording. */
+  heroTitle: string;
+  heroTagline: string;
+}
+
+export async function loadGalleryConfig(env: Env, database?: DB): Promise<GalleryConfig> {
+  const dbi = database ?? drizzle(env.DB, { schema });
+  let stored: Record<string, unknown> = {};
+  try {
+    const row = await dbi.query.settings.findFirst({ where: eq(s.settings.key, GALLERY_KEY) });
+    if (row?.value && typeof row.value === 'object') stored = row.value as Record<string, unknown>;
+  } catch {
+    // No settings row/table yet → hero on, default copy.
+  }
+  return {
+    // Absent (older config) or true ⇒ on; only an explicit false disables.
+    heroEnabled: stored.heroEnabled !== false,
+    heroTitle: typeof stored.heroTitle === 'string' ? stored.heroTitle : '',
+    heroTagline: typeof stored.heroTagline === 'string' ? stored.heroTagline : '',
+  };
+}
+
+export function cleanGalleryConfig(raw: unknown): GalleryConfig {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  return {
+    heroEnabled: o.heroEnabled !== false,
+    heroTitle: (typeof o.heroTitle === 'string' ? o.heroTitle : '').trim().slice(0, 80),
+    heroTagline: (typeof o.heroTagline === 'string' ? o.heroTagline : '').trim().slice(0, 200),
   };
 }

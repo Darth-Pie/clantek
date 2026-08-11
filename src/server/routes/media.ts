@@ -26,10 +26,18 @@ const ALLOWED: Record<string, string> = {
 
 const MAX_BYTES = 1_000_000; // 1 MB — these are small insignia/avatars, not photos.
 
+/**
+ * The gallery is the one category that stores actual photographs, so it gets a
+ * bigger ceiling. It's still bounded well under the Workers request-body limit,
+ * and the admin downscales client-side before uploading (see GalleryAdmin), so
+ * this is a backstop for an odd file rather than the normal size.
+ */
+const MAX_PHOTO_BYTES = 6_000_000; // 6 MB
+
 // What can be uploaded, where it's stored, and who may upload it. An avatar is
 // self-service (any signed-in member can set their own), so it has no extra
 // permission beyond being authenticated; medal and rank art are admin-only.
-const CATEGORIES: Record<string, { prefix: string; permission?: Permission }> = {
+const CATEGORIES: Record<string, { prefix: string; permission?: Permission; maxBytes?: number }> = {
   medals: { prefix: 'medals', permission: 'medals.manage' },
   ranks: { prefix: 'ranks', permission: 'ranks.manage' },
   avatars: { prefix: 'avatars' },
@@ -38,6 +46,7 @@ const CATEGORIES: Record<string, { prefix: string; permission?: Permission }> = 
   events: { prefix: 'events', permission: 'events.manage' },
   pages: { prefix: 'pages', permission: 'pages.manage' },
   branding: { prefix: 'branding', permission: 'settings.manage' },
+  gallery: { prefix: 'gallery', permission: 'gallery.manage', maxBytes: MAX_PHOTO_BYTES },
 };
 
 const media = new Hono<AppContext>();
@@ -77,8 +86,9 @@ media.post('/:category', requireUser, async (c) => {
   if (!ext) {
     return c.json({ error: 'Unsupported image type. Use PNG, JPEG, GIF, or WebP.' }, 415);
   }
-  if (file.size > MAX_BYTES) {
-    return c.json({ error: 'Image is too large (max 1 MB).' }, 413);
+  const limit = conf.maxBytes ?? MAX_BYTES;
+  if (file.size > limit) {
+    return c.json({ error: `Image is too large (max ${Math.round(limit / 1_000_000)} MB).` }, 413);
   }
 
   const key = `${conf.prefix}/${crypto.randomUUID()}.${ext}`;

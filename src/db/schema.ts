@@ -696,3 +696,62 @@ export const auditLog = sqliteTable(
     index('audit_action_idx').on(t.action),
   ],
 );
+
+/* ------------------------------------------------------------------ *
+ * Gallery module — albums of uploaded images and embedded videos.
+ *
+ * Optional per-install (settings['modules'].gallery); the tables exist either
+ * way, they just go unread while the module is off.
+ * ------------------------------------------------------------------ */
+
+export const galleryAlbums = sqliteTable(
+  'gallery_albums',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    slug: text('slug').notNull().unique(),
+    title: text('title').notNull(),
+    description: text('description'),
+    // Who may see it — see canViewAlbum() in shared/gallery.ts, which is the one
+    // authority. 'members' is the default so a newly created album is never
+    // accidentally world-readable before its author has chosen.
+    audience: text('audience', { enum: ['public', 'members', 'role'] })
+      .notNull()
+      .default('members'),
+    // Read only when audience = 'role'. ON DELETE SET NULL rather than CASCADE:
+    // deleting a role must never delete its album, and it must never *widen*
+    // one either — an album left on 'role' with no role reads as closed.
+    visibleToRole: integer('visible_to_role').references(() => roles.id, { onDelete: 'set null' }),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at').notNull().default(now),
+    updatedAt: integer('updated_at').notNull().default(now),
+  },
+  (t) => [index('gallery_album_sort_idx').on(t.sortOrder)],
+);
+
+export const galleryItems = sqliteTable(
+  'gallery_items',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    albumId: integer('album_id')
+      .notNull()
+      .references(() => galleryAlbums.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['image', 'video'] }).notNull(),
+    // Images: our own /media/gallery/… object. Videos: the pasted watch URL,
+    // kept for the admin UI only — `src` is the sole thing that may be framed.
+    url: text('url').notNull(),
+    src: text('src'),
+    provider: text('provider'),
+    thumbUrl: text('thumb_url'),
+    // Intrinsic size, captured at upload. The justified layout needs a real
+    // aspect ratio up front or every row reflows once the images decode.
+    width: integer('width').notNull().default(1600),
+    height: integer('height').notNull().default(1200),
+    caption: text('caption'),
+    alt: text('alt'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at').notNull().default(now),
+  },
+  (t) => [index('gallery_item_album_idx').on(t.albumId, t.sortOrder)],
+);

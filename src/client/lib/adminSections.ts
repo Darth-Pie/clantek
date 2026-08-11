@@ -44,6 +44,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
       { key: 'pages', label: 'Pages', tabs: [{ key: 'pages', label: 'Pages', permission: 'pages.manage' }] },
       { key: 'navigation', label: 'Navigation', tabs: [{ key: 'navigation', label: 'Navigation', permission: 'pages.manage' }] },
       { key: 'news', label: 'News', tabs: [{ key: 'news', label: 'News', permission: 'news.create' }] },
+      { key: 'gallery', label: 'Gallery', tabs: [{ key: 'gallery', label: 'Gallery', permission: 'gallery.manage' }] },
       { key: 'training', label: 'Training', tabs: [{ key: 'training', label: 'Training', permission: 'training.manage' }] },
     ],
   },

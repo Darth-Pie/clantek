@@ -21,6 +21,7 @@ import {
   FileText,
   Navigation,
   Newspaper,
+  Images,
   Users,
   Award,
   Network,
@@ -40,6 +41,7 @@ import { getRecent } from '../lib/recent';
 import UsageBar from '../components/UsageBar';
 import MorphingTabs from '../components/MorphingTabs';
 import NewsAdmin from './NewsAdmin';
+import GalleryAdmin from './GalleryAdmin';
 import Ranks from './Ranks';
 import Roles from './Roles';
 import Medals from './Medals';
@@ -67,6 +69,7 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
   pages: FileText,
   navigation: Navigation,
   news: Newspaper,
+  gallery: Images,
   training: GraduationCap,
   admissions: UserPlus,
   'ranks-roles': Users,
@@ -85,6 +88,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   pages: () => <PagesAdmin />,
   navigation: () => <NavAdmin />,
   news: () => <NewsAdmin />,
+  gallery: () => <GalleryAdmin />,
   training: () => <TrainingAdmin />,
   applicants: () => <ApplicantsAdmin />,
   bans: () => <BansAdmin />,

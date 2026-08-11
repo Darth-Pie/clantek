@@ -3,7 +3,17 @@ import { eq } from 'drizzle-orm';
 import * as s from '../../db/schema';
 import type { AppContext, Env } from '../env';
 import { db, requireAuth, requirePermission } from '../middleware/auth';
-import { loadModules, cleanModuleFlags, MODULES_KEY, loadScConfig, cleanScConfig, SC_KEY } from '../modules';
+import {
+  loadModules,
+  cleanModuleFlags,
+  MODULES_KEY,
+  loadScConfig,
+  cleanScConfig,
+  SC_KEY,
+  loadGalleryConfig,
+  cleanGalleryConfig,
+  GALLERY_KEY,
+} from '../modules';
 import { loadFooter, FOOTER_KEY } from '../footer';
 import { cleanFooter } from '../../shared/footer';
 import { botInviteUrl } from '../../shared/botPermissions';
@@ -58,7 +68,14 @@ function identityView(cfg: Awaited<ReturnType<typeof loadConfig>>) {
  * settings.manage may change them.
  * ------------------------------------------------------------------ */
 
-settings.get('/modules', requireAuth, async (c) => {
+/**
+ * Public: which optional modules this install runs. Was members-only, but the
+ * gallery can hold public albums, so a logged-out visitor's nav has to know
+ * whether a Gallery link belongs there. The payload is a handful of booleans
+ * naming features whose existence is already obvious from the outside (the
+ * routes 404 when off) — no secrets, no per-member data.
+ */
+settings.get('/modules', async (c) => {
   return c.json({ modules: await loadModules(c.env, db(c.env)) });
 });
 
@@ -97,6 +114,30 @@ settings.put('/sc', requirePermission('settings.manage'), async (c) => {
       set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
     });
   return c.json({ ok: true, sc: clean });
+});
+
+/* ------------------------------------------------------------------ *
+ * Gallery module config (the hero and its copy). GET is public for the same
+ * reason /modules is — the gallery page renders for logged-out visitors when an
+ * album is public, and the hero is part of that page. Only settings.manage writes.
+ * ------------------------------------------------------------------ */
+
+settings.get('/gallery', async (c) => {
+  return c.json({ gallery: await loadGalleryConfig(c.env, db(c.env)) });
+});
+
+settings.put('/gallery', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ gallery?: unknown }>();
+  const clean = cleanGalleryConfig(body.gallery);
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: GALLERY_KEY, value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  return c.json({ ok: true, gallery: clean });
 });
 
 /* ------------------------------------------------------------------ *

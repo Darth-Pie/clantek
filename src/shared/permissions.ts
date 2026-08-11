@@ -40,6 +40,10 @@ export const PERMISSIONS = {
   'events.manage': 'Create, edit, and cancel events',
   'events.attendees': 'See who has signed up for an event',
 
+  // Viewing a gallery needs no permission — each album carries its own audience
+  // (everyone / members / one role). This is only the right to build them.
+  'gallery.manage': 'Create gallery albums, upload media, and set who can see each album',
+
   'theme.manage': 'Edit site theme and appearance',
   'pages.manage': 'Arrange page layouts and modules',
   'settings.manage': 'Edit site settings',
@@ -80,6 +84,7 @@ export const PREVIEW_PERMISSIONS: Permission[] = [
   'medals.manage',
   'warrecords.manage',
   'games.manage',
+  'gallery.manage',
 ];
 
 export function isPermission(value: string): value is Permission {

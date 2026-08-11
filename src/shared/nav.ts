@@ -37,6 +37,12 @@ export interface BuiltinTarget {
   serverRoute?: boolean;
   /** True → reachable by anyone, including logged-out visitors (e.g. the About page). */
   public?: boolean;
+  /**
+   * Names an optional module this destination belongs to. The entry is hidden
+   * unless that module is enabled, so a menu built while the gallery was on
+   * doesn't leave a dead link behind when it's switched off.
+   */
+  module?: 'starcitizen' | 'gallery';
 }
 
 /** The fixed destinations the app always ships. `key` is what a link stores. */
@@ -45,6 +51,10 @@ export const BUILTIN_TARGETS: Record<string, BuiltinTarget> = {
   news: { key: 'news', path: '/news', label: 'News' },
   roster: { key: 'roster', path: '/roster', label: 'Roster' },
   events: { key: 'events', path: '/events', label: 'Events', permission: 'events.view' },
+  // Public because the gallery holds public albums; the page itself decides
+  // what a given viewer actually gets. The link is additionally hidden when the
+  // gallery module is off — see SiteNav, which gates on the module flag.
+  gallery: { key: 'gallery', path: '/gallery', label: 'Gallery', public: true, module: 'gallery' },
   about: { key: 'about', path: '/about', label: 'About', serverRoute: true, public: true },
   admin: { key: 'admin', path: '/admin', label: 'Admin', admin: true },
 };
@@ -210,6 +220,10 @@ export function defaultNavConfig(navPages: { slug: string; title: string | null 
     { id: newNavId(), type: 'link', label: '', kind: 'builtin', target: 'news' },
     { id: newNavId(), type: 'link', label: '', kind: 'builtin', target: 'roster' },
     { id: newNavId(), type: 'link', label: '', kind: 'builtin', target: 'events' },
+    // Present in the default menu but hidden until the gallery module is turned
+    // on (SiteNav gates it on the flag), so enabling the module surfaces the
+    // link without an admin having to go and build one.
+    { id: newNavId(), type: 'link', label: '', kind: 'builtin', target: 'gallery' },
     ...navPages.map((p) => ({
       id: newNavId(),
       type: 'link' as const,

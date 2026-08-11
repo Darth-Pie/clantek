@@ -66,6 +66,7 @@ import scVerifyRoutes from './routes/scVerify';
 import { loadSeo, renderHead } from './seo';
 import tokensRoutes from './routes/tokens';
 import orgChartRoutes from './routes/orgchart';
+import { escapeHtml, renderLayoutBody } from './pages/render';
 
 const app = new Hono<AppContext>();
 
@@ -466,15 +467,7 @@ app.get('/media/*', async (c) => {
 // like RSI) a URL they can read WITHOUT an account — and crawlers can index it.
 // Reads the same page_layouts row members see; renders heading + text modules.
 app.get('/legal', async (c) => {
-  const esc = (v: string) =>
-    v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  // Admin-authored page HTML is already script-free, but strip anything
-  // executable as defense in depth before serving it publicly.
-  const clean = (html: string) =>
-    html
-      .replace(/<\s*(script|style|iframe|object|embed)[\s\S]*?<\/\s*\1\s*>/gi, '')
-      .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*')/gi, '')
-      .replace(/javascript:/gi, '');
+  const esc = escapeHtml;
 
   let title = 'Legal';
   let body = '';
@@ -484,22 +477,7 @@ app.get('/legal', async (c) => {
     });
     if (!row) return c.notFound();
     title = row.title || 'Legal';
-    const layout = (row.layout ?? {}) as {
-      rows?: { columns?: { modules?: { type?: string; config?: Record<string, unknown> }[] }[] }[];
-    };
-    for (const r of layout.rows ?? []) {
-      for (const col of r.columns ?? []) {
-        for (const m of col.modules ?? []) {
-          const cfg = m.config ?? {};
-          if (m.type === 'heading') {
-            const lvl = Number(cfg.level) === 1 ? 1 : Number(cfg.level) === 3 ? 3 : 2;
-            body += `<h${lvl}>${esc(String(cfg.text ?? ''))}</h${lvl}>`;
-          } else if (m.type === 'text' || m.type === 'html') {
-            body += clean(String(cfg.html ?? ''));
-          }
-        }
-      }
-    }
+    body = renderLayoutBody(row.layout);
   } catch {
     return c.notFound();
   }

@@ -19,6 +19,7 @@ import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requirePermission } from '../middleware/auth';
 import { loadPageAccess } from '../pageAccess';
+import { renderLayoutBody } from '../pages/render';
 import {
   defaultLayout,
   sanitizeLayout,
@@ -121,6 +122,32 @@ pages.get('/:slug', async (c) => {
   // logged-out visitor may view the page at all.
   const isPublic = row ? !!row.isPublic : slug === HOME_SLUG;
   return c.json({ slug, title: row?.title ?? (slug === HOME_SLUG ? 'Home' : slug), layout, exists, customized: !!row, isPublic });
+});
+
+/**
+ * A page's content rendered to an HTML fragment, for a build step outside this
+ * app to embed (the static mustr.gg site pulls its copy from here).
+ *
+ * Gated on `pages.manage` rather than public on purpose: a page being authored
+ * for the marketing site is usually a draft, and publishing every layout at a
+ * guessable URL just to export it would leak work in progress. Bearer API tokens
+ * resolve to the same permission set as a session, so a build script can
+ * authenticate without a browser.
+ *
+ * Returns a FRAGMENT, not a document — the consumer owns the shell, so the
+ * marketing site keeps its own nav, footer and styling.
+ */
+pages.get('/:slug/export', requirePermission('pages.manage'), async (c) => {
+  const slug = c.req.param('slug');
+  const row = await db(c.env).query.pageLayouts.findFirst({ where: eq(s.pageLayouts.slug, slug) });
+  if (!row) return c.json({ error: 'No such page.' }, 404);
+
+  return c.json({
+    slug,
+    title: row.title ?? slug,
+    html: renderLayoutBody(row.layout),
+    exportedAt: Math.floor(Date.now() / 1000),
+  });
 });
 
 /** Create a custom page. */

@@ -19,6 +19,14 @@ export default defineConfig({
         target: 'http://127.0.0.1:8787',
         changeOrigin: true,
       },
+      // Uploaded media is served by the Worker out of R2. Without this, Vite's
+      // SPA fallback answers /media/* with index.html, so every uploaded image
+      // silently fails to decode in dev while working fine in production (where
+      // run_worker_first sends these straight to the Worker).
+      '/media': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+      },
     },
   },
 });

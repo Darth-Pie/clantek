@@ -57,6 +57,39 @@ export default function MustrGgAdmin() {
       <Alerts error={error} warning={warning} notice={notice} />
 
       <div className="module-config">
+        <h3>The mustr.gg site</h3>
+        <div className="module-row">
+          <div className="module-info">
+            <span className="module-name">Live site</span>
+            <span className="muted small">
+              The public marketing site as visitors see it. Separate from this app — it’s a static Cloudflare Pages
+              project, so nothing here affects it.
+            </span>
+          </div>
+          <a className="site-link" href="https://mustr.gg" target="_blank" rel="noopener noreferrer">
+            Open ↗
+          </a>
+        </div>
+        <div className="module-row">
+          <div className="module-info">
+            <span className="module-name">Cloudflare Pages dashboard</span>
+            <span className="muted small">
+              Deployments, rollback and build logs for the <code>mustr-site</code> project — where the marketing site
+              is actually published from.
+            </span>
+          </div>
+          <a
+            className="site-link"
+            href="https://dash.cloudflare.com/f9954b71f74407c9f7678cde6a4c21b0/pages/view/mustr-site"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open ↗
+          </a>
+        </div>
+      </div>
+
+      <div className="module-config">
         <h3>Demo / preview mode</h3>
         <div className="module-row">
           <div className="module-info">

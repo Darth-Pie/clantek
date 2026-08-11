@@ -54,11 +54,12 @@ export interface ScConfig {
   orgSid: string;
   hangarEnabled: boolean;
   verifyEnabled: boolean;
+  ccuEnabled: boolean;
 }
 
 // Defaults are ON so the UI shows while loading; the server is the authority
 // (killed routes 404 regardless of what the client briefly renders).
-const SC_DEFAULT: ScConfig = { orgSid: '', hangarEnabled: true, verifyEnabled: true };
+const SC_DEFAULT: ScConfig = { orgSid: '', hangarEnabled: true, verifyEnabled: true, ccuEnabled: true };
 
 let scCache: ScConfig | null = null;
 let scInflight: Promise<ScConfig> | null = null;

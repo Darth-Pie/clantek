@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import type { HangarItem } from '../shared/hangar';
+import type { CcuBoard } from '../shared/ccu';
 
 const now = sql`(unixepoch())`;
 
@@ -106,6 +107,24 @@ export const scHangars = sqliteTable('sc_hangars', {
   // hangar.view permission. Off by default — sharing is opt-in per member.
   isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(false),
   importedAt: integer('imported_at').notNull().default(now),
+});
+
+/**
+ * A member's CCU (Cross Chassis Upgrade) planning board — one JSON blob per
+ * member, chains of upgrade steps built on top of their imported hangar. Steps
+ * are either references into that hangar or upgrades the member has yet to buy,
+ * so a board is a plan, not a record of ownership. Shares the hangar's opt-in
+ * visibility model; cascades away with the member. SC module only.
+ */
+export const scCcuBoards = sqliteTable('sc_ccu_boards', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  board: text('board', { mode: 'json' }).$type<CcuBoard>().notNull(),
+  // Whether the owner has shared their plans with members holding hangar.view.
+  // Off by default, exactly like the hangar — sharing is opt-in per member.
+  isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(false),
+  updatedAt: integer('updated_at').notNull().default(now),
 });
 
 /**

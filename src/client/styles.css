@@ -4962,19 +4962,63 @@ a.org-box:hover {
   min-width: 5rem;
 }
 
-.adminmenu-tools {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
 .adminmenu-into {
+  flex: 0 0 auto;
   max-width: 6.5rem;
 }
 
 .adminmenu-empty {
   padding: 0.3rem 0.1rem;
+}
+
+/* Grip handle — the only draggable part of a row, so the label input stays
+   freely selectable (the drag-vs-select trap the site-nav builder warned of). */
+.adminmenu-grip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  align-self: stretch;
+  color: var(--color-muted);
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+  border-radius: 5px;
+  touch-action: none;
+}
+.adminmenu-grip:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.adminmenu-grip:active {
+  cursor: grabbing;
+}
+
+/* Source row while it's being dragged. */
+.adminmenu-row.dragging,
+.adminmenu-group.dragging > .adminmenu-row-group {
+  opacity: 0.45;
+}
+
+/* Drop indicators: a line above/below an item, a dashed ring when appending to a
+   group, and a line above/below a group when reordering groups. */
+.adminmenu-row.drop-before {
+  box-shadow: 0 -3px 0 -1px var(--color-accent);
+}
+.adminmenu-row.drop-after {
+  box-shadow: 0 3px 0 -1px var(--color-accent);
+}
+.adminmenu-group.drop-into > .adminmenu-items {
+  outline: 2px dashed var(--color-accent);
+  outline-offset: 3px;
+  border-radius: var(--radius);
+}
+.adminmenu-group.drop-group-before {
+  box-shadow: 0 -3px 0 -1px var(--color-accent);
+}
+.adminmenu-group.drop-group-after {
+  box-shadow: 0 3px 0 -1px var(--color-accent);
 }
 
 @media (max-width: 640px) {

@@ -3,18 +3,18 @@
  *
  * The tools that exist (and the permission each needs) are fixed in code; this
  * only rearranges and relabels them. So there's no add/remove: every tool is
- * always present, you just reorder groups, reorder tools, move a tool to another
- * group, or give a group/tool a custom name. Reordering is up/down plus "move to
- * a group" — the same deterministic, finger-friendly scheme as the site-nav
- * builder, no nested drag-drop.
+ * always present, you just drag to reorder groups and tools, drag a tool into
+ * another group, or give a group/tool a custom name.
  *
- * Saved to /api/admin-nav as an order+label override; the sidebar re-reads it live
- * via the `ct-adminnav-changed` event. A tool added in a future version that the
- * saved arrangement never mentions still shows up (it's appended to its home
- * group) — arranging the menu can never hide a tool, only move it.
+ * Reordering is native drag-and-drop via a dedicated grip handle (so the label
+ * inputs stay selectable). Drag doesn't work on touch, so a "move to group"
+ * select stays as a fallback there. Saved to /api/admin-nav as an order+label
+ * override; the sidebar re-reads it live via the `ct-adminnav-changed` event. A
+ * tool added in a future version that the saved arrangement never mentions still
+ * shows up (it's appended to its home group) — arranging can never hide a tool.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type DragEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { ADMIN_GROUPS } from '../lib/adminSections';
@@ -32,6 +32,19 @@ interface EditGroup {
   label: string;
   items: EditItem[];
 }
+
+type DragState =
+  | { kind: 'item'; groupKey: string; itemKey: string }
+  | { kind: 'group'; groupKey: string }
+  | null;
+type OverState = {
+  groupKey: string;
+  itemKey?: string;
+  /** true → indicator sits below the target, false → above. */
+  after?: boolean;
+  /** true → the target is the group itself (append / group reorder). */
+  group?: boolean;
+} | null;
 
 /** The canonical tree this install can arrange (mustr.gg-only tools hidden elsewhere). */
 function canonicalTree() {
@@ -82,10 +95,18 @@ function toOverride(groups: EditGroup[]): AdminNavOverride {
   };
 }
 
+/** Is the pointer past the vertical midpoint of the row it's over? */
+function isAfter(e: DragEvent, el: HTMLElement): boolean {
+  const r = el.getBoundingClientRect();
+  return e.clientY > r.top + r.height / 2;
+}
+
 export default function AdminMenuAdmin() {
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<EditGroup[]>([]);
   const [saved, setSaved] = useState('');
+  const [drag, setDrag] = useState<DragState>(null);
+  const [over, setOver] = useState<OverState>(null);
   const { run, busy, error, notice, warning } = useAction();
 
   useEffect(() => {
@@ -109,35 +130,108 @@ export default function AdminMenuAdmin() {
       return next;
     });
 
-  const moveGroup = (gIdx: number, dir: -1 | 1) =>
-    update((gs) => {
-      const j = gIdx + dir;
-      if (j < 0 || j >= gs.length) return;
-      [gs[gIdx], gs[j]] = [gs[j]!, gs[gIdx]!];
-    });
   const setGroupLabel = (gIdx: number, value: string) =>
     update((gs) => {
       gs[gIdx]!.label = value;
-    });
-
-  const moveItem = (gIdx: number, iIdx: number, dir: -1 | 1) =>
-    update((gs) => {
-      const items = gs[gIdx]!.items;
-      const j = iIdx + dir;
-      if (j < 0 || j >= items.length) return;
-      [items[iIdx], items[j]] = [items[j]!, items[iIdx]!];
     });
   const setItemLabel = (gIdx: number, iIdx: number, value: string) =>
     update((gs) => {
       gs[gIdx]!.items[iIdx]!.label = value;
     });
-  const moveItemToGroup = (gIdx: number, iIdx: number, targetKey: string) =>
+
+  /** Move an item next to a target item (before/after), or append when target is null. */
+  const moveItem = (
+    fromG: string,
+    itemKey: string,
+    toG: string,
+    targetItemKey: string | null,
+    after: boolean,
+  ) =>
     update((gs) => {
-      const target = gs.find((g) => g.key === targetKey);
-      if (!target || target.key === gs[gIdx]!.key) return;
-      const [item] = gs[gIdx]!.items.splice(iIdx, 1);
-      if (item) target.items.push(item);
+      if (fromG === toG && itemKey === targetItemKey) return;
+      const from = gs.find((g) => g.key === fromG);
+      const si = from?.items.findIndex((i) => i.key === itemKey) ?? -1;
+      if (!from || si < 0) return;
+      const [item] = from.items.splice(si, 1);
+      const to = gs.find((g) => g.key === toG);
+      if (!to || !item) {
+        from.items.splice(si, 0, item!);
+        return;
+      }
+      if (targetItemKey == null) {
+        to.items.push(item);
+        return;
+      }
+      const ti = to.items.findIndex((i) => i.key === targetItemKey);
+      if (ti < 0) to.items.push(item);
+      else to.items.splice(after ? ti + 1 : ti, 0, item);
     });
+
+  /** Reorder a group relative to a target group. */
+  const moveGroup = (groupKey: string, targetKey: string, after: boolean) =>
+    update((gs) => {
+      if (groupKey === targetKey) return;
+      const si = gs.findIndex((g) => g.key === groupKey);
+      if (si < 0) return;
+      const [g] = gs.splice(si, 1);
+      const ti = gs.findIndex((x) => x.key === targetKey);
+      if (ti < 0 || !g) gs.push(g!);
+      else gs.splice(after ? ti + 1 : ti, 0, g);
+    });
+
+  const clearDrag = () => {
+    setDrag(null);
+    setOver(null);
+  };
+
+  /* --- drag sources (the grip handles) --- */
+  const startItemDrag = (groupKey: string, itemKey: string) => (e: DragEvent) => {
+    setDrag({ kind: 'item', groupKey, itemKey });
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', itemKey);
+    } catch {
+      /* some browsers require a payload; ignore if refused */
+    }
+  };
+  const startGroupDrag = (groupKey: string) => (e: DragEvent) => {
+    setDrag({ kind: 'group', groupKey });
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', groupKey);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  /* --- drop targets --- */
+  const overItemRow = (groupKey: string, itemKey: string) => (e: DragEvent<HTMLLIElement>) => {
+    if (drag?.kind !== 'item') return; // let group-drags bubble to the group
+    e.preventDefault();
+    e.stopPropagation();
+    setOver({ groupKey, itemKey, after: isAfter(e, e.currentTarget) });
+  };
+  const dropItemRow = (groupKey: string, itemKey: string) => (e: DragEvent<HTMLLIElement>) => {
+    if (drag?.kind !== 'item') return;
+    e.preventDefault();
+    e.stopPropagation();
+    moveItem(drag.groupKey, drag.itemKey, groupKey, itemKey, isAfter(e, e.currentTarget));
+    clearDrag();
+  };
+
+  const overGroupBox = (groupKey: string) => (e: DragEvent<HTMLLIElement>) => {
+    if (!drag) return;
+    e.preventDefault();
+    if (drag.kind === 'item') setOver({ groupKey, group: true });
+    else setOver({ groupKey, group: true, after: isAfter(e, e.currentTarget) });
+  };
+  const dropGroupBox = (groupKey: string) => (e: DragEvent<HTMLLIElement>) => {
+    if (!drag) return;
+    e.preventDefault();
+    if (drag.kind === 'item') moveItem(drag.groupKey, drag.itemKey, groupKey, null, false);
+    else moveGroup(drag.groupKey, groupKey, isAfter(e, e.currentTarget));
+    clearDrag();
+  };
 
   const save = () =>
     run(async () => {
@@ -163,14 +257,31 @@ export default function AdminMenuAdmin() {
 
   if (loading) return <div className="loading">Loading…</div>;
 
+  const groupClass = (g: EditGroup) => {
+    let cls = 'adminmenu-group';
+    if (drag?.kind === 'group' && drag.groupKey === g.key) cls += ' dragging';
+    if (over?.groupKey === g.key && over.group) {
+      if (drag?.kind === 'item') cls += ' drop-into';
+      else cls += over.after ? ' drop-group-after' : ' drop-group-before';
+    }
+    return cls;
+  };
+  const itemClass = (g: EditGroup, it: EditItem) => {
+    let cls = 'adminmenu-row adminmenu-row-item';
+    if (drag?.kind === 'item' && drag.itemKey === it.key) cls += ' dragging';
+    if (over?.groupKey === g.key && over.itemKey === it.key) cls += over.after ? ' drop-after' : ' drop-before';
+    return cls;
+  };
+
   return (
     <section className="panel adminmenu">
       <header className="panel-head adminmenu-head">
         <div>
           <h2>Admin Menu</h2>
           <p className="muted">
-            Arrange this admin sidebar: reorder groups and tools, move a tool to another group, or
-            rename either. Tools can’t be removed — everyone still only sees the ones they have
+            Drag the <span className="adminmenu-grip" aria-hidden>⠿</span> grips to arrange this admin
+            sidebar: reorder groups and tools, or drag a tool into another group. Rename anything by
+            typing over it. Tools can’t be removed — everyone still only sees the ones they have
             permission for.
           </p>
         </div>
@@ -188,8 +299,25 @@ export default function AdminMenuAdmin() {
 
       <ol className="adminmenu-tree">
         {groups.map((g, gIdx) => (
-          <li key={g.key} className="adminmenu-group">
+          <li
+            key={g.key}
+            className={groupClass(g)}
+            onDragOver={overGroupBox(g.key)}
+            onDrop={dropGroupBox(g.key)}
+          >
             <div className="adminmenu-row adminmenu-row-group">
+              <span
+                className="adminmenu-grip"
+                role="button"
+                tabIndex={-1}
+                draggable
+                onDragStart={startGroupDrag(g.key)}
+                onDragEnd={clearDrag}
+                title="Drag to reorder this group"
+                aria-label={`Drag to reorder the ${g.defaultLabel} group`}
+              >
+                ⠿
+              </span>
               <span className="adminmenu-kind" title="Group heading">
                 Group
               </span>
@@ -200,16 +328,31 @@ export default function AdminMenuAdmin() {
                 aria-label={`Name for the ${g.defaultLabel} group`}
                 onChange={(e) => setGroupLabel(gIdx, e.target.value)}
               />
-              <div className="adminmenu-tools">
-                <button className="mini" title="Move group up" disabled={gIdx === 0} onClick={() => moveGroup(gIdx, -1)}>↑</button>
-                <button className="mini" title="Move group down" disabled={gIdx === groups.length - 1} onClick={() => moveGroup(gIdx, 1)}>↓</button>
-              </div>
             </div>
 
             <ol className="adminmenu-items">
               {g.items.map((it, iIdx) => (
-                <li key={it.key} className="adminmenu-row adminmenu-row-item">
-                  <span className="adminmenu-kind adminmenu-kind-item" title="Tool">Tool</span>
+                <li
+                  key={it.key}
+                  className={itemClass(g, it)}
+                  onDragOver={overItemRow(g.key, it.key)}
+                  onDrop={dropItemRow(g.key, it.key)}
+                >
+                  <span
+                    className="adminmenu-grip"
+                    role="button"
+                    tabIndex={-1}
+                    draggable
+                    onDragStart={startItemDrag(g.key, it.key)}
+                    onDragEnd={clearDrag}
+                    title="Drag to reorder, or into another group"
+                    aria-label={`Drag to move the ${it.defaultLabel} tool`}
+                  >
+                    ⠿
+                  </span>
+                  <span className="adminmenu-kind adminmenu-kind-item" title="Tool">
+                    Tool
+                  </span>
                   <input
                     className="adminmenu-label"
                     value={it.label}
@@ -217,31 +360,27 @@ export default function AdminMenuAdmin() {
                     aria-label={`Name for the ${it.defaultLabel} tool`}
                     onChange={(e) => setItemLabel(gIdx, iIdx, e.target.value)}
                   />
-                  <div className="adminmenu-tools">
-                    <button className="mini" title="Move up" disabled={iIdx === 0} onClick={() => moveItem(gIdx, iIdx, -1)}>↑</button>
-                    <button className="mini" title="Move down" disabled={iIdx === g.items.length - 1} onClick={() => moveItem(gIdx, iIdx, 1)}>↓</button>
-                    {groups.length > 1 && (
-                      <select
-                        className="adminmenu-into"
-                        value=""
-                        title="Move to another group"
-                        onChange={(e) => e.target.value && moveItemToGroup(gIdx, iIdx, e.target.value)}
-                      >
-                        <option value="">To ▾</option>
-                        {groups
-                          .filter((other) => other.key !== g.key)
-                          .map((other) => (
-                            <option key={other.key} value={other.key}>
-                              {other.label.trim() || other.defaultLabel}
-                            </option>
-                          ))}
-                      </select>
-                    )}
-                  </div>
+                  {groups.length > 1 && (
+                    <select
+                      className="adminmenu-into"
+                      value=""
+                      title="Move to another group (touch-friendly alternative to dragging)"
+                      onChange={(e) => e.target.value && moveItem(g.key, it.key, e.target.value, null, false)}
+                    >
+                      <option value="">To ▾</option>
+                      {groups
+                        .filter((other) => other.key !== g.key)
+                        .map((other) => (
+                          <option key={other.key} value={other.key}>
+                            {other.label.trim() || other.defaultLabel}
+                          </option>
+                        ))}
+                    </select>
+                  )}
                 </li>
               ))}
               {g.items.length === 0 && (
-                <li className="adminmenu-empty muted small">Empty — move a tool here from another group.</li>
+                <li className="adminmenu-empty muted small">Empty — drag a tool here from another group.</li>
               )}
             </ol>
           </li>

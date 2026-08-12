@@ -18,7 +18,6 @@ import { useModules, useScConfig } from '../lib/modules';
 import HangarView from '../components/HangarView';
 import HangarImport from '../components/HangarImport';
 import ScVerify from '../components/ScVerify';
-import CcuPlanner from '../components/CcuPlanner';
 import MemberTraining from '../components/MemberTraining';
 
 interface Role {
@@ -612,9 +611,6 @@ export default function MemberDetail() {
                 <HangarImport userId={member.id} onImported={() => setHangarKey((k) => k + 1)} />
               )}
               {sc.hangarEnabled && <HangarView userId={member.id} refreshKey={hangarKey} />}
-              {sc.hangarEnabled && sc.ccuEnabled && (
-                <CcuPlanner userId={member.id} isSelf={isSelf} refreshKey={hangarKey} />
-              )}
               <p className="sc-disclaimer muted small">
                 Star Citizen®, Squadron 42®, Roberts Space Industries®, and Cloud Imperium® are
                 trademarks of Cloud Imperium Rights LLC. mustr is an unofficial community tool and is

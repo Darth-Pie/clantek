@@ -254,27 +254,6 @@ export default function ModulesAdmin() {
                     onChange={(v) => void saveSc({ ...sc, verifyEnabled: v })}
                   />
                 </div>
-                <div className="module-row">
-                  <div className="module-info">
-                    <span className="module-name">CCU upgrade planner</span>
-                    <span className="muted small">
-                      Members lay out ship upgrade chains on top of their imported hangar. Touches
-                      RSI only through the hangar, so it turns off with it.
-                    </span>
-                  </div>
-                  <Switch
-                    // Reads OFF whenever the hangar is off, even though the
-                    // stored ccuEnabled stays true — a switch painted "on" next
-                    // to the words "Off (needs hangar)" contradicts itself. The
-                    // stored value is preserved, so turning the hangar back on
-                    // restores whatever this was set to.
-                    checked={sc.ccuEnabled && sc.hangarEnabled}
-                    disabled={busy || !sc.hangarEnabled}
-                    label="CCU upgrade planner"
-                    stateText={!sc.hangarEnabled ? 'Off (needs hangar)' : undefined}
-                    onChange={(v) => void saveSc({ ...sc, ccuEnabled: v })}
-                  />
-                </div>
               </OptionSet>
             </>
           )}

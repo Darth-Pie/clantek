@@ -1,7 +1,6 @@
 import { sqliteTable, text, integer, index, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import type { HangarItem } from '../shared/hangar';
-import type { CcuBoard } from '../shared/ccu';
 
 const now = sql`(unixepoch())`;
 
@@ -111,16 +110,21 @@ export const scHangars = sqliteTable('sc_hangars', {
 
 /**
  * A member's CCU (Cross Chassis Upgrade) planning board — one JSON blob per
- * member, chains of upgrade steps built on top of their imported hangar. Steps
- * are either references into that hangar or upgrades the member has yet to buy,
- * so a board is a plan, not a record of ownership. Shares the hangar's opt-in
- * visibility model; cascades away with the member. SC module only.
+ * member, chains of upgrade steps built on top of their imported hangar.
+ *
+ * The CCU planner itself is archived (see archive/ccu-planner/README.md) —
+ * pulled for a UI rework, not a data problem. This table is kept declared
+ * (rather than deleted from the schema) so drizzle-kit's next diff doesn't
+ * emit a DROP TABLE and destroy every member's saved plans. `board` is left
+ * as untyped JSON here since the shared `CcuBoard` type moved into the
+ * archive with the rest of the feature; restoring the planner restores the
+ * `$type<CcuBoard>()` too.
  */
 export const scCcuBoards = sqliteTable('sc_ccu_boards', {
   userId: integer('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
-  board: text('board', { mode: 'json' }).$type<CcuBoard>().notNull(),
+  board: text('board', { mode: 'json' }).notNull(),
   // Whether the owner has shared their plans with members holding hangar.view.
   // Off by default, exactly like the hangar — sharing is opt-in per member.
   isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(false),

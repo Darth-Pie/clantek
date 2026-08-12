@@ -8,7 +8,7 @@
  * the invite sees this short list and nothing more.
  *
  * Bits are Discord permission flags. They're non-overlapping, so summing them
- * equals bitwise-OR; the total (2199425928192) stays well under
+ * equals bitwise-OR; the total (8992607232) stays well under
  * Number.MAX_SAFE_INTEGER, so plain numbers are safe here (a `|` would overflow
  * 32 bits — always add, never OR).
  */
@@ -28,7 +28,7 @@ export const BOT_PERMISSIONS: BotPermission[] = [
   { bit: 16384, name: 'Embed Links', why: 'Show events as rich embeds instead of plain text.' },
   { bit: 268435456, name: 'Manage Roles', why: 'Keep members’ Discord roles in sync with their rank on the site.' },
   { bit: 134217728, name: 'Manage Nicknames', why: 'Keep members’ server nicknames in sync with their display name.' },
-  { bit: 2199023255552, name: 'Manage Events', why: 'Create and update Discord’s built-in scheduled events.' },
+  { bit: 8589934592, name: 'Manage Events', why: 'Create and update Discord’s built-in scheduled events.' },
 ];
 
 /** The permissions integer for the invite URL (sum = bitwise-OR here). */

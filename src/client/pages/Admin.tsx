@@ -33,9 +33,12 @@ import {
   UserPlus,
   GraduationCap,
   Rocket,
+  ListOrdered,
 } from 'lucide';
 import { useSession } from '../lib/session';
+import { api } from '../lib/api';
 import { visibleAdminGroups } from '../lib/adminSections';
+import type { AdminNavOverride } from '../../shared/adminNav';
 import { isMustrHost } from '../lib/wordmark';
 import { getRecent } from '../lib/recent';
 import UsageBar from '../components/UsageBar';
@@ -62,7 +65,12 @@ import ApplicantsAdmin from './ApplicantsAdmin';
 import BansAdmin from './BansAdmin';
 import TrainingAdmin from './TrainingAdmin';
 import MustrGgAdmin from './MustrGgAdmin';
+import AdminMenuAdmin from './AdminMenuAdmin';
 import AuditLog from './AuditLog';
+
+/** Cached admin-menu arrangement, so the sidebar renders in the saved order on
+ *  first paint instead of flashing the default and then reordering. */
+const OVERRIDE_CACHE = 'ct-admin-nav-override';
 
 /** Sidebar item key → an icon, so the rail reads like a real nav rail. */
 const ITEM_ICONS: Record<string, typeof FileText> = {
@@ -80,6 +88,7 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
   analytics: Gauge,
   appearance: Palette,
   logs: ScrollText,
+  adminmenu: ListOrdered,
   mustrgg: Rocket,
 };
 
@@ -107,6 +116,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   seo: () => <SeoAdmin />,
   footer: () => <FooterAdmin />,
   audit: () => <AuditLog />,
+  adminmenu: () => <AdminMenuAdmin />,
   mustrgg: () => <MustrGgAdmin />,
 };
 
@@ -135,6 +145,40 @@ export default function Admin() {
     if (typeof window !== 'undefined' && window.innerWidth <= 720) setNavOpen(false);
   };
 
+  // The saved sidebar arrangement. Seed from the localStorage cache so the rail
+  // paints in order immediately, then revalidate from the server and refresh live
+  // when the Admin Menu editor saves (it fires `ct-adminnav-changed`).
+  const [override, setOverride] = useState<AdminNavOverride | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(OVERRIDE_CACHE);
+      return raw ? (JSON.parse(raw) as AdminNavOverride) : null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    const load = () => {
+      api
+        .get<{ override: AdminNavOverride | null }>('/admin-nav')
+        .then((d) => {
+          setOverride(d.override);
+          try {
+            if (d.override) localStorage.setItem(OVERRIDE_CACHE, JSON.stringify(d.override));
+            else localStorage.removeItem(OVERRIDE_CACHE);
+          } catch {
+            /* private mode — arrangement still applies for the session */
+          }
+        })
+        .catch(() => {
+          /* offline or unauthorized → fall back to the built-in order */
+        });
+    };
+    load();
+    window.addEventListener('ct-adminnav-changed', load);
+    return () => window.removeEventListener('ct-adminnav-changed', load);
+  }, []);
+
   // Re-read recently-viewed when it changes (a tool recorded one, another tab wrote it).
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -147,7 +191,7 @@ export default function Admin() {
     };
   }, []);
 
-  const groups = visibleAdminGroups(can, isMustrHost());
+  const groups = visibleAdminGroups(can, isMustrHost(), override);
   if (groups.length === 0) {
     return <div className="empty">You don’t have access to any admin tools.</div>;
   }

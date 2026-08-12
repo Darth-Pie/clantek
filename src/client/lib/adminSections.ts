@@ -13,28 +13,18 @@
  */
 
 import type { Permission } from '../../shared/permissions';
+import {
+  applyAdminNav,
+  type AdminGroup,
+  type AdminItem,
+  type AdminTab,
+  type AdminNavOverride,
+} from '../../shared/adminNav';
 
-export interface AdminTab {
-  /** Maps to a component in Admin.tsx's renderer map, and to /admin/:item/:tab. */
-  key: string;
-  label: string;
-  permission: Permission;
-}
-
-export interface AdminItem {
-  /** Route segment: /admin/:key */
-  key: string;
-  label: string;
-  tabs: AdminTab[];
-  /** Only shown on the mustr.gg showcase host — never in a buyer's install. */
-  mustrOnly?: boolean;
-}
-
-export interface AdminGroup {
-  key: string;
-  label: string;
-  items: AdminItem[];
-}
+// The tree's shapes live in shared/adminNav.ts (so the server can sanitise a
+// saved arrangement without importing this file). Re-exported for existing
+// consumers that import the types from here.
+export type { AdminGroup, AdminItem, AdminTab };
 
 export const ADMIN_GROUPS: AdminGroup[] = [
   {
@@ -99,6 +89,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         ],
       },
       { key: 'logs', label: 'Logs', tabs: [{ key: 'audit', label: 'Logs', permission: 'audit.view' }] },
+      { key: 'adminmenu', label: 'Admin Menu', tabs: [{ key: 'adminmenu', label: 'Admin Menu', permission: 'settings.manage' }] },
       {
         key: 'mustrgg',
         label: 'mustr.gg',
@@ -112,14 +103,22 @@ export const ADMIN_GROUPS: AdminGroup[] = [
 type Can = (permission: Permission) => boolean;
 
 /** The tree pruned to what a viewer may see: tabs → items → groups they can reach.
- *  `onMustrHost` gates mustr.gg-only items (hidden everywhere else). */
-export function visibleAdminGroups(can: Can, onMustrHost = false): AdminGroup[] {
-  return ADMIN_GROUPS.map((g) => ({
-    ...g,
-    items: g.items
-      .map((i) => ({ ...i, tabs: i.tabs.filter((t) => can(t.permission)) }))
-      .filter((i) => i.tabs.length > 0 && (!i.mustrOnly || onMustrHost)),
-  })).filter((g) => g.items.length > 0);
+ *  `onMustrHost` gates mustr.gg-only items (hidden everywhere else). An optional
+ *  saved `override` re-orders and relabels first (via applyAdminNav, which can't
+ *  widen access — every item keeps its code-defined tabs), then we filter. */
+export function visibleAdminGroups(
+  can: Can,
+  onMustrHost = false,
+  override?: AdminNavOverride | null,
+): AdminGroup[] {
+  return applyAdminNav(ADMIN_GROUPS, override)
+    .map((g) => ({
+      ...g,
+      items: g.items
+        .map((i) => ({ ...i, tabs: i.tabs.filter((t) => can(t.permission)) }))
+        .filter((i) => i.tabs.length > 0 && (!i.mustrOnly || onMustrHost)),
+    }))
+    .filter((g) => g.items.length > 0);
 }
 
 /** Which group an item belongs to (for tagging recently-viewed records). */

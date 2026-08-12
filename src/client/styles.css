@@ -3694,6 +3694,13 @@ button.mini {
 }
 
 /* Identity & Discord admin: the copy-these-into-Discord URL rows */
+/* <fieldset> defaults to min-width:min-content, so a long unbreakable value
+   (e.g. the bot invite URL) makes the box push past the panel to the right.
+   Pin fieldsets to the container width; inner fields scroll on their own. */
+.identity-admin fieldset {
+  min-width: 0;
+  max-width: 100%;
+}
 .identity-url {
   margin: 0.5rem 0;
 }
@@ -4884,6 +4891,97 @@ a.org-box:hover {
     flex-wrap: wrap;
   }
   .nav-row-label {
+    flex-basis: 100%;
+    order: 3;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Admin Menu builder — see pages/AdminMenuAdmin.tsx. Arranges the admin
+ * sidebar itself; shares the nav-builder's visual language.
+ * ------------------------------------------------------------------ */
+
+.adminmenu-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.adminmenu-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.adminmenu-tree,
+.adminmenu-items {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.adminmenu-group {
+  margin-top: 0.2rem;
+}
+
+.adminmenu-items {
+  margin: 0.4rem 0 0 1.25rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--color-border);
+}
+
+.adminmenu-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.adminmenu-row-group {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.adminmenu-kind {
+  flex: 0 0 auto;
+  min-width: 3.5rem;
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.adminmenu-label {
+  flex: 1 1 8rem;
+  min-width: 5rem;
+}
+
+.adminmenu-tools {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.adminmenu-into {
+  max-width: 6.5rem;
+}
+
+.adminmenu-empty {
+  padding: 0.3rem 0.1rem;
+}
+
+@media (max-width: 640px) {
+  .adminmenu-row {
+    flex-wrap: wrap;
+  }
+  .adminmenu-label {
     flex-basis: 100%;
     order: 3;
   }

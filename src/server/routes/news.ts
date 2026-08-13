@@ -12,6 +12,7 @@
 import { Hono } from 'hono';
 import { and, desc, eq, ne } from 'drizzle-orm';
 import * as s from '../../db/schema';
+import { emitNotification } from '../notifications';
 import type { AppContext } from '../env';
 import { db, requirePermission } from '../middleware/auth';
 import { loadPageAccess } from '../pageAccess';
@@ -247,6 +248,15 @@ news.post('/:id/status', requirePermission('news.publish'), async (c) => {
     targetId: String(id),
     meta: { from: post.status, to: status },
   });
+
+  if (status === 'published' && post.status !== 'published') {
+    c.executionCtx.waitUntil(
+      emitNotification(c.env, 'news.published', {
+        title: `News published: ${updated.title}`,
+        link: '/news',
+      }),
+    );
+  }
 
   return c.json({ post: updated });
 });

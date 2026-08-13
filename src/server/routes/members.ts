@@ -11,6 +11,7 @@ import { discordClient } from '../config';
 import { grantRole, revokeRole, syncMemberRankRoles, reconcileMember } from '../discord/sync';
 import { announce } from '../discord/announce';
 import { deleteMediaByUrl } from './media';
+import { emitNotification } from '../notifications';
 
 const members = new Hono<AppContext>();
 
@@ -138,6 +139,14 @@ members.post('/:id/approve', requirePermission('members.approve'), async (c) => 
     ip: c.req.header('cf-connecting-ip'),
   });
 
+  c.executionCtx.waitUntil(
+    emitNotification(c.env, 'member.approved', {
+      title: `Approved: ${target.username}`,
+      body: 'An applicant was approved and is now a member.',
+      link: '/roster',
+    }),
+  );
+
   if (rankId) {
     const client = await rest(c.env);
     if (client) {
@@ -196,6 +205,14 @@ members.post('/:id/ban', requirePermission('members.ban'), async (c) => {
     meta: { discordId: target.discordId, username: target.username },
     ip: c.req.header('cf-connecting-ip'),
   });
+
+  c.executionCtx.waitUntil(
+    emitNotification(c.env, 'member.banned', {
+      title: `Banned: ${target.username}`,
+      body: cleanedReason,
+      link: '/admin/admissions',
+    }),
+  );
   return c.json({ ok: true });
 });
 

@@ -101,6 +101,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
           { key: 'footer', label: 'Footer', permission: 'settings.manage' },
         ],
       },
+      { key: 'notifications', label: 'Notifications', tabs: [{ key: 'notifications', label: 'Notifications', permission: 'settings.manage' }] },
       { key: 'logs', label: 'Logs', tabs: [{ key: 'audit', label: 'Logs', permission: 'audit.view' }] },
       {
         key: 'mustrgg',

@@ -32,6 +32,7 @@ import {
   UserPlus,
   GraduationCap,
   Rocket,
+  Bell,
 } from 'lucide';
 import { useSession } from '../lib/session';
 import { api } from '../lib/api';
@@ -64,6 +65,7 @@ import BansAdmin from './BansAdmin';
 import TrainingAdmin from './TrainingAdmin';
 import MustrGgAdmin from './MustrGgAdmin';
 import AdminMenuAdmin from './AdminMenuAdmin';
+import NotificationsAdmin from './NotificationsAdmin';
 import AuditLog from './AuditLog';
 
 /** Cached admin-menu arrangement, so the sidebar renders in the saved order on
@@ -84,6 +86,7 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
   discord: Bot,
   analytics: Gauge,
   appearance: Palette,
+  notifications: Bell,
   logs: ScrollText,
   mustrgg: Rocket,
 };
@@ -113,6 +116,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   footer: () => <FooterAdmin />,
   audit: () => <AuditLog />,
   adminmenu: () => <AdminMenuAdmin />,
+  notifications: () => <NotificationsAdmin />,
   mustrgg: () => <MustrGgAdmin />,
 };
 

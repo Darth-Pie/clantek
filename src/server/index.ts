@@ -61,6 +61,8 @@ import auditRoutes from './routes/audit';
 import pagesRoutes from './routes/pages';
 import navRoutes from './routes/nav';
 import adminNavRoutes from './routes/admin-nav';
+import notificationsRoutes from './routes/notifications';
+import { emitNotification } from './notifications';
 import hangarRoutes from './routes/hangar';
 import galleryRoutes from './routes/gallery';
 import scVerifyRoutes from './routes/scVerify';
@@ -340,6 +342,18 @@ app.get('/api/auth/callback', async (c) => {
       source: 'system',
     });
 
+    // A brand-new applicant (not in the guild) is waiting on approval — notify
+    // whichever roles the admin routed this event to. Best-effort, in background.
+    if (!inGuild) {
+      c.executionCtx.waitUntil(
+        emitNotification(c.env, 'applicant.pending', {
+          title: `New applicant: ${discordUser.global_name || discordUser.username}`,
+          body: 'Someone signed in and is waiting on approval.',
+          link: '/admin/admissions',
+        }),
+      );
+    }
+
     // Apply the default rank's roles to a new member. Done in the background so
     // the Discord round-trips don't hold up the login redirect. (Applicants get
     // no rank/roles until approved.)
@@ -424,6 +438,7 @@ app.route('/api/audit', auditRoutes);
 app.route('/api/pages', pagesRoutes);
 app.route('/api/nav', navRoutes);
 app.route('/api/admin-nav', adminNavRoutes);
+app.route('/api/notifications', notificationsRoutes);
 app.route('/api/hangar', hangarRoutes);
 app.route('/api/gallery', galleryRoutes);
 app.route('/api/sc', scVerifyRoutes);

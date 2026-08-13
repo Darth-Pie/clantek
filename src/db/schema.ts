@@ -759,3 +759,40 @@ export const galleryItems = sqliteTable(
   },
   (t) => [index('gallery_item_album_idx').on(t.albumId, t.sortOrder)],
 );
+
+/* ------------------------------------------------------------------ *
+ * Notifications — role-gated, in-app. A notification carries the set of
+ * role ids that may see it (empty = nobody); read state is per member.
+ * ------------------------------------------------------------------ */
+
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    /** Event key from shared/notifications.ts (e.g. 'applicant.pending'). */
+    type: text('type').notNull(),
+    title: text('title').notNull(),
+    body: text('body'),
+    /** Optional in-app link the card opens (e.g. /admin/admissions). */
+    link: text('link'),
+    /** Role ids allowed to see this; a viewer needs one of them (god bypasses). */
+    roleIds: text('role_ids', { mode: 'json' }).$type<number[]>().notNull().default([]),
+    createdAt: integer('created_at').notNull().default(now),
+  },
+  (t) => [index('notification_created_idx').on(t.createdAt)],
+);
+
+/** One row per member per notification they've read. */
+export const notificationReads = sqliteTable(
+  'notification_reads',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    notificationId: integer('notification_id')
+      .notNull()
+      .references(() => notifications.id, { onDelete: 'cascade' }),
+    readAt: integer('read_at').notNull().default(now),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.notificationId] })],
+);

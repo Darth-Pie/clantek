@@ -6,6 +6,7 @@ import { useSession } from './lib/session';
 import { useBranding } from './lib/branding';
 import type { Permission } from '../shared/permissions';
 import AccountMenu from './components/AccountMenu';
+import NotificationBell from './components/NotificationBell';
 import SiteNav from './components/SiteNav';
 import type { NavItem } from '../shared/nav';
 import Login from './pages/Login';
@@ -262,7 +263,10 @@ export default function App() {
 
         <div className="account">
           {viewer ? (
-            <AccountMenu />
+            <>
+              {!viewer.pending && <NotificationBell />}
+              <AccountMenu />
+            </>
           ) : (
             <a className="discord-btn" href="/api/auth/login">
               Sign in with Discord

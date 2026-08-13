@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
+import { useDragOrder, type DragOrder } from '../lib/dragOrder';
 import PageRenderer from '../components/PageRenderer';
 import RichTextEditor from '../components/RichTextEditor';
 import NumberField from '../components/NumberField';
@@ -205,13 +206,15 @@ export default function PagesAdmin() {
     const i = rows.findIndex((r) => r.id === rowId);
     if (i >= 0) rows.splice(i, 1);
   });
-  const moveRow = (rowId: string, dir: -1 | 1) =>
+  // Drag to reorder rows. Modules already drag between columns; rows are a flat
+  // list, so the shared useDragOrder hook drives them.
+  const reorderRows = (nextKeys: string[]) =>
     edit((rows) => {
-      const i = rows.findIndex((r) => r.id === rowId);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= rows.length) return;
-      [rows[i], rows[j]] = [rows[j]!, rows[i]!];
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      const next = nextKeys.map((k) => byId.get(k)).filter((r): r is LayoutRow => !!r);
+      rows.splice(0, rows.length, ...next);
     });
+  const rowDnd = useDragOrder(layout?.rows.map((r) => r.id) ?? [], reorderRows);
 
   /* --- column ops --- */
   const addColumn = (rowId: string) =>
@@ -245,15 +248,6 @@ export default function PagesAdmin() {
     edit((rows) => {
       const col = findCol(rows, rowId, colId);
       if (col) col.modules = col.modules.filter((m) => m.id !== moduleId);
-    });
-  const moveModule = (rowId: string, colId: string, moduleId: string, dir: -1 | 1) =>
-    edit((rows) => {
-      const col = findCol(rows, rowId, colId);
-      if (!col) return;
-      const i = col.modules.findIndex((m) => m.id === moduleId);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= col.modules.length) return;
-      [col.modules[i], col.modules[j]] = [col.modules[j]!, col.modules[i]!];
     });
   const patchConfig = (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) =>
     edit((rows) => {
@@ -488,15 +482,13 @@ export default function PagesAdmin() {
               key={row.id}
               row={row}
               index={ri}
-              total={layout.rows.length}
-              onMoveRow={moveRow}
+              rowDnd={rowDnd}
               onRemoveRow={removeRow}
               onAddColumn={addColumn}
               onRemoveColumn={removeColumn}
               onSetSpan={setSpan}
               onAddModule={addModule}
               onRemoveModule={removeModule}
-              onMoveModule={moveModule}
               onPatchConfig={patchConfig}
               onSetVisibility={setVisibility}
               roles={roles}
@@ -520,29 +512,29 @@ export default function PagesAdmin() {
 function RowEditor(props: {
   row: LayoutRow;
   index: number;
-  total: number;
-  onMoveRow: (rowId: string, dir: -1 | 1) => void;
+  rowDnd: DragOrder;
   onRemoveRow: (rowId: string) => void;
   onAddColumn: (rowId: string) => void;
   onRemoveColumn: (rowId: string, colId: string) => void;
   onSetSpan: (rowId: string, colId: string, span: number) => void;
   onAddModule: (rowId: string, colId: string, type: ModuleType) => void;
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
-  onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
   onSetVisibility: (rowId: string, colId: string, moduleId: string, value: string) => void;
   roles: RoleOpt[];
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
 }) {
-  const { row, index, total } = props;
+  const { row, index, rowDnd } = props;
+  const cls = `row-editor ${rowDnd.isDragging(row.id) ? 'dragging ' : ''}${rowDnd.dropClass(row.id)}`.trim();
   return (
-    <div className="row-editor">
+    <div className={cls} {...rowDnd.rowProps(row.id)}>
       <div className="row-editor-bar">
+        <span className="row-editor-drag drag-grip" title="Drag to reorder this row" {...rowDnd.handleProps(row.id)}>
+          ⠿
+        </span>
         <span className="row-editor-label">Row {index + 1}</span>
         <div className="row-editor-tools">
-          <button type="button" className="mini" title="Move up" disabled={index === 0} onClick={() => props.onMoveRow(row.id, -1)}>↑</button>
-          <button type="button" className="mini" title="Move down" disabled={index === total - 1} onClick={() => props.onMoveRow(row.id, 1)}>↓</button>
           <button type="button" className="mini" title="Add column" onClick={() => props.onAddColumn(row.id)}>+ Col</button>
           <button type="button" className="mini danger" title="Delete row" onClick={() => props.onRemoveRow(row.id)}>✕</button>
         </div>
@@ -563,7 +555,6 @@ function ColumnEditor(props: {
   onSetSpan: (rowId: string, colId: string, span: number) => void;
   onAddModule: (rowId: string, colId: string, type: ModuleType) => void;
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
-  onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
   onSetVisibility: (rowId: string, colId: string, moduleId: string, value: string) => void;
   roles: RoleOpt[];
@@ -605,16 +596,8 @@ function ColumnEditor(props: {
         }}
       >
         {col.modules.length === 0 && <div className="col-empty">Drop or add a module</div>}
-        {col.modules.map((m, mi) => (
-          <ModuleEditor
-            key={m.id}
-            {...props}
-            rowId={rowId}
-            colId={col.id}
-            module={m}
-            index={mi}
-            total={col.modules.length}
-          />
+        {col.modules.map((m) => (
+          <ModuleEditor key={m.id} {...props} rowId={rowId} colId={col.id} module={m} />
         ))}
       </div>
 
@@ -641,17 +624,14 @@ function ModuleEditor(props: {
   rowId: string;
   colId: string;
   module: LayoutModule;
-  index: number;
-  total: number;
   onRemoveModule: (rowId: string, colId: string, moduleId: string) => void;
-  onMoveModule: (rowId: string, colId: string, moduleId: string, dir: -1 | 1) => void;
   onPatchConfig: (rowId: string, colId: string, moduleId: string, patch: Record<string, unknown>) => void;
   onSetVisibility: (rowId: string, colId: string, moduleId: string, value: string) => void;
   roles: RoleOpt[];
   onDragStartModule: (d: Drag) => void;
   onDropModule: (rowId: string, colId: string, beforeId: string | null) => void;
 }) {
-  const { rowId, colId, module: m, index, total } = props;
+  const { rowId, colId, module: m } = props;
   const spec = moduleSpec(m.type);
   const cfg = m.config;
   // Only make the card draggable while the ⋮⋮ handle is held. If the whole card
@@ -679,19 +659,17 @@ function ModuleEditor(props: {
     >
       <div className="module-editor-bar">
         <span
-          className="module-editor-drag"
+          className="module-editor-drag drag-grip"
           title="Drag to move"
           // Arm dragging only for a gesture that begins on the handle; disarm if
           // it was just a click (mouseup with no drag) so text stays selectable.
           onMouseDown={() => setGrabbing(true)}
           onMouseUp={() => setGrabbing(false)}
         >
-          ⋮⋮
+          ⠿
         </span>
         <span className="module-editor-type">{spec?.label ?? m.type}</span>
         <div className="module-editor-tools">
-          <button type="button" className="mini" title="Move up" disabled={index === 0} onClick={() => props.onMoveModule(rowId, colId, m.id, -1)}>↑</button>
-          <button type="button" className="mini" title="Move down" disabled={index === total - 1} onClick={() => props.onMoveModule(rowId, colId, m.id, 1)}>↓</button>
           <button type="button" className="mini danger" title="Remove" onClick={() => props.onRemoveModule(rowId, colId, m.id)}>✕</button>
         </div>
       </div>

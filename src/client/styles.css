@@ -5085,6 +5085,17 @@ tr.drop-after > td {
   align-items: center;
 }
 
+/* Page layout editor rows (PagesAdmin): drag a row by its grip. */
+.row-editor.dragging {
+  opacity: 0.5;
+}
+.row-editor.drop-before {
+  box-shadow: 0 -3px 0 -1px var(--color-accent);
+}
+.row-editor.drop-after {
+  box-shadow: 0 3px 0 -1px var(--color-accent);
+}
+
 /* ------------------------------------------------------------------ *
  * Reassign-on-delete dialog — see components/ReassignDialog.tsx
  * ------------------------------------------------------------------ */

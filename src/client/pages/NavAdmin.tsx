@@ -1,15 +1,22 @@
 /**
- * Navigation builder — arrange the top menu.
+ * Navigation builder — arrange the top menu by dragging.
  *
  * The menu is an ordered list of entries; each is a link (to a built-in page, a
- * custom page, or a URL) or a category (a dropdown holding links). Reordering is
- * up/down plus "move into a category" / "move out", rather than nested drag-drop
- * — deterministic and finger-friendly, and it sidesteps the drag-vs-select trap.
- * Every entry can be gated to a role. Saved to /api/nav; the top bar re-reads it
- * live via the `ct-nav-changed` event.
+ * custom page, or a URL) or a submenu (a dropdown holding links). Editing is
+ * drag-and-drop, mirroring the Admin Menu builder:
+ *  - drag any row by its grip;
+ *  - drop on a top-level row to reorder at the top level (this also pulls a link
+ *    back out of a submenu);
+ *  - drop into a submenu's body to file a link under it;
+ *  - drop on a link inside a submenu to place it precisely.
+ * Submenus can't nest, so a submenu only ever reorders at the top level.
+ *
+ * Only the grip is draggable, so the label inputs stay editable. Every entry can
+ * be gated to a role. Saved to /api/nav; the top bar re-reads it live via the
+ * `ct-nav-changed` event.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type DragEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import {
@@ -30,12 +37,35 @@ interface RoleOpt {
   color: string | null;
 }
 
+type DragState = { id: string; isSubmenu: boolean } | null;
+/** Where the pointer currently is, for the drop indicator. */
+type OverState =
+  | { kind: 'top'; id: string; after: boolean }
+  | { kind: 'child'; id: string; after: boolean }
+  | { kind: 'into'; groupId: string }
+  | null;
+
+/** Recursively remove the entry with `id` from the tree, returning it. */
+function removeItem(items: NavItem[], id: string): NavItem | null {
+  const i = items.findIndex((x) => x.id === id);
+  if (i >= 0) return items.splice(i, 1)[0] ?? null;
+  for (const it of items) {
+    if (it.type === 'group' && it.children) {
+      const found = removeItem(it.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 export default function NavAdmin() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<NavItem[]>([]);
   const [saved, setSaved] = useState<string>('[]');
   const [pages, setPages] = useState<PageOpt[]>([]);
   const [roles, setRoles] = useState<RoleOpt[]>([]);
+  const [drag, setDrag] = useState<DragState>(null);
+  const [over, setOver] = useState<OverState>(null);
 
   const { run, busy, error, notice, warning } = useAction();
 
@@ -52,7 +82,6 @@ export default function NavAdmin() {
   }, []);
 
   const dirty = useMemo(() => JSON.stringify(items) !== saved, [items, saved]);
-  const groups = useMemo(() => items.filter((i) => i.type === 'group'), [items]);
 
   /** Clone, mutate, set — every edit goes through here. */
   const update = (fn: (draft: NavItem[]) => void) =>
@@ -62,51 +91,137 @@ export default function NavAdmin() {
       return next;
     });
 
-  /* --- top-level ops --- */
-  const moveTop = (idx: number, dir: -1 | 1) =>
-    update((it) => {
-      const j = idx + dir;
-      if (j < 0 || j >= it.length) return;
-      [it[idx], it[j]] = [it[j]!, it[idx]!];
-    });
-  const delTop = (idx: number) => update((it) => it.splice(idx, 1));
+  /* --- label / role / delete (index-based; the tree re-renders after a drag) --- */
   const setTop = (idx: number, patch: Partial<NavItem>) =>
     update((it) => {
       it[idx] = { ...it[idx]!, ...patch };
     });
-  const moveInto = (idx: number, groupId: string) =>
-    update((it) => {
-      const g = it.find((x) => x.id === groupId && x.type === 'group');
-      if (!g) return;
-      const [item] = it.splice(idx, 1);
-      if (item) (g.children ??= []).push(item);
-    });
-
-  /* --- child ops --- */
-  const moveChild = (gIdx: number, cIdx: number, dir: -1 | 1) =>
-    update((it) => {
-      const kids = it[gIdx]!.children!;
-      const j = cIdx + dir;
-      if (j < 0 || j >= kids.length) return;
-      [kids[cIdx], kids[j]] = [kids[j]!, kids[cIdx]!];
-    });
-  const delChild = (gIdx: number, cIdx: number) => update((it) => it[gIdx]!.children!.splice(cIdx, 1));
+  const delTop = (idx: number) => update((it) => it.splice(idx, 1));
   const setChild = (gIdx: number, cIdx: number, patch: Partial<NavItem>) =>
     update((it) => {
       const kids = it[gIdx]!.children!;
       kids[cIdx] = { ...kids[cIdx]!, ...patch };
     });
-  const moveOut = (gIdx: number, cIdx: number) =>
-    update((it) => {
-      const [child] = it[gIdx]!.children!.splice(cIdx, 1);
-      if (child) it.splice(gIdx + 1, 0, child);
-    });
+  const delChild = (gIdx: number, cIdx: number) => update((it) => it[gIdx]!.children!.splice(cIdx, 1));
 
   /* --- adding --- */
   const addLink = (kind: NavItem['kind'], target: string, label = '') =>
     update((it) => it.push({ id: newNavId(), type: 'link', label, kind, target }));
   const addGroup = () =>
-    update((it) => it.push({ id: newNavId(), type: 'group', label: 'New category', children: [] }));
+    update((it) => it.push({ id: newNavId(), type: 'group', label: 'New submenu', children: [] }));
+
+  /* --- drag-and-drop --- */
+  const clearDrag = () => {
+    setDrag(null);
+    setOver(null);
+  };
+  const afterY = (e: DragEvent<HTMLElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return e.clientY > r.top + r.height / 2;
+  };
+  const startDrag = (id: string, isSubmenu: boolean) => (e: DragEvent) => {
+    setDrag({ id, isSubmenu });
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', id);
+    } catch {
+      /* some browsers require a payload; ignore if refused */
+    }
+  };
+
+  const doDrop = (target: NonNullable<OverState>) => {
+    const d = drag;
+    clearDrag();
+    if (!d) return;
+    // A submenu can only live at the top level — never inside another submenu.
+    if (d.isSubmenu && target.kind !== 'top') return;
+    if ((target.kind === 'top' || target.kind === 'child') && target.id === d.id) return;
+
+    update((tree) => {
+      const moved = removeItem(tree, d.id);
+      if (!moved) return;
+      if (target.kind === 'top') {
+        const idx = tree.findIndex((x) => x.id === target.id);
+        if (idx < 0) tree.push(moved);
+        else tree.splice(target.after ? idx + 1 : idx, 0, moved);
+      } else if (target.kind === 'child') {
+        const grp = tree.find((x) => x.type === 'group' && x.children?.some((c) => c.id === target.id));
+        if (!grp?.children) {
+          tree.push(moved);
+          return;
+        }
+        const idx = grp.children.findIndex((c) => c.id === target.id);
+        grp.children.splice(target.after ? idx + 1 : idx, 0, moved);
+      } else {
+        const grp = tree.find((x) => x.type === 'group' && x.id === target.groupId);
+        if (!grp) tree.push(moved);
+        else (grp.children ??= []).push(moved);
+      }
+    });
+  };
+
+  // Drop-target handlers. Each stops propagation so an inner target (a child, a
+  // submenu body) wins over the outer top-level row it sits within.
+  const topProps = (id: string) => ({
+    onDragOver: (e: DragEvent<HTMLElement>) => {
+      if (!drag) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setOver({ kind: 'top', id, after: afterY(e) });
+    },
+    onDrop: (e: DragEvent<HTMLElement>) => {
+      if (!drag) return;
+      e.preventDefault();
+      e.stopPropagation();
+      doDrop({ kind: 'top', id, after: afterY(e) });
+    },
+  });
+  const childProps = (id: string) => ({
+    onDragOver: (e: DragEvent<HTMLElement>) => {
+      if (!drag || drag.isSubmenu) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setOver({ kind: 'child', id, after: afterY(e) });
+    },
+    onDrop: (e: DragEvent<HTMLElement>) => {
+      if (!drag || drag.isSubmenu) return;
+      e.preventDefault();
+      e.stopPropagation();
+      doDrop({ kind: 'child', id, after: afterY(e) });
+    },
+  });
+  const intoProps = (groupId: string) => ({
+    onDragOver: (e: DragEvent<HTMLElement>) => {
+      if (!drag || drag.isSubmenu) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setOver({ kind: 'into', groupId });
+    },
+    onDrop: (e: DragEvent<HTMLElement>) => {
+      if (!drag || drag.isSubmenu) return;
+      e.preventDefault();
+      e.stopPropagation();
+      doDrop({ kind: 'into', groupId });
+    },
+  });
+
+  const gripProps = (id: string, isSubmenu: boolean) => ({
+    className: 'drag-grip',
+    draggable: !busy,
+    onDragStart: startDrag(id, isSubmenu),
+    onDragEnd: clearDrag,
+    title: 'Drag to reorder',
+    'aria-hidden': true,
+  });
+
+  const rowCls = (base: string, id: string, kinds: NonNullable<OverState>['kind'][]) => {
+    let cls = base;
+    if (drag?.id === id) cls += ' dragging';
+    if (over && kinds.includes(over.kind) && 'id' in over && over.id === id) {
+      cls += over.after ? ' drop-after' : ' drop-before';
+    }
+    return cls;
+  };
 
   const save = () =>
     run(async () => {
@@ -143,8 +258,8 @@ export default function NavAdmin() {
         <div>
           <h2>Navigation</h2>
           <p className="muted">
-            Arrange the top menu: reorder entries, nest them under categories, and choose who sees
-            each. Categories become dropdowns.
+            Drag the grips to arrange the top menu: reorder entries, drag a link into a submenu to
+            file it there, or drag it back out. Submenus become dropdowns. Choose who sees each.
           </p>
         </div>
         <button className="primary" disabled={busy || !dirty} onClick={() => void save()}>
@@ -158,32 +273,33 @@ export default function NavAdmin() {
         {items.map((item, idx) =>
           item.type === 'group' ? (
             <li key={item.id} className="nav-tree-group">
-              <div className="nav-row nav-row-group">
-                <span className="nav-row-kind" title="Category (dropdown)">
-                  ▾ Category
+              <div className={rowCls('nav-row nav-row-group', item.id, ['top'])} {...topProps(item.id)}>
+                <span {...gripProps(item.id, true)}>⠿</span>
+                <span className="nav-row-kind" title="Submenu (dropdown)">
+                  ▾ Submenu
                 </span>
                 <input
                   className="nav-row-label"
                   value={item.label}
-                  placeholder="Category name"
+                  placeholder="Submenu name"
                   onChange={(e) => setTop(idx, { label: e.target.value })}
                 />
                 {roleSelect(item.visibleToRole, (v) => setTop(idx, { visibleToRole: v }))}
                 <div className="nav-row-tools">
-                  <button className="mini" title="Move up" disabled={idx === 0} onClick={() => moveTop(idx, -1)}>↑</button>
-                  <button className="mini" title="Move down" disabled={idx === items.length - 1} onClick={() => moveTop(idx, 1)}>↓</button>
-                  <button className="mini danger" title="Delete category (its links move nowhere — they're removed)" onClick={() => delTop(idx)}>✕</button>
+                  <button className="mini danger" title="Delete submenu (its links are removed with it)" onClick={() => delTop(idx)}>✕</button>
                 </div>
               </div>
 
-              <ol className="nav-tree-children">
+              <ol
+                className={over?.kind === 'into' && over.groupId === item.id ? 'nav-tree-children drop-into' : 'nav-tree-children'}
+                {...intoProps(item.id)}
+              >
                 {(item.children ?? []).length === 0 && (
-                  <li className="nav-child-empty muted small">
-                    Empty — use “Move into” on a link below, or add one from the toolbar.
-                  </li>
+                  <li className="nav-child-empty muted small">Empty — drag a link here to file it under this submenu.</li>
                 )}
                 {(item.children ?? []).map((child, cIdx) => (
-                  <li key={child.id} className="nav-row nav-row-child">
+                  <li key={child.id} className={rowCls('nav-row nav-row-child', child.id, ['child'])} {...childProps(child.id)}>
+                    <span {...gripProps(child.id, false)}>⠿</span>
                     <span className="nav-row-kind">{describeKind(child)}</span>
                     <input
                       className="nav-row-label"
@@ -193,9 +309,6 @@ export default function NavAdmin() {
                     />
                     {roleSelect(child.visibleToRole, (v) => setChild(idx, cIdx, { visibleToRole: v }))}
                     <div className="nav-row-tools">
-                      <button className="mini" title="Move up" disabled={cIdx === 0} onClick={() => moveChild(idx, cIdx, -1)}>↑</button>
-                      <button className="mini" title="Move down" disabled={cIdx === (item.children?.length ?? 0) - 1} onClick={() => moveChild(idx, cIdx, 1)}>↓</button>
-                      <button className="mini" title="Move out to top level" onClick={() => moveOut(idx, cIdx)}>⇤</button>
                       <button className="mini danger" title="Remove" onClick={() => delChild(idx, cIdx)}>✕</button>
                     </div>
                   </li>
@@ -203,7 +316,8 @@ export default function NavAdmin() {
               </ol>
             </li>
           ) : (
-            <li key={item.id} className="nav-row nav-row-link">
+            <li key={item.id} className={rowCls('nav-row nav-row-link', item.id, ['top'])} {...topProps(item.id)}>
+              <span {...gripProps(item.id, false)}>⠿</span>
               <span className="nav-row-kind">{describeKind(item)}</span>
               <input
                 className="nav-row-label"
@@ -213,23 +327,6 @@ export default function NavAdmin() {
               />
               {roleSelect(item.visibleToRole, (v) => setTop(idx, { visibleToRole: v }))}
               <div className="nav-row-tools">
-                <button className="mini" title="Move up" disabled={idx === 0} onClick={() => moveTop(idx, -1)}>↑</button>
-                <button className="mini" title="Move down" disabled={idx === items.length - 1} onClick={() => moveTop(idx, 1)}>↓</button>
-                {groups.length > 0 && (
-                  <select
-                    className="nav-into"
-                    value=""
-                    title="Move into a category"
-                    onChange={(e) => e.target.value && moveInto(idx, e.target.value)}
-                  >
-                    <option value="">Into ▾</option>
-                    {groups.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {g.label || 'Category'}
-                      </option>
-                    ))}
-                  </select>
-                )}
                 <button className="mini danger" title="Remove" onClick={() => delTop(idx)}>✕</button>
               </div>
             </li>
@@ -256,7 +353,7 @@ function describeKind(item: NavItem): string {
   return 'Link';
 }
 
-/** The "add an entry" strip: a built-in, a page, a custom URL, or a category. */
+/** The "add an entry" strip: a built-in, a page, a custom URL, or a submenu. */
 function AddToolbar({
   pages,
   onAddLink,
@@ -327,7 +424,7 @@ function AddToolbar({
         </label>
 
         <button type="button" className="ghost" onClick={onAddGroup}>
-          + Category
+          + Submenu
         </button>
       </div>
 

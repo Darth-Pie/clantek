@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import Switch from '../components/Switch';
+import ColorPicker from '../components/ColorPicker';
 
 interface Seo {
   description?: string;
@@ -182,11 +183,11 @@ export default function SeoAdmin() {
         <legend>Appearance</legend>
         <label>
           Theme color <span className="muted small">(browser UI tint on mobile / PWA)</span>
-          <input
-            type="color"
+          <ColorPicker
             value={/^#[0-9a-fA-F]{6}$/.test(seo.themeColor ?? '') ? seo.themeColor! : '#0f1115'}
-            onChange={(e) => set({ themeColor: e.target.value })}
+            onChange={(hex) => set({ themeColor: hex })}
             disabled={busy}
+            aria-label="Theme color"
           />
         </label>
       </fieldset>

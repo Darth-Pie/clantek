@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import Switch from '../components/Switch';
+import ColorPicker from '../components/ColorPicker';
 import { PERMISSIONS, type Permission } from '../../shared/permissions';
 import ReassignDialog from '../components/ReassignDialog';
 
@@ -246,10 +247,10 @@ function RoleEditor({
           Name
           <input value={name} onChange={(e) => setName(e.target.value)} disabled={busy} />
         </label>
-        <label className="color-field">
+        <div className="color-field">
           Color
-          <input type="color" value={color} onChange={(e) => setColor(e.target.value)} disabled={busy} />
-        </label>
+          <ColorPicker value={color} onChange={setColor} disabled={busy} aria-label="Role color" />
+        </div>
       </div>
 
       <label>

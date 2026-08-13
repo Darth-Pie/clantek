@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useTheme, DEFAULT_THEME, type ThemeTokens } from '../lib/theme';
 import { useAction, Alerts } from '../lib/action';
+import ColorPicker from '../components/ColorPicker';
 
 const TOKEN_KEYS = Object.keys(DEFAULT_THEME);
 
@@ -221,11 +222,10 @@ export default function Theme() {
                     <code>{key}</code>
                   </label>
                   <div className="theme-row-controls">
-                    <input
-                      type="color"
+                    <ColorPicker
                       value={isHex(draft[key] ?? '') ? draft[key]! : '#000000'}
                       disabled={busy}
-                      onChange={(e) => update(key, e.target.value)}
+                      onChange={(hex) => update(key, hex)}
                       aria-label={`${label} color`}
                     />
                     <input

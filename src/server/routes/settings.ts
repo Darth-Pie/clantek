@@ -17,6 +17,7 @@ import {
 import { loadFooter, FOOTER_KEY } from '../footer';
 import { cleanFooter } from '../../shared/footer';
 import { botInviteUrl } from '../../shared/botPermissions';
+import { sanitizeCustomThemes } from '../../shared/customThemes';
 import { loadPageAccess, PAGE_ACCESS_KEY } from '../pageAccess';
 import { cleanPageAccess } from '../../shared/pageAccess';
 import { mergeSeo, SEO_KEY, type StoredSeo } from '../seo';
@@ -314,6 +315,27 @@ settings.put('/theme', requirePermission('theme.manage'), async (c) => {
     });
 
   return c.json({ ok: true, theme: clean });
+});
+
+/** An install's saved custom themes (ordered). Any signed-in member may read
+ *  them; only theme managers save. */
+settings.get('/themes/custom', requireAuth, async (c) => {
+  const row = await db(c.env).query.settings.findFirst({ where: eq(s.settings.key, 'customThemes') });
+  return c.json({ themes: sanitizeCustomThemes(row?.value) });
+});
+
+settings.put('/themes/custom', requirePermission('theme.manage'), async (c) => {
+  const body = await c.req.json<{ themes?: unknown }>();
+  const clean = sanitizeCustomThemes(body.themes);
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: 'customThemes', value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  return c.json({ ok: true, themes: clean });
 });
 
 settings.get('/site', async (c) => {

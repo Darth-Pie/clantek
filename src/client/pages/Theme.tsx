@@ -11,6 +11,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useTheme, DEFAULT_THEME, type ThemeTokens } from '../lib/theme';
 import { useAction, Alerts } from '../lib/action';
+import { api } from '../lib/api';
+import { useDragOrder } from '../lib/dragOrder';
+import { newThemeId, type CustomTheme } from '../../shared/customThemes';
 import ColorPicker from '../components/ColorPicker';
 
 const TOKEN_KEYS = Object.keys(DEFAULT_THEME);
@@ -196,6 +199,15 @@ export default function Theme() {
   const baselineRef = useRef<ThemeTokens>({ ...DEFAULT_THEME, ...tokens });
   const { run, busy, error, notice } = useAction();
 
+  // This install's own saved palettes, shown in the rail below the presets.
+  const [customThemes, setCustomThemes] = useState<CustomTheme[]>([]);
+  useEffect(() => {
+    api
+      .get<{ themes: CustomTheme[] }>('/settings/themes/custom')
+      .then(({ themes }) => setCustomThemes(themes))
+      .catch(() => setCustomThemes([]));
+  }, []);
+
   // Leaving the editor with unsaved edits shouldn't leak a preview into the
   // rest of the app — restore the last saved theme on unmount.
   useEffect(() => () => preview(baselineRef.current), [preview]);
@@ -213,6 +225,34 @@ export default function Theme() {
     setDraft(next);
     preview(next);
   };
+
+  /* --- custom themes: save current, delete, drag to reorder --- */
+  const saveAsNew = () =>
+    run(async () => {
+      const name = window.prompt('Name this theme:')?.trim();
+      if (!name) return '';
+      const next = [...customThemes, { id: newThemeId(), name, tokens: { ...draft } }];
+      setCustomThemes(next);
+      await api.put('/settings/themes/custom', { themes: next });
+      return `Saved “${name}” to your themes.`;
+    });
+  const deleteTheme = (id: string) =>
+    run(async () => {
+      const next = customThemes.filter((t) => t.id !== id);
+      setCustomThemes(next);
+      await api.put('/settings/themes/custom', { themes: next });
+      return 'Theme removed.';
+    });
+  const reorderThemes = (ids: string[]) => {
+    const byId = new Map(customThemes.map((t) => [t.id, t]));
+    const next = ids.map((i) => byId.get(i)).filter((t): t is CustomTheme => !!t);
+    setCustomThemes(next);
+    void api.put('/settings/themes/custom', { themes: next }).catch(() => {});
+  };
+  const themeDnd = useDragOrder(
+    customThemes.map((t) => t.id),
+    reorderThemes,
+  );
 
   const onSave = () =>
     run(async () => {
@@ -405,6 +445,35 @@ export default function Theme() {
               </button>
             ))}
           </div>
+
+          {customThemes.length > 0 && (
+            <>
+              <div className="theme-rail-title">Your themes</div>
+              <ol className="theme-custom-list">
+                {customThemes.map((t) => {
+                  const cls = `theme-custom-row${themeDnd.isDragging(t.id) ? ' dragging' : ''} ${themeDnd.dropClass(t.id)}`.trim();
+                  return (
+                    <li key={t.id} className={cls} {...themeDnd.rowProps(t.id)}>
+                      <span className="drag-grip" title="Drag to reorder" aria-hidden {...(busy ? {} : themeDnd.handleProps(t.id))}>
+                        ⠿
+                      </span>
+                      <button className="preset theme-custom-apply" disabled={busy} onClick={() => applyTokens(t.tokens)}>
+                        <span className="preset-swatch" style={{ background: t.tokens['--color-accent'] ?? 'var(--color-accent)' }} />
+                        {t.name}
+                      </button>
+                      <button className="mini danger" title={`Delete “${t.name}”`} disabled={busy} onClick={() => void deleteTheme(t.id)}>
+                        ✕
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </>
+          )}
+
+          <button type="button" className="ghost theme-save-as" disabled={busy || !dirty} onClick={() => void saveAsNew()} title={dirty ? 'Save the current colors as a reusable theme' : 'Edit the theme first, then save it'}>
+            + Save current as theme
+          </button>
         </aside>
       </div>
     </section>

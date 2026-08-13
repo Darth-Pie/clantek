@@ -1926,6 +1926,44 @@ a.admin-crumb:hover {
   text-align: left;
 }
 
+/* Saved custom themes: a grip, the apply button, and a delete. */
+.theme-custom-list {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.theme-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.theme-custom-row.dragging {
+  opacity: 0.45;
+}
+.theme-custom-row.drop-before {
+  box-shadow: 0 -3px 0 -1px var(--color-accent);
+}
+.theme-custom-row.drop-after {
+  box-shadow: 0 3px 0 -1px var(--color-accent);
+}
+.theme-custom-apply {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+.theme-save-as {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
 .theme-row + .theme-row {
   border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
 }

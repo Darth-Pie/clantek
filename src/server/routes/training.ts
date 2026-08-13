@@ -19,6 +19,9 @@ const training = new Hono<AppContext>();
 
 type DB = ReturnType<typeof db>;
 
+/** settings key: how the member training page orders courses. */
+const TRAINING_SORT_KEY = 'trainingSort';
+
 /** trainingId → its required rank ids. */
 async function requiredRanksFor(database: DB, trainingIds: number[]): Promise<Map<number, number[]>> {
   const m = new Map<number, number[]>();
@@ -63,7 +66,11 @@ training.get('/', requireAuth, async (c) => {
   const done = new Set(mine.map((m) => m.trainingId));
   const myRank = viewer.rank?.id ?? -1;
 
+  const sortRow = await database.query.settings.findFirst({ where: eq(s.settings.key, TRAINING_SORT_KEY) });
+  const sortMode = (sortRow?.value as { sort?: string } | undefined)?.sort === 'alpha' ? 'alpha' : 'custom';
+
   return c.json({
+    sortMode,
     sections: sections.map((sec) => ({ id: sec.id, title: sec.title, sortOrder: sec.sortOrder })),
     trainings: courses.map((t) => {
       const requiredRankIds = reqMap.get(t.id) ?? [];
@@ -83,6 +90,51 @@ training.get('/', requireAuth, async (c) => {
       };
     }),
   });
+});
+
+/** Save the whole arrangement in one call: section order + each course's order
+ *  and section assignment. sortOrder is the index in the flattened display list. */
+training.put('/order', requirePermission('training.manage'), async (c) => {
+  const body = await c.req.json<{ sections?: number[]; courses?: { id: number; sectionId: number | null }[] }>();
+  const database = db(c.env);
+
+  const sections = (Array.isArray(body.sections) ? body.sections : []).map(Number).filter((n) => Number.isInteger(n));
+  const validSections = new Set(
+    (await database.select({ id: s.trainingSections.id }).from(s.trainingSections)).map((r) => r.id),
+  );
+  await Promise.all(
+    sections
+      .filter((id) => validSections.has(id))
+      .map((id, i) => database.update(s.trainingSections).set({ sortOrder: i }).where(eq(s.trainingSections.id, id))),
+  );
+
+  const courses = Array.isArray(body.courses) ? body.courses : [];
+  await Promise.all(
+    courses.map((course, i) => {
+      const id = Number(course?.id);
+      if (!Number.isInteger(id)) return Promise.resolve();
+      const rawSec = course?.sectionId;
+      const sectionId = rawSec != null && validSections.has(Number(rawSec)) ? Number(rawSec) : null;
+      return database.update(s.trainings).set({ sortOrder: i, sectionId }).where(eq(s.trainings.id, id));
+    }),
+  );
+
+  return c.json({ ok: true });
+});
+
+/** How the member training page orders courses: custom (drag order) or alpha. */
+training.put('/settings', requirePermission('training.manage'), async (c) => {
+  const { sort } = await c.req.json<{ sort?: string }>();
+  const value = { sort: sort === 'alpha' ? 'alpha' : 'custom' };
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: TRAINING_SORT_KEY, value, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  return c.json({ ok: true, sort: value.sort });
 });
 
 /* Sections — collapsible groups courses can be filed under. training.manage. */

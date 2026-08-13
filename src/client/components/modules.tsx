@@ -853,15 +853,17 @@ function TrainingModule({ config }: { config: Config }) {
   const title = str(config, 'title', 'Training');
   const [courses, setCourses] = useState<TrainingCourse[] | null>(null);
   const [sections, setSections] = useState<TrainingSection[]>([]);
+  const [sortMode, setSortMode] = useState<'custom' | 'alpha'>('custom');
   const [open, setOpen] = useState<TrainingCourse | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
 
   const load = () =>
     api
-      .get<{ trainings: TrainingCourse[]; sections: TrainingSection[] }>('/training')
+      .get<{ trainings: TrainingCourse[]; sections: TrainingSection[]; sortMode?: string }>('/training')
       .then((d) => {
         setCourses(d.trainings);
         setSections(d.sections ?? []);
+        setSortMode(d.sortMode === 'alpha' ? 'alpha' : 'custom');
       })
       .catch(() => setCourses([]));
 
@@ -921,10 +923,15 @@ function TrainingModule({ config }: { config: Config }) {
   // Ungrouped courses render flat at the top; each non-empty section becomes a
   // collapsible group (default open). A course whose section was deleted falls
   // back to ungrouped.
+  // Custom keeps the admin's drag order (already sorted server-side); alpha sorts
+  // by title within each group. Filtering preserves order, so sort the whole list
+  // once up front.
+  const ordered =
+    sortMode === 'alpha' ? [...courses].sort((a, b) => a.title.localeCompare(b.title)) : courses;
   const sectionIds = new Set(sections.map((s2) => s2.id));
-  const ungrouped = courses.filter((c) => c.sectionId == null || !sectionIds.has(c.sectionId));
+  const ungrouped = ordered.filter((c) => c.sectionId == null || !sectionIds.has(c.sectionId));
   const groups = sections
-    .map((sec) => ({ sec, items: courses.filter((c) => c.sectionId === sec.id) }))
+    .map((sec) => ({ sec, items: ordered.filter((c) => c.sectionId === sec.id) }))
     .filter((g) => g.items.length > 0);
 
   return (

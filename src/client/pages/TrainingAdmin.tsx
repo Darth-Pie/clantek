@@ -5,10 +5,17 @@
  * an officer (per course). Completion is tracked per member on their profile.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type DragEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import Switch from '../components/Switch';
+
+type DragState = { id: number; kind: 'section' | 'course' } | null;
+type OverState =
+  | { kind: 'section'; id: number; after: boolean }
+  | { kind: 'course'; id: number; after: boolean }
+  | { kind: 'into'; sectionId: number | null }
+  | null;
 
 interface Rank {
   id: number;
@@ -58,14 +65,18 @@ export default function TrainingAdmin() {
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [newSection, setNewSection] = useState('');
+  const [sortMode, setSortMode] = useState<'custom' | 'alpha'>('custom');
+  const [drag, setDrag] = useState<DragState>(null);
+  const [over, setOver] = useState<OverState>(null);
   const { run, busy, error, notice, warning } = useAction();
 
   const load = () =>
     api
-      .get<{ trainings: Course[]; sections: Section[] }>('/training')
+      .get<{ trainings: Course[]; sections: Section[]; sortMode?: string }>('/training')
       .then((d) => {
         setCourses(d.trainings);
         setSections(d.sections ?? []);
+        setSortMode(d.sortMode === 'alpha' ? 'alpha' : 'custom');
       })
       .catch(() => setCourses([]));
 
@@ -156,63 +167,186 @@ export default function TrainingAdmin() {
       return 'Course deleted.';
     });
 
+  const setSort = (alpha: boolean) =>
+    run(async () => {
+      const sort = alpha ? 'alpha' : 'custom';
+      setSortMode(sort);
+      await api.put('/training/settings', { sort });
+      return alpha ? 'The training page now sorts courses A–Z.' : 'The training page uses your custom drag order.';
+    });
+
+  /* --- drag to arrange sections + courses --- */
+  // Persist the whole arrangement: section order + each course's order and
+  // section. sortOrder becomes the index in the grouped, flattened list.
+  const persist = (nextSections: Section[], nextCourses: Course[]) => {
+    setSections(nextSections);
+    setCourses(nextCourses);
+    const isOrphan = (c: Course) => c.sectionId == null || !nextSections.some((s) => s.id === c.sectionId);
+    const flat: { id: number; sectionId: number | null }[] = [];
+    for (const sec of nextSections) {
+      for (const c of nextCourses.filter((x) => x.sectionId === sec.id)) flat.push({ id: c.id, sectionId: sec.id });
+    }
+    for (const c of nextCourses.filter(isOrphan)) flat.push({ id: c.id, sectionId: null });
+    void api
+      .put('/training/order', { sections: nextSections.map((s) => s.id), courses: flat })
+      .catch(() => void load());
+  };
+
+  const afterY = (e: DragEvent<HTMLElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return e.clientY > r.top + r.height / 2;
+  };
+  const clearDrag = () => {
+    setDrag(null);
+    setOver(null);
+  };
+  const startDrag = (id: number, kind: 'section' | 'course') => (e: DragEvent) => {
+    setDrag({ id, kind });
+    e.dataTransfer.effectAllowed = 'move';
+    try {
+      e.dataTransfer.setData('text/plain', String(id));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const moveCourseRelative = (dragId: number, targetId: number, after: boolean, list: Course[]) => {
+    if (dragId === targetId) return;
+    const moved = list.find((c) => c.id === dragId);
+    const target = list.find((c) => c.id === targetId);
+    if (!moved || !target) return;
+    const next = list.filter((c) => c.id !== dragId);
+    const ti = next.findIndex((c) => c.id === targetId);
+    next.splice(after ? ti + 1 : ti, 0, { ...moved, sectionId: target.sectionId });
+    persist(sections, next);
+  };
+  const moveCourseInto = (dragId: number, sectionId: number | null, list: Course[]) => {
+    const moved = list.find((c) => c.id === dragId);
+    if (!moved) return;
+    const next = list.filter((c) => c.id !== dragId);
+    next.push({ ...moved, sectionId });
+    persist(sections, next);
+  };
+  const moveSection = (dragId: number, targetId: number, after: boolean) => {
+    if (dragId === targetId) return;
+    const moved = sections.find((s) => s.id === dragId);
+    if (!moved) return;
+    const next = sections.filter((s) => s.id !== dragId);
+    const ti = next.findIndex((s) => s.id === targetId);
+    if (ti < 0) next.push(moved);
+    else next.splice(after ? ti + 1 : ti, 0, moved);
+    persist(next, courses ?? []);
+  };
+
+  const courseRowProps = (id: number) => ({
+    onDragOver: (e: DragEvent<HTMLElement>) => {
+      if (drag?.kind !== 'course') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setOver({ kind: 'course', id, after: afterY(e) });
+    },
+    onDrop: (e: DragEvent<HTMLElement>) => {
+      if (drag?.kind !== 'course') return;
+      e.preventDefault();
+      e.stopPropagation();
+      moveCourseRelative(drag.id, id, afterY(e), courses ?? []);
+      clearDrag();
+    },
+  });
+  const groupBodyProps = (sectionId: number | null) => ({
+    onDragOver: (e: DragEvent<HTMLElement>) => {
+      if (drag?.kind !== 'course') return;
+      e.preventDefault();
+      setOver({ kind: 'into', sectionId });
+    },
+    onDrop: (e: DragEvent<HTMLElement>) => {
+      if (drag?.kind !== 'course') return;
+      e.preventDefault();
+      moveCourseInto(drag.id, sectionId, courses ?? []);
+      clearDrag();
+    },
+  });
+  const sectionHeadProps = (id: number) => ({
+    onDragOver: (e: DragEvent<HTMLElement>) => {
+      if (drag?.kind !== 'section') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setOver({ kind: 'section', id, after: afterY(e) });
+    },
+    onDrop: (e: DragEvent<HTMLElement>) => {
+      if (drag?.kind !== 'section') return;
+      e.preventDefault();
+      e.stopPropagation();
+      moveSection(drag.id, id, afterY(e));
+      clearDrag();
+    },
+  });
+  const gripProps = (id: number, kind: 'section' | 'course') => ({
+    className: 'drag-grip',
+    draggable: !busy,
+    onDragStart: startDrag(id, kind),
+    onDragEnd: clearDrag,
+    title: 'Drag to reorder',
+    'aria-hidden': true,
+  });
+
   if (courses === null) return <div className="loading">Loading…</div>;
 
   const rankName = (id: number) => ranks.find((r) => r.id === id)?.name ?? `#${id}`;
-  const sectionName = (id: number | null) => (id == null ? null : sections.find((s) => s.id === id)?.title ?? null);
+
+  const orphan = (c: Course) => c.sectionId == null || !sections.some((s) => s.id === c.sectionId);
+  const grouped = sections.map((sec) => ({ sec, items: courses.filter((c) => c.sectionId === sec.id) }));
+  const ungrouped = courses.filter(orphan);
+
+  const courseRow = (c: Course) => {
+    const dragging = drag?.kind === 'course' && drag.id === c.id;
+    const drop = over?.kind === 'course' && over.id === c.id ? (over.after ? ' drop-after' : ' drop-before') : '';
+    return (
+      <li key={c.id} className={`training-admin-item training-course-row${dragging ? ' dragging' : ''}${drop}`} {...courseRowProps(c.id)}>
+        <span {...gripProps(c.id, 'course')}>⠿</span>
+        <div className="training-admin-info">
+          <div className="training-name">{c.title}</div>
+          <div className="muted small">
+            {c.completionMode === 'self' ? 'Self-attested' : 'Officer-verified'}
+            {c.requiredRankIds.length > 0 && <> · Required for {c.requiredRankIds.map(rankName).join(', ')}</>}
+          </div>
+        </div>
+        <div className="training-admin-actions">
+          <button type="button" className="mini" disabled={busy} onClick={() => startEdit(c)}>
+            Edit
+          </button>
+          <button type="button" className="mini danger" disabled={busy} onClick={() => void remove(c)}>
+            Delete
+          </button>
+        </div>
+      </li>
+    );
+  };
 
   return (
     <section className="panel training-admin">
-      <header className="panel-head">
+      <header className="panel-head training-admin-head">
         <h2>Training</h2>
-        {!draft && (
-          <button type="button" className="primary" onClick={startNew}>
-            + New course
-          </button>
-        )}
+        <div className="training-admin-controls">
+          <div className="check" title="When on, the member training page ignores the drag order and lists courses A–Z within each section.">
+            <Switch
+              checked={sortMode === 'alpha'}
+              onChange={(v) => void setSort(v)}
+              disabled={busy}
+              label="Sort courses A–Z on the training page"
+              hideState
+            />
+            <span className="muted small">Sort A–Z on page</span>
+          </div>
+          {!draft && (
+            <button type="button" className="primary" onClick={startNew}>
+              + New course
+            </button>
+          )}
+        </div>
       </header>
 
       <Alerts error={error} warning={warning} notice={notice} />
-
-      {/* Sections */}
-      <div className="training-sections-admin">
-        <h3>Sections</h3>
-        <p className="muted small">Collapsible groups the courses are shown under in the module.</p>
-        {sections.length > 0 && (
-          <ul className="training-admin-list">
-            {sections.map((sec) => (
-              <li key={sec.id} className="training-admin-item">
-                <span className="training-name">{sec.title}</span>
-                <div className="training-admin-actions">
-                  <button type="button" className="mini" disabled={busy} onClick={() => void renameSection(sec)}>
-                    Rename
-                  </button>
-                  <button type="button" className="mini danger" disabled={busy} onClick={() => void deleteSection(sec)}>
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="training-add-section">
-          <input
-            type="text"
-            value={newSection}
-            placeholder="New section name (e.g. Onboarding)"
-            onChange={(e) => setNewSection(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                void addSection();
-              }
-            }}
-          />
-          <button type="button" className="mini" disabled={busy || !newSection.trim()} onClick={() => void addSection()}>
-            + Add section
-          </button>
-        </div>
-      </div>
 
       {/* Course editor */}
       {draft && (
@@ -297,33 +431,73 @@ export default function TrainingAdmin() {
         </div>
       )}
 
-      {/* Course list */}
-      {courses.length === 0 && !draft ? (
-        <p className="empty">No courses yet. Add one to build your training repository.</p>
-      ) : (
-        <ul className="training-admin-list">
-          {courses.map((c) => (
-            <li key={c.id} className="training-admin-item">
-              <div className="training-admin-info">
-                <div className="training-name">{c.title}</div>
-                <div className="muted small">
-                  {c.completionMode === 'self' ? 'Self-attested' : 'Officer-verified'}
-                  {sectionName(c.sectionId) && <> · {sectionName(c.sectionId)}</>}
-                  {c.requiredRankIds.length > 0 && <> · Required for {c.requiredRankIds.map(rankName).join(', ')}</>}
+      {/* Sections (draggable groups) with their courses, then an ungrouped bucket. */}
+      <p className="muted small training-tree-hint">
+        Drag the grips to reorder sections and courses, or drag a course into another section.
+        {sortMode === 'alpha' && ' (The training page is sorting A–Z, so this order only applies once you switch that off.)'}
+      </p>
+
+      <div className="training-tree">
+        {grouped.map(({ sec, items }) => {
+          const headDrop =
+            over?.kind === 'section' && over.id === sec.id ? (over.after ? ' drop-after' : ' drop-before') : '';
+          const dragging = drag?.kind === 'section' && drag.id === sec.id;
+          const intoOn = over?.kind === 'into' && over.sectionId === sec.id;
+          return (
+            <div key={sec.id} className={`training-group${dragging ? ' dragging' : ''}`}>
+              <div className={`training-group-head${headDrop}`} {...sectionHeadProps(sec.id)}>
+                <span {...gripProps(sec.id, 'section')}>⠿</span>
+                <span className="training-name">{sec.title}</span>
+                <span className="training-section-count muted small">{items.length}</span>
+                <div className="training-admin-actions">
+                  <button type="button" className="mini" disabled={busy} onClick={() => void renameSection(sec)}>
+                    Rename
+                  </button>
+                  <button type="button" className="mini danger" disabled={busy} onClick={() => void deleteSection(sec)}>
+                    Delete
+                  </button>
                 </div>
               </div>
-              <div className="training-admin-actions">
-                <button type="button" className="mini" disabled={busy} onClick={() => startEdit(c)}>
-                  Edit
-                </button>
-                <button type="button" className="mini danger" disabled={busy} onClick={() => void remove(c)}>
-                  Delete
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+              <ul className={`training-admin-list training-group-body${intoOn ? ' drop-into' : ''}`} {...groupBodyProps(sec.id)}>
+                {items.length === 0 && <li className="muted small nav-child-empty">Empty — drag a course here.</li>}
+                {items.map(courseRow)}
+              </ul>
+            </div>
+          );
+        })}
+
+        <div className="training-group">
+          <div className="training-group-head training-group-head-static">
+            <span className="training-name">Ungrouped</span>
+            <span className="training-section-count muted small">{ungrouped.length}</span>
+          </div>
+          <ul
+            className={`training-admin-list training-group-body${over?.kind === 'into' && over.sectionId === null ? ' drop-into' : ''}`}
+            {...groupBodyProps(null)}
+          >
+            {ungrouped.length === 0 && <li className="muted small nav-child-empty">Empty — drag a course here to un-file it.</li>}
+            {ungrouped.map(courseRow)}
+          </ul>
+        </div>
+      </div>
+
+      <div className="training-add-section">
+        <input
+          type="text"
+          value={newSection}
+          placeholder="New section name (e.g. Onboarding)"
+          onChange={(e) => setNewSection(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void addSection();
+            }
+          }}
+        />
+        <button type="button" className="mini" disabled={busy || !newSection.trim()} onClick={() => void addSection()}>
+          + Add section
+        </button>
+      </div>
     </section>
   );
 }

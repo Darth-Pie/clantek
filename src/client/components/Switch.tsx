@@ -23,12 +23,15 @@ export default function Switch({
   disabled = false,
   /** Replaces the "On"/"Off" text, e.g. "Off (needs hangar)". */
   stateText,
+  /** Omit the On/Off text — for lists where a caption sits beside the toggle. */
+  hideState = false,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
   label: string;
   disabled?: boolean;
   stateText?: string;
+  hideState?: boolean;
 }) {
   return (
     <label className={disabled ? 'rocker is-disabled' : 'rocker'}>
@@ -40,7 +43,7 @@ export default function Switch({
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
       />
-      <span className="rocker-state">{stateText ?? (checked ? 'On' : 'Off')}</span>
+      {!hideState && <span className="rocker-state">{stateText ?? (checked ? 'On' : 'Off')}</span>}
     </label>
   );
 }

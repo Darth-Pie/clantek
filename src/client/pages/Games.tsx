@@ -6,6 +6,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import Switch from '../components/Switch';
 
 interface Game {
   id: number;
@@ -100,12 +101,12 @@ export default function Games() {
                   />
                 </td>
                 <td>
-                  <input
-                    type="checkbox"
+                  <Switch
                     checked={game.active}
-                    onChange={(e) => void setActive(game.id, e.target.checked)}
+                    onChange={(v) => void setActive(game.id, v)}
                     disabled={busy}
-                    title={game.active ? 'Active' : 'Inactive'}
+                    label={`${game.name} active`}
+                    stateText={game.active ? 'Active' : 'Inactive'}
                   />
                 </td>
                 <td>{game.recordCount}</td>

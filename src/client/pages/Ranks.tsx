@@ -13,6 +13,7 @@ import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
 import { useDragOrder } from '../lib/dragOrder';
+import Switch from '../components/Switch';
 import ReassignDialog from '../components/ReassignDialog';
 
 interface Rank {
@@ -372,16 +373,17 @@ function RankRolesEditor({
       ) : (
         <div className="rre-roles">
           {roles.map((role) => (
-            <label key={role.id} className="rre-role">
-              <input
-                type="checkbox"
+            <div key={role.id} className="rre-role">
+              <Switch
                 checked={selected.has(role.id)}
                 onChange={() => toggle(role.id)}
                 disabled={busy}
+                label={role.name}
+                hideState
               />
               <span className="dot" style={{ background: role.color ?? 'var(--color-muted)' }} />
               {role.name}
-            </label>
+            </div>
           ))}
         </div>
       )}

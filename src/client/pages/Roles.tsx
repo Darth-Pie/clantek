@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import Switch from '../components/Switch';
 import { PERMISSIONS, type Permission } from '../../shared/permissions';
 import ReassignDialog from '../components/ReassignDialog';
 
@@ -303,18 +304,19 @@ function RoleEditor({
           <div key={area} className="perm-group">
             <h4>{area}</h4>
             {entries.map(([perm, label]) => (
-              <label key={perm} className="perm">
-                <input
-                  type="checkbox"
+              <div key={perm} className="perm">
+                <Switch
                   checked={perms.has(perm)}
                   onChange={() => toggle(perm)}
                   disabled={busy}
+                  label={label}
+                  hideState
                 />
                 <span>
                   {label}
                   <code>{perm}</code>
                 </span>
-              </label>
+              </div>
             ))}
           </div>
         ))}

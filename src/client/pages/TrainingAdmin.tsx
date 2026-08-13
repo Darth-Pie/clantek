@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import Switch from '../components/Switch';
 
 interface Rank {
   id: number;
@@ -267,14 +268,15 @@ export default function TrainingAdmin() {
               {[...ranks]
                 .sort((a, b) => a.sortOrder - b.sortOrder)
                 .map((r) => (
-                  <label key={r.id} className="training-rank-opt">
-                    <input
-                      type="checkbox"
+                  <div key={r.id} className="training-rank-opt">
+                    <Switch
                       checked={draft.requiredRankIds.includes(r.id)}
                       onChange={() => toggleRank(r.id)}
+                      label={r.name}
+                      hideState
                     />
                     {r.name}
-                  </label>
+                  </div>
                 ))}
             </div>
           </div>

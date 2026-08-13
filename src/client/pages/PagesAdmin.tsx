@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { useDragOrder, type DragOrder } from '../lib/dragOrder';
+import Switch from '../components/Switch';
 import PageRenderer from '../components/PageRenderer';
 import RichTextEditor from '../components/RichTextEditor';
 import NumberField from '../components/NumberField';
@@ -435,17 +436,18 @@ export default function PagesAdmin() {
       {/* Per-page controls: public visibility (all pages), plus nav placement +
           rename/delete for custom pages, reset for home. */}
       <div className="pages-admin-meta">
-        <label className="inline-field pages-public-toggle" title="When on, logged-out visitors can view this page. Module-level visibility still applies.">
-          <input
-            type="checkbox"
+        <div className="inline-field check pages-public-toggle" title="When on, logged-out visitors can view this page. Module-level visibility still applies.">
+          <Switch
             checked={!!current?.isPublic}
-            onChange={(e) => togglePagePublic(e.target.checked)}
+            onChange={(v) => togglePagePublic(v)}
             disabled={saving}
+            label="Public — viewable without signing in"
+            hideState
           />
           <span>
             Public <span className="muted small">— viewable without signing in</span>
           </span>
-        </label>
+        </div>
         {current?.isHome ? (
           <button type="button" className="ghost" onClick={resetDefault} disabled={saving}>
             Reset home to default

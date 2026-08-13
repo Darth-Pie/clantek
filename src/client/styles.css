@@ -727,6 +727,7 @@ button.primary:disabled {
 }
 
 .perm {
+  display: flex;
   flex-direction: row !important;
   align-items: center;
   gap: 0.5rem !important;
@@ -2271,7 +2272,7 @@ a.admin-crumb:hover {
   gap: 0.5rem;
   margin-top: 0.9rem;
 }
-label.check {
+.check {
   display: flex;
   flex-direction: row;
   align-items: center;

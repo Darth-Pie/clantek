@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
+import Switch from '../components/Switch';
 
 // TipTap/ProseMirror is heavy; only pull it in when a post is actually open.
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'));
@@ -196,10 +197,10 @@ function PostEditor({
         />
       </label>
 
-      <label className="check">
-        <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} disabled={busy} />
-        Pin to the top of the feed
-      </label>
+      <div className="check">
+        <Switch checked={pinned} onChange={setPinned} disabled={busy} label="Pin to the top of the feed" hideState />
+        <span>Pin to the top of the feed</span>
+      </div>
 
       <label className="rte-label">Body</label>
       <Suspense fallback={<div className="loading">Loading editor…</div>}>

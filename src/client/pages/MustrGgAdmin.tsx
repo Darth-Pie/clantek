@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import Switch from '../components/Switch';
 
 export default function MustrGgAdmin() {
   const [demo, setDemo] = useState<boolean | null>(null);
@@ -101,15 +102,12 @@ export default function MustrGgAdmin() {
               and Settings (secrets) are never exposed.
             </span>
           </div>
-          <label className="module-toggle">
-            <input
-              type="checkbox"
-              checked={!!demo}
-              disabled={busy || demo === null}
-              onChange={(e) => void toggleDemo(e.target.checked)}
-            />
-            <span>{demo ? 'On' : 'Off'}</span>
-          </label>
+          <Switch
+            checked={!!demo}
+            disabled={busy || demo === null}
+            label="Read-only applicant preview"
+            onChange={(v) => void toggleDemo(v)}
+          />
         </div>
       </div>
 
@@ -124,15 +122,12 @@ export default function MustrGgAdmin() {
               to apply or clear it.
             </span>
           </div>
-          <label className="module-toggle">
-            <input
-              type="checkbox"
-              checked={!!wordmark}
-              disabled={busy || wordmark === null}
-              onChange={(e) => void toggleWordmark(e.target.checked)}
-            />
-            <span>{wordmark ? 'On' : 'Off'}</span>
-          </label>
+          <Switch
+            checked={!!wordmark}
+            disabled={busy || wordmark === null}
+            label="Auto-style the mustr wordmark"
+            onChange={(v) => void toggleWordmark(v)}
+          />
         </div>
       </div>
     </section>

@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import Switch from '../components/Switch';
 
 interface Config {
   channelId: string | null;
@@ -118,13 +119,13 @@ export default function Announcements() {
       <fieldset className="tenure">
         <legend>Announce these events</legend>
         {EVENT_LABELS.map(([key, label, hint]) => (
-          <label key={key} className="check announce-event">
-            <input type="checkbox" checked={events[key]} onChange={() => toggle(key)} disabled={busy} />
+          <div key={key} className="check announce-event">
+            <Switch checked={events[key]} onChange={() => toggle(key)} disabled={busy} label={label} hideState />
             <span>
               {label}
               <span className="muted small"> — {hint}</span>
             </span>
-          </label>
+          </div>
         ))}
         <p className="muted small">
           Nothing posts unless a channel is chosen above and the event is ticked.

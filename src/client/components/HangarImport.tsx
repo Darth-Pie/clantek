@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { SC_HANGAR_BOOKMARKLET } from '../../shared/hangar';
+import Switch from './Switch';
 
 export default function HangarImport({ userId, onImported }: { userId: number; onImported: () => void }) {
   const [json, setJson] = useState('');
@@ -129,12 +130,13 @@ export default function HangarImport({ userId, onImported }: { userId: number; o
       {msg && <p className={msg.ok ? 'muted small' : 'small warn'}>{msg.text}</p>}
 
       {hasHangar && (
-        <label className="hangar-share">
-          <input
-            type="checkbox"
+        <div className="hangar-share check">
+          <Switch
             checked={isPublic}
             disabled={sharing}
-            onChange={(e) => void togglePublic(e.target.checked)}
+            onChange={(v) => void togglePublic(v)}
+            label="Show my hangar to other members"
+            hideState
           />
           <span>
             <strong>Show my hangar to other members</strong>
@@ -144,7 +146,7 @@ export default function HangarImport({ userId, onImported }: { userId: number; o
                 : 'Only you can see your hangar. Turn this on to share it with authorized members.'}
             </span>
           </span>
-        </label>
+        </div>
       )}
     </div>
   );

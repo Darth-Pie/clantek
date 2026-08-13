@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import Switch from '../components/Switch';
 
 interface Seo {
   description?: string;
@@ -111,15 +112,18 @@ export default function SeoAdmin() {
           Keywords <span className="muted small">(comma-separated, optional)</span>
           <input value={seo.keywords ?? ''} maxLength={300} onChange={(e) => set({ keywords: e.target.value })} disabled={busy} />
         </label>
-        <label className="inline-field">
-          <input
-            type="checkbox"
+        <div className="inline-field check">
+          <Switch
             checked={!!seo.noindex}
-            onChange={(e) => set({ noindex: e.target.checked })}
+            onChange={(v) => set({ noindex: v })}
             disabled={busy}
+            label="Hide from search engines"
+            hideState
           />
-          Hide from search engines (members-only site) — sets <code>noindex</code>.
-        </label>
+          <span>
+            Hide from search engines (members-only site) — sets <code>noindex</code>.
+          </span>
+        </div>
       </fieldset>
 
       <fieldset>

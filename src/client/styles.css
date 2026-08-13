@@ -16,7 +16,9 @@ body {
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
   color: inherit;
 }
@@ -383,12 +385,37 @@ button.danger:hover:not(:disabled) {
 
 input[type='text'],
 input[type='password'],
-input:not([type]) {
+input[type='email'],
+input[type='url'],
+input[type='search'],
+input[type='tel'],
+input:not([type]),
+textarea {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 0.4rem 0.6rem;
   width: 100%;
+}
+
+/* Multi-line fields: same box as text inputs, but comfortable to type in. */
+textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  line-height: 1.5;
+}
+
+/* One muted placeholder colour for every control, instead of each browser's. */
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-muted);
+  opacity: 1;
+}
+
+/* Long, unbreakable content (e.g. an invite URL) must not stretch a fieldset
+   past its container — fieldsets default to min-width:min-content. */
+fieldset {
+  min-width: 0;
 }
 
 /* Themed defaults for the remaining form controls, so any select or date/number
@@ -411,6 +438,8 @@ input[type='date']::-webkit-calendar-picker-indicator {
 }
 
 input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
 button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -5083,6 +5112,30 @@ tr.drop-after > td {
 }
 .gallery-admin-list li {
   align-items: center;
+}
+
+/* Footer admin (Theme & Branding → Footer): stacked labels + link rows. */
+.footer-admin > label {
+  display: block;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+.footer-admin > label > input,
+.footer-admin > label > textarea {
+  margin-top: 0.3rem;
+  color: var(--color-text);
+}
+.footer-admin fieldset {
+  margin-bottom: 1rem;
+}
+.footer-link-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.footer-link-row input:first-of-type {
+  max-width: 12rem;
 }
 
 /* Page layout editor rows (PagesAdmin): drag a row by its grip. */

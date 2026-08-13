@@ -4,8 +4,8 @@
  * Two tiers, deliberately separated. The top is a card per module: name, one
  * sentence, and a switch — the whole "what does this install run" answer
  * readable at a glance, without settings for modules you don't use in the way.
- * Below that, each module's option sets are accordions, collapsed by default
- * apart from the first of each, so the page stays short as more modules land.
+ * Below that, each module's option sets are accordions, all collapsed by
+ * default, so the page stays short as more modules land.
  *
  * A module's settings only render while it's on. There's no point showing an
  * org SID field for a module whose routes are all 404ing.
@@ -186,11 +186,7 @@ export default function ModulesAdmin() {
         <div className="module-settings">
           {scOpen && sc && (
             <>
-              <OptionSet
-                title="Star Citizen — org identity"
-                hint="Used by account verification"
-                initialOpen
-              >
+              <OptionSet title="Star Citizen — org identity" hint="Used by account verification">
                 <label className="option-field">
                   Org SID
                   <div className="module-config-row">
@@ -259,7 +255,7 @@ export default function ModulesAdmin() {
           )}
 
           {galOpen && gal && (
-            <OptionSet title="Gallery — page & hero" hint="Albums live under Content → Gallery" initialOpen>
+            <OptionSet title="Gallery — page & hero" hint="Albums live under Content → Gallery">
               <p className="muted small">
                 Each album decides its own audience, so a public album and a leadership-only one can
                 sit side by side.

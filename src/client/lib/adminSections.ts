@@ -32,7 +32,14 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     label: 'Content',
     items: [
       { key: 'pages', label: 'Pages', tabs: [{ key: 'pages', label: 'Pages', permission: 'pages.manage' }] },
-      { key: 'navigation', label: 'Navigation', tabs: [{ key: 'navigation', label: 'Navigation', permission: 'pages.manage' }] },
+      {
+        key: 'navigation',
+        label: 'Navigation',
+        tabs: [
+          { key: 'navigation', label: 'Navigation', permission: 'pages.manage' },
+          { key: 'adminmenu', label: 'Admin Menu', permission: 'settings.manage' },
+        ],
+      },
       { key: 'news', label: 'News', tabs: [{ key: 'news', label: 'News', permission: 'news.create' }] },
       { key: 'gallery', label: 'Gallery', tabs: [{ key: 'gallery', label: 'Gallery', permission: 'gallery.manage' }] },
       { key: 'training', label: 'Training', tabs: [{ key: 'training', label: 'Training', permission: 'training.manage' }] },
@@ -74,8 +81,14 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     key: 'settings',
     label: 'Settings',
     items: [
-      { key: 'identity', label: 'Identity & Discord', tabs: [{ key: 'identity', label: 'Identity & Discord', permission: 'settings.manage' }] },
-      { key: 'bot', label: 'Bot Settings', tabs: [{ key: 'announcements', label: 'Bot Settings', permission: 'settings.manage' }] },
+      {
+        key: 'discord',
+        label: 'Discord Bot',
+        tabs: [
+          { key: 'identity', label: 'Identity', permission: 'settings.manage' },
+          { key: 'announcements', label: 'Bot Settings', permission: 'settings.manage' },
+        ],
+      },
       { key: 'analytics', label: 'Analytics', tabs: [{ key: 'analytics', label: 'Analytics', permission: 'settings.manage' }] },
       { key: 'modules', label: 'Modules', tabs: [{ key: 'modules', label: 'Modules', permission: 'settings.manage' }] },
       {
@@ -89,7 +102,6 @@ export const ADMIN_GROUPS: AdminGroup[] = [
         ],
       },
       { key: 'logs', label: 'Logs', tabs: [{ key: 'audit', label: 'Logs', permission: 'audit.view' }] },
-      { key: 'adminmenu', label: 'Admin Menu', tabs: [{ key: 'adminmenu', label: 'Admin Menu', permission: 'settings.manage' }] },
       {
         key: 'mustrgg',
         label: 'mustr.gg',

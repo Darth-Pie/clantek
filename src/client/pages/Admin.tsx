@@ -25,7 +25,6 @@ import {
   Users,
   Award,
   Network,
-  Fingerprint,
   Bot,
   Gauge,
   Palette,
@@ -33,7 +32,6 @@ import {
   UserPlus,
   GraduationCap,
   Rocket,
-  ListOrdered,
 } from 'lucide';
 import { useSession } from '../lib/session';
 import { api } from '../lib/api';
@@ -83,12 +81,10 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
   'ranks-roles': Users,
   'medals-records': Award,
   'org-chart': Network,
-  identity: Fingerprint,
-  bot: Bot,
+  discord: Bot,
   analytics: Gauge,
   appearance: Palette,
   logs: ScrollText,
-  adminmenu: ListOrdered,
   mustrgg: Rocket,
 };
 

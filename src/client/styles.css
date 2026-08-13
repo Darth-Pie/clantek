@@ -5032,6 +5032,60 @@ a.org-box:hover {
 }
 
 /* ------------------------------------------------------------------ *
+ * Drag-to-reorder — shared grip + drop indicators for lists that use
+ * lib/dragOrder.ts (Ranks table, gallery albums & items).
+ * ------------------------------------------------------------------ */
+
+.drag-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  padding: 0 0.15rem;
+  color: var(--color-muted);
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+  border-radius: 5px;
+  touch-action: none;
+}
+.drag-grip:hover {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.drag-grip:active {
+  cursor: grabbing;
+}
+
+/* Table rows (Ranks): box-shadow on the cells, since <tr> clips its own. */
+tr.dragging > td {
+  opacity: 0.45;
+}
+tr.drop-before > td {
+  box-shadow: inset 0 2px 0 0 var(--color-accent);
+}
+tr.drop-after > td {
+  box-shadow: inset 0 -2px 0 0 var(--color-accent);
+}
+
+/* List items (gallery albums & items). */
+.gallery-admin-list li.dragging,
+.gallery-admin-item.dragging {
+  opacity: 0.45;
+}
+.gallery-admin-list li.drop-before,
+.gallery-admin-item.drop-before {
+  box-shadow: 0 -3px 0 -1px var(--color-accent);
+}
+.gallery-admin-list li.drop-after,
+.gallery-admin-item.drop-after {
+  box-shadow: 0 3px 0 -1px var(--color-accent);
+}
+.gallery-admin-list li {
+  align-items: center;
+}
+
+/* ------------------------------------------------------------------ *
  * Reassign-on-delete dialog — see components/ReassignDialog.tsx
  * ------------------------------------------------------------------ */
 

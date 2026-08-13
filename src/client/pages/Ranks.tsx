@@ -12,6 +12,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
+import { useDragOrder } from '../lib/dragOrder';
 import ReassignDialog from '../components/ReassignDialog';
 
 interface Rank {
@@ -106,14 +107,19 @@ export default function Ranks() {
     });
   };
 
-  const move = (index: number, direction: -1 | 1) =>
-    run(() => {
-      const next = [...ranks];
-      const target = index + direction;
-      if (target < 0 || target >= next.length) return Promise.resolve();
-      [next[index], next[target]] = [next[target]!, next[index]!];
-      return api.put('/ranks/order', { order: next.map((r) => r.id).reverse() });
-    });
+  // Drag to reorder. Display is highest-first; the endpoint wants lowest-first,
+  // so the saved order is the reversed display order. Optimistic, then load()
+  // (via useAction) reconciles with what the server stored.
+  const reorder = (nextKeys: string[]) => {
+    const byId = new Map(ranks.map((r) => [String(r.id), r]));
+    const next = nextKeys.map((k) => byId.get(k)).filter((r): r is Rank => !!r);
+    setRanks(next);
+    void run(() => api.put('/ranks/order', { order: next.map((r) => r.id).reverse() }));
+  };
+  const dnd = useDragOrder(
+    ranks.map((r) => String(r.id)),
+    reorder,
+  );
 
   const saveRankRoles = (rankId: number, roleIds: number[]) =>
     run(async () => {
@@ -167,18 +173,20 @@ export default function Ranks() {
           </tr>
         </thead>
         <tbody>
-          {ranks.map((rank, index) => (
-            <tr key={rank.id}>
+          {ranks.map((rank) => {
+            const key = String(rank.id);
+            const rowCls = `${dnd.isDragging(key) ? 'dragging ' : ''}${dnd.dropClass(key)}`.trim();
+            return (
+            <tr key={rank.id} className={rowCls || undefined} {...dnd.rowProps(key)}>
               <td className="reorder">
-                <button onClick={() => void move(index, -1)} disabled={busy || index === 0}>
-                  ↑
-                </button>
-                <button
-                  onClick={() => void move(index, 1)}
-                  disabled={busy || index === ranks.length - 1}
+                <span
+                  className="drag-grip"
+                  title="Drag to reorder"
+                  aria-label={`Drag to reorder ${rank.name}`}
+                  {...(busy ? {} : dnd.handleProps(key))}
                 >
-                  ↓
-                </button>
+                  ⠿
+                </span>
               </td>
               <td>
                 <RankImageCell
@@ -232,7 +240,8 @@ export default function Ranks() {
                 </button>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
 

@@ -17,9 +17,10 @@
  * flight, and buttons do all three without ceremony.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
+import { useDragOrder } from '../lib/dragOrder';
 import { prepareGalleryImage } from '../lib/galleryImage';
 import {
   ALBUM_AUDIENCES,
@@ -155,19 +156,20 @@ export default function GalleryAdmin() {
       return 'Album deleted.';
     });
 
-  const moveAlbum = (index: number, dir: -1 | 1) =>
-    run(async () => {
-      const next = [...albums];
-      const target = index + dir;
-      const a = next[index];
-      const b = next[target];
-      if (!a || !b) return;
-      next[index] = b;
-      next[target] = a;
-      setAlbums(next);
+  // Drag to reorder albums — optimistic, then persist the id order.
+  const reorderAlbums = (nextKeys: string[]) => {
+    const byId = new Map(albums.map((a) => [String(a.id), a]));
+    const next = nextKeys.map((k) => byId.get(k)).filter((a): a is GalleryAlbum => !!a);
+    setAlbums(next);
+    void run(async () => {
       await api.put('/gallery/albums/order', { ids: next.map((x) => x.id) });
       return 'Order saved.';
     });
+  };
+  const albumDnd = useDragOrder(
+    albums.map((a) => String(a.id)),
+    reorderAlbums,
+  );
 
   /** Upload each picked photo as a full + thumbnail pair, then add them all at once. */
   const addImages = (files: FileList) =>
@@ -251,20 +253,21 @@ export default function GalleryAdmin() {
       return 'Removed.';
     });
 
-  const moveItem = (index: number, dir: -1 | 1) =>
-    run(async () => {
-      if (!selected) return;
-      const next = [...items];
-      const target = index + dir;
-      const a = next[index];
-      const b = next[target];
-      if (!a || !b) return;
-      next[index] = b;
-      next[target] = a;
-      setItems(next);
+  // Drag to reorder items within the selected album.
+  const reorderItems = (nextKeys: string[]) => {
+    if (!selected) return;
+    const byId = new Map(items.map((i) => [String(i.id), i]));
+    const next = nextKeys.map((k) => byId.get(k)).filter((i): i is GalleryItem => !!i);
+    setItems(next);
+    void run(async () => {
       await api.put(`/gallery/albums/${selected.id}/items/order`, { ids: next.map((x) => x.id) });
       return 'Order saved.';
     });
+  };
+  const itemDnd = useDragOrder(
+    items.map((i) => String(i.id)),
+    reorderItems,
+  );
 
   return (
     <section className="panel gallery-admin">
@@ -305,41 +308,33 @@ export default function GalleryAdmin() {
             <p className="muted small">No albums yet.</p>
           ) : (
             <ul>
-              {albums.map((a, i) => (
-                <li key={a.id} className={a.id === selectedId ? 'is-selected' : undefined}>
-                  <button type="button" className="gallery-admin-pick" onClick={() => setSelectedId(a.id)}>
-                    <span className="gallery-admin-thumb">
-                      {a.coverUrl ? <img src={a.coverUrl} alt="" loading="lazy" /> : null}
+              {albums.map((a) => {
+                const key = String(a.id);
+                const cls = `${a.id === selectedId ? 'is-selected ' : ''}${albumDnd.isDragging(key) ? 'dragging ' : ''}${albumDnd.dropClass(key)}`.trim();
+                return (
+                  <li key={a.id} className={cls || undefined} {...albumDnd.rowProps(key)}>
+                    <span
+                      className="drag-grip gallery-admin-grip"
+                      title="Drag to reorder"
+                      aria-label={`Drag to reorder ${a.title}`}
+                      {...(busy ? {} : albumDnd.handleProps(key))}
+                    >
+                      ⠿
                     </span>
-                    <span>
-                      <strong>{a.title}</strong>
-                      <span className="muted small">
-                        {a.itemCount} · {audienceLabel(a, roles.find((r) => r.id === a.visibleToRole)?.name)}
+                    <button type="button" className="gallery-admin-pick" onClick={() => setSelectedId(a.id)}>
+                      <span className="gallery-admin-thumb">
+                        {a.coverUrl ? <img src={a.coverUrl} alt="" loading="lazy" /> : null}
                       </span>
-                    </span>
-                  </button>
-                  <span className="gallery-admin-move">
-                    <button
-                      type="button"
-                      className="small"
-                      disabled={busy || i === 0}
-                      aria-label={`Move ${a.title} up`}
-                      onClick={() => void moveAlbum(i, -1)}
-                    >
-                      ↑
+                      <span>
+                        <strong>{a.title}</strong>
+                        <span className="muted small">
+                          {a.itemCount} · {audienceLabel(a, roles.find((r) => r.id === a.visibleToRole)?.name)}
+                        </span>
+                      </span>
                     </button>
-                    <button
-                      type="button"
-                      className="small"
-                      disabled={busy || i === albums.length - 1}
-                      aria-label={`Move ${a.title} down`}
-                      onClick={() => void moveAlbum(i, 1)}
-                    >
-                      ↓
-                    </button>
-                  </span>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </aside>
@@ -476,18 +471,22 @@ export default function GalleryAdmin() {
                 <p className="muted">This album is empty.</p>
               ) : (
                 <ul className="gallery-admin-items">
-                  {items.map((item, i) => (
-                    <ItemRow
-                      key={item.id}
-                      item={item}
-                      busy={busy}
-                      first={i === 0}
-                      last={i === items.length - 1}
-                      onMove={(dir) => void moveItem(i, dir)}
-                      onSave={(caption, alt) => void saveItemText(item, caption, alt)}
-                      onDelete={() => void deleteItem(item)}
-                    />
-                  ))}
+                  {items.map((item) => {
+                    const key = String(item.id);
+                    return (
+                      <ItemRow
+                        key={item.id}
+                        item={item}
+                        busy={busy}
+                        dragging={itemDnd.isDragging(key)}
+                        dropClass={itemDnd.dropClass(key)}
+                        handleProps={busy ? undefined : itemDnd.handleProps(key)}
+                        rowProps={itemDnd.rowProps(key)}
+                        onSave={(caption, alt) => void saveItemText(item, caption, alt)}
+                        onDelete={() => void deleteItem(item)}
+                      />
+                    );
+                  })}
                 </ul>
               )}
             </>
@@ -502,17 +501,26 @@ export default function GalleryAdmin() {
 function ItemRow({
   item,
   busy,
-  first,
-  last,
-  onMove,
+  dragging,
+  dropClass,
+  handleProps,
+  rowProps,
   onSave,
   onDelete,
 }: {
   item: GalleryItem;
   busy: boolean;
-  first: boolean;
-  last: boolean;
-  onMove: (dir: -1 | 1) => void;
+  dragging: boolean;
+  dropClass: string;
+  handleProps?: {
+    draggable: true;
+    onDragStart: (e: DragEvent) => void;
+    onDragEnd: () => void;
+  };
+  rowProps: {
+    onDragOver: (e: DragEvent<HTMLElement>) => void;
+    onDrop: (e: DragEvent<HTMLElement>) => void;
+  };
   onSave: (caption: string, alt: string) => void;
   onDelete: () => void;
 }) {
@@ -522,7 +530,15 @@ function ItemRow({
   const dirty = caption !== (item.caption ?? '') || alt !== (item.alt ?? '');
 
   return (
-    <li className="gallery-admin-item">
+    <li className={`gallery-admin-item ${dragging ? 'dragging ' : ''}${dropClass}`.trim()} {...rowProps}>
+      <span
+        className="drag-grip"
+        title="Drag to reorder"
+        aria-label="Drag to reorder this item"
+        {...handleProps}
+      >
+        ⠿
+      </span>
       <span className="gallery-admin-thumb">
         {thumb ? <img src={thumb} alt="" loading="lazy" /> : <span aria-hidden>▶</span>}
       </span>
@@ -546,12 +562,6 @@ function ItemRow({
         {item.kind === 'video' && <span className="muted small">{item.provider} · {item.url}</span>}
       </div>
       <div className="gallery-admin-item-actions">
-        <button type="button" className="small" disabled={busy || first} aria-label="Move up" onClick={() => onMove(-1)}>
-          ↑
-        </button>
-        <button type="button" className="small" disabled={busy || last} aria-label="Move down" onClick={() => onMove(1)}>
-          ↓
-        </button>
         <button type="button" className="small primary" disabled={busy || !dirty} onClick={() => onSave(caption, alt)}>
           Save
         </button>

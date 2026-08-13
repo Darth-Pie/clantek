@@ -36,11 +36,35 @@ const NAV_ALIGN: { label: string; value: string }[] = [
   { label: 'Right', value: 'flex-end' },
 ];
 
+// Curated font choices. Every one is a stack of fonts already installed on
+// common systems (Windows/macOS/Linux) with a category fallback, so nothing is
+// fetched over the network — no external request, no CSP change, works offline.
+// The named lead font renders where present; the fallback keeps it sane elsewhere.
 const FONT_STACKS: { label: string; value: string }[] = [
+  // Sans-serif
   { label: 'System', value: 'system-ui, sans-serif' },
   { label: 'Humanist sans', value: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' },
-  { label: 'Serif', value: 'Georgia, "Times New Roman", serif' },
-  { label: 'Monospace', value: 'ui-monospace, "SFMono-Regular", Menlo, monospace' },
+  { label: 'Neo-grotesque (Helvetica)', value: '"Helvetica Neue", Helvetica, Arial, sans-serif' },
+  { label: 'Geometric (Avenir / Futura)', value: '"Avenir Next", Avenir, "Century Gothic", "Futura", sans-serif' },
+  { label: 'Rounded (Trebuchet)', value: '"Trebuchet MS", "Segoe UI", Verdana, sans-serif' },
+  { label: 'Tahoma / Verdana', value: 'Tahoma, Verdana, Geneva, sans-serif' },
+  { label: 'Optima / Candara', value: 'Optima, Candara, "Segoe UI", sans-serif' },
+  { label: 'Condensed (Arial Narrow)', value: '"Arial Narrow", "Roboto Condensed", "Segoe UI", sans-serif' },
+  // Serif
+  { label: 'Old-style serif (Georgia)', value: 'Georgia, "Times New Roman", serif' },
+  { label: 'Transitional (Times)', value: '"Times New Roman", Times, "Liberation Serif", serif' },
+  { label: 'Elegant (Garamond)', value: '"EB Garamond", Garamond, "Palatino Linotype", "Book Antiqua", serif' },
+  { label: 'Book serif (Palatino)', value: '"Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif' },
+  { label: 'Slab serif (Rockwell)', value: 'Rockwell, "Roboto Slab", "Courier New", Georgia, serif' },
+  { label: 'Modern (Cambria)', value: 'Cambria, Constantia, Georgia, serif' },
+  { label: 'High-contrast (Didot)', value: 'Didot, "Bodoni MT", "Playfair Display", Georgia, serif' },
+  // Display / character
+  { label: 'Impact (headline)', value: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif' },
+  { label: 'Copperplate (caps)', value: '"Copperplate", "Copperplate Gothic Light", "Papyrus", fantasy' },
+  { label: 'Handwritten (script)', value: '"Segoe Script", "Bradley Hand", "Brush Script MT", cursive' },
+  // Monospace
+  { label: 'Monospace', value: 'ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace' },
+  { label: 'Typewriter (Courier)', value: '"Courier New", Courier, "Lucida Console", monospace' },
 ];
 
 // Complete palettes as starting points. Each is a full token set so applying

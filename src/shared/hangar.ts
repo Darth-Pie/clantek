@@ -29,37 +29,32 @@ export interface HangarCategory {
 }
 
 /**
- * The filter buttons, mirroring RSI's own hangar categories. `type` is reliable
- * for the broad buckets (ships/paints/equipment). RSI does NOT expose the finer
+ * The filter buttons within the ships-only view. The list is already reduced to
+ * ships, so these narrow it further. RSI does NOT expose the finer
  * Standalone/Game/Combo split per item — it's a server-side filter there — so
  * those key off the pledge-name prefix RSI usually applies (see the SC memory).
  */
 export const HANGAR_CATEGORIES: HangarCategory[] = [
-  { key: 'all', label: 'All items', test: () => true },
-  { key: 'allships', label: 'All ships', test: (i) => i.type === 'ship' },
-  { key: 'standalone', label: 'Standalone ships', test: (i) => i.type === 'ship' && /standalone ship/i.test(i.name) },
-  { key: 'game', label: 'Game packages', test: (i) => i.type === 'ship' && /\b(package|starter|game package)\b/i.test(i.name) },
-  { key: 'combo', label: 'Combo packs', test: (i) => i.type === 'ship' && /combo/i.test(i.name) },
-  { key: 'paints', label: 'Paints', test: (i) => i.type === 'skin' },
+  { key: 'all', label: 'All ships', test: () => true },
+  { key: 'standalone', label: 'Standalone', test: (i) => /standalone ship/i.test(i.name) },
+  { key: 'game', label: 'Game packages', test: (i) => /\b(package|starter|game package)\b/i.test(i.name) },
+  { key: 'combo', label: 'Combo packs', test: (i) => /combo/i.test(i.name) },
 ];
 
 /**
- * Item types we never surface. RSI's hangar is mostly noise for a showcase —
- * store credits, ship equipment, loot, hull components, decorations and coupons
- * clutter the view — so we keep only the interesting pledges (ships, paints,
- * packages, and anything not on this list). Kept here so the filter is one
- * authority the view can trust.
+ * Whether an item is a ship. The hangar view shows ONLY ships — paints (skins),
+ * rewards, store credit, equipment, loot, components, decorations and coupons are
+ * all noise for a fleet showcase. `type === 'ship'` is RSI's own reliable slug.
+ * (Expanding packages into their contained ships, and resolving a CCU-upgraded
+ * pledge to its *current* ship, are a separate follow-up — see the SC memory.)
  */
-export const HANGAR_HIDDEN_TYPES = new Set(['coupon', 'decoration', 'equipment', 'loot', 'component']);
-
-/** Whether an item is one we display (not a hidden RSI clutter type). */
-export function isDisplayableHangarItem(i: HangarItem): boolean {
-  return !HANGAR_HIDDEN_TYPES.has((i.type || '').toLowerCase());
+export function isShipHangarItem(i: HangarItem): boolean {
+  return (i.type || '').toLowerCase() === 'ship';
 }
 
-/** A hangar reduced to the items worth showing (drops the hidden types). */
-export function visibleHangarItems(items: HangarItem[]): HangarItem[] {
-  return items.filter(isDisplayableHangarItem);
+/** A hangar reduced to just the ships. */
+export function shipHangarItems(items: HangarItem[]): HangarItem[] {
+  return items.filter(isShipHangarItem);
 }
 
 const RSI_ORIGIN = 'https://robertsspaceindustries.com';

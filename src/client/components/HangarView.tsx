@@ -11,7 +11,7 @@ import {
   HANGAR_CATEGORIES,
   hangarImageUrl,
   hangarValueNum,
-  visibleHangarItems,
+  shipHangarItems,
   type HangarItem,
 } from '../../shared/hangar';
 
@@ -35,14 +35,19 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<{ k: string; dir: 1 | -1 }>({ k: 'name', dir: 1 });
+  // The whole hangar is collapsible so it doesn't dominate a profile. Mirrored
+  // into state (not left to the DOM) so a re-render — e.g. filtering inside it —
+  // can't snap it back open after the member collapsed it.
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     api
       .get<HangarResponse>(`/hangar/${userId}`)
       .then((res) => {
-        // Only display-worthy types (drops equipment/loot/coupons/etc.).
-        setItems(res.hangar ? visibleHangarItems(res.hangar.items) : null);
+        // Ships only — paints, rewards, packages-as-non-ships and other clutter
+        // are dropped (see shipHangarItems).
+        setItems(res.hangar ? shipHangarItems(res.hangar.items) : null);
         setImportedAt(res.hangar?.importedAt ?? null);
         setMeta({ self: res.self, canView: res.canView, isPublic: res.isPublic });
       })
@@ -78,9 +83,7 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
   const sortBy = (k: string) => setSort((s) => (s.k === k ? { k, dir: s.dir === 1 ? -1 : 1 } : { k, dir: 1 }));
   const arrow = (k: string) => (sort.k === k ? (sort.dir === 1 ? ' ▲' : ' ▼') : '');
 
-  // At-a-glance totals over the displayed items: how many ships, and the summed
-  // pledge value (rough — packages list their own price alongside their ships).
-  const shipCount = items.filter((i) => i.type === 'ship').length;
+  // All items are ships now, so the summed pledge value is the one extra stat.
   const totalValue = items.reduce((sum, i) => sum + Math.max(0, hangarValueNum(i)), 0);
 
   // Monetary value is the main incentive to inflate a self-reported hangar, so it
@@ -89,7 +92,15 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
   const showValue = meta.self || can('hangar.value');
 
   return (
-    <div className="hangar-view">
+    <details className="hangar-view hangar-accordion" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="hangar-accordion-summary">
+        <span className="hangar-accordion-title">Hangar</span>
+        <span className="muted small">
+          {items.length} ship{items.length === 1 ? '' : 's'}
+          {showValue && totalValue > 0 && ` · $${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+        </span>
+      </summary>
+
       <div className="hangar-toolbar">
         <div className="hangar-filters">
           {HANGAR_CATEGORIES.map((c) => (
@@ -106,24 +117,10 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
         </div>
         <input
           className="hangar-search"
-          placeholder="Search name or type…"
+          placeholder="Search ships…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-      </div>
-
-      <div className="hangar-summary">
-        <span className="hangar-stat">
-          <strong>{items.length}</strong> items
-        </span>
-        <span className="hangar-stat">
-          <strong>{shipCount}</strong> ships
-        </span>
-        {showValue && totalValue > 0 && (
-          <span className="hangar-stat">
-            <strong>${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</strong> value
-          </span>
-        )}
       </div>
 
       <div className="hangar-count muted small">
@@ -140,8 +137,7 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
           <thead>
             <tr>
               <th>Preview</th>
-              <th onClick={() => sortBy('name')}>Name{arrow('name')}</th>
-              <th onClick={() => sortBy('type')}>Type{arrow('type')}</th>
+              <th onClick={() => sortBy('name')}>Ship{arrow('name')}</th>
               {showValue && <th onClick={() => sortBy('valueNum')}>Value{arrow('valueNum')}</th>}
               <th onClick={() => sortBy('availability')}>Availability{arrow('availability')}</th>
             </tr>
@@ -153,9 +149,6 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
                 <tr key={i.id || idx}>
                   <td>{src && <img className="hangar-thumb" loading="lazy" src={src} alt="" />}</td>
                   <td className="hangar-name">{i.name}</td>
-                  <td>
-                    <span className="hangar-type">{i.type}</span>
-                  </td>
                   {showValue && <td>{i.value}</td>}
                   <td className="muted small">{i.availability}</td>
                 </tr>
@@ -163,8 +156,8 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
             })}
           </tbody>
         </table>
-        {rows.length === 0 && <p className="muted small hangar-empty">No items match this filter.</p>}
+        {rows.length === 0 && <p className="muted small hangar-empty">No ships match this filter.</p>}
       </div>
-    </div>
+    </details>
   );
 }

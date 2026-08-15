@@ -7102,3 +7102,11 @@ a.notif-link:hover {
 .hangar-accordion[open] > summary {
   margin-bottom: 0.5rem;
 }
+.hangar-name .hangar-ship {
+  display: block;
+}
+.hangar-name .hangar-was,
+.hangar-name .hangar-contains {
+  display: block;
+  font-style: italic;
+}

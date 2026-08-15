@@ -11,6 +11,8 @@ import {
   HANGAR_CATEGORIES,
   hangarImageUrl,
   hangarValueNum,
+  hangarShipName,
+  hangarOriginalName,
   shipHangarItems,
   type HangarItem,
 } from '../../shared/hangar';
@@ -59,14 +61,19 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
     if (!items) return [];
     const catTest = HANGAR_CATEGORIES.find((c) => c.key === cat)!.test;
     const needle = q.toLowerCase();
+    // Search matches the resolved (current) ship name and the raw pledge name.
     const list = items
       .filter(catTest)
-      .filter((i) => !needle || i.name.toLowerCase().includes(needle) || i.type.toLowerCase().includes(needle));
+      .filter((i) => !needle || hangarShipName(i).toLowerCase().includes(needle) || i.name.toLowerCase().includes(needle));
+    // Sort key resolves per column; 'name' sorts by the displayed (current) ship.
+    const keyVal = (i: HangarItem): string | number => {
+      if (sort.k === 'valueNum') return hangarValueNum(i);
+      if (sort.k === 'availability') return (i.availability || '').toLowerCase();
+      return hangarShipName(i).toLowerCase();
+    };
     return [...list].sort((a, b) => {
-      let x: string | number = sort.k === 'valueNum' ? hangarValueNum(a) : (a[sort.k as keyof HangarItem] ?? '');
-      let y: string | number = sort.k === 'valueNum' ? hangarValueNum(b) : (b[sort.k as keyof HangarItem] ?? '');
-      if (typeof x === 'string') x = x.toLowerCase();
-      if (typeof y === 'string') y = y.toLowerCase();
+      const x = keyVal(a);
+      const y = keyVal(b);
       return (x > y ? 1 : x < y ? -1 : 0) * sort.dir;
     });
   }, [items, cat, q, sort]);
@@ -148,7 +155,15 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
               return (
                 <tr key={i.id || idx}>
                   <td>{src && <img className="hangar-thumb" loading="lazy" src={src} alt="" />}</td>
-                  <td className="hangar-name">{i.name}</td>
+                  <td className="hangar-name">
+                    <span className="hangar-ship">{hangarShipName(i)}</span>
+                    {hangarOriginalName(i).toLowerCase() !== hangarShipName(i).toLowerCase() && (
+                      <span className="hangar-was muted small">upgraded from {hangarOriginalName(i)}</span>
+                    )}
+                    {i.ships && i.ships.length > 0 && (
+                      <span className="hangar-contains muted small">Contains: {i.ships.join(', ')}</span>
+                    )}
+                  </td>
                   {showValue && <td>{i.value}</td>}
                   <td className="muted small">{i.availability}</td>
                 </tr>

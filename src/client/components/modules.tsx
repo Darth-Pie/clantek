@@ -749,6 +749,63 @@ function GamesModule({ config }: { config: Config }) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Leaderboard — top members by events attended (recent or all-time). Members
+ * only unless the admin flips the leaderboard public; on a 401 it hides quietly.
+ * ------------------------------------------------------------------ */
+
+interface LeaderRow {
+  id: number;
+  name: string;
+  avatar: string | null;
+  profileImageUrl: string | null;
+  discordId: string;
+  count: number;
+}
+
+function LeaderboardModule({ config }: { config: Config }) {
+  const title = str(config, 'title', 'Most Active');
+  const limit = num(config, 'limit', 10);
+  const windowMode = str(config, 'window', 'recent') === 'all' ? 'all' : 'recent';
+  const [rows, setRows] = useState<LeaderRow[] | null>(null);
+  const [denied, setDenied] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<{ leaderboard: LeaderRow[] }>(`/attendance/leaderboard?window=${windowMode}`)
+      .then(({ leaderboard }) => setRows(leaderboard))
+      .catch(() => {
+        // 401 for a logged-out visitor when the board isn't public — hide quietly.
+        setDenied(true);
+        setRows([]);
+      });
+  }, [windowMode]);
+
+  if (denied) return null;
+  if (rows === null) return <ModuleCard title={title}><p className="muted">Loading…</p></ModuleCard>;
+
+  return (
+    <ModuleCard title={title} action={<Link className="btn-link" to="/leaderboard">Full board</Link>}>
+      {rows.length === 0 ? (
+        <p className="muted">No attendance recorded yet.</p>
+      ) : (
+        <ol className="leaderboard leaderboard-mini">
+          {rows.slice(0, limit).map((m, i) => (
+            <li key={m.id} className={`leaderboard-row rank-${i + 1 <= 3 ? i + 1 : 'n'}`}>
+              <span className="leaderboard-rank">{i + 1}</span>
+              <Link to={`/members/${m.id}`} className="leaderboard-member">
+                <img className="avatar-sm" src={memberAvatar(m, 64)} alt="" loading="lazy" />
+                <span className="name">{m.name}</span>
+              </Link>
+              <span className="leaderboard-count">{m.count}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </ModuleCard>
+  );
+}
+
+/* ------------------------------------------------------------------ *
  * Registry — the single map the renderer and editor read.
  * ------------------------------------------------------------------ */
 
@@ -970,4 +1027,5 @@ export const MODULE_RENDERERS: Record<ModuleType, (props: { config: Config }) =>
   warrecords: WarRecordsModule,
   games: GamesModule,
   training: TrainingModule,
+  leaderboard: LeaderboardModule,
 };

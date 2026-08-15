@@ -709,7 +709,8 @@ function ModuleEditor(props: {
           m.type === 'events' ||
           m.type === 'medals' ||
           m.type === 'warrecords' ||
-          m.type === 'games') && (
+          m.type === 'games' ||
+          m.type === 'leaderboard') && (
           <>
             <input
               type="text"
@@ -728,6 +729,19 @@ function ModuleEditor(props: {
               />
             </label>
           </>
+        )}
+
+        {m.type === 'leaderboard' && (
+          <label className="inline-field">
+            Ranking
+            <select
+              value={cfg.window === 'all' ? 'all' : 'recent'}
+              onChange={(e) => props.onPatchConfig(rowId, colId, m.id, { window: e.target.value })}
+            >
+              <option value="recent">Recent activity</option>
+              <option value="all">All-time</option>
+            </select>
+          </label>
         )}
 
         {m.type === 'training' && (

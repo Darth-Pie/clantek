@@ -7007,6 +7007,13 @@ a.notif-link:hover {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.leaderboard-mini .leaderboard-row {
+  padding: 0.35rem 0.55rem;
+  gap: 0.6rem;
+}
+.leaderboard-mini .leaderboard-rank {
+  width: 1.4rem;
+}
 
 /* Member activity — score + heatmap */
 .member-activity-head {

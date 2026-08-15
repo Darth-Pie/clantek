@@ -29,7 +29,8 @@ export type ModuleType =
   | 'medals'
   | 'warrecords'
   | 'games'
-  | 'training';
+  | 'training'
+  | 'leaderboard';
 
 export interface LayoutModule {
   /** Stable id for React keys and drag-and-drop; not meaningful to the server. */
@@ -226,6 +227,12 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     label: 'Training',
     description: 'The training courses members can take, with completion tracking.',
     defaultConfig: { title: 'Training' },
+  },
+  {
+    type: 'leaderboard',
+    label: 'Leaderboard',
+    description: 'Most active members by events attended (recent or all-time).',
+    defaultConfig: { title: 'Most Active', limit: 10, window: 'recent' },
   },
 ];
 
@@ -465,6 +472,10 @@ function cleanConfig(
     out.label = (typeof src.label === 'string' ? src.label : 'Learn more').slice(0, 80);
     out.href = cleanUrl(src.href);
     out.style = src.style === 'default' ? 'default' : 'primary';
+  }
+
+  if (type === 'leaderboard') {
+    out.window = src.window === 'all' ? 'all' : 'recent';
   }
 
   return out;

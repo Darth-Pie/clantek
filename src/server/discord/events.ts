@@ -19,6 +19,7 @@ import { type ActionRow, type Embed } from './rest';
 import { loadConfig, discordRestFromConfig } from '../config';
 import { loadAnnouncementConfig } from './announce';
 import { loadEventState, type EventState } from '../events/signups';
+import { loadAttendanceConfig } from '../attendance';
 
 type EventRow = typeof s.events.$inferSelect;
 
@@ -127,11 +128,13 @@ function eventEmbed(state: EventState, siteUrl?: string): Embed {
 
 /**
  * The sign-up buttons: one per role (secondary, showing its count), then a
- * final row with "Attending" (join with no specific role) and "Withdraw".
- * Discord caps a message at 5 action rows of 5 buttons; role buttons take up to
- * four rows (20 roles) and the controls take the fifth.
+ * final row with "Attending" (join with no specific role), an optional "I'm
+ * here" check-in button, and "Withdraw". Discord caps a message at 5 action rows
+ * of 5 buttons; role buttons take up to four rows (20 roles) and the controls
+ * take the fifth. `checkinEnabled` adds the check-in button (the click validates
+ * the open window server-side, so the button can sit there permanently).
  */
-function eventComponents(state: EventState): ActionRow[] {
+function eventComponents(state: EventState, checkinEnabled: boolean): ActionRow[] {
   const eid = state.event.id;
   const rows: ActionRow[] = [];
 
@@ -150,13 +153,14 @@ function eventComponents(state: EventState): ActionRow[] {
     rows.push({ type: 1, components: roleButtons.slice(i, i + 5) });
   }
 
-  rows.push({
-    type: 1,
-    components: [
-      { type: 2, style: 1, label: 'Attending', custom_id: `evt:role:${eid}:none` },
-      { type: 2, style: 4, label: 'Withdraw', custom_id: `evt:withdraw:${eid}` },
-    ],
-  });
+  const controls: ActionRow['components'] = [
+    { type: 2, style: 1, label: 'Attending', custom_id: `evt:role:${eid}:none` },
+  ];
+  if (checkinEnabled) {
+    controls.push({ type: 2, style: 3, label: "I'm here", emoji: { name: '✅' }, custom_id: `evt:checkin:${eid}` });
+  }
+  controls.push({ type: 2, style: 4, label: 'Withdraw', custom_id: `evt:withdraw:${eid}` });
+  rows.push({ type: 1, components: controls });
   return rows;
 }
 
@@ -164,8 +168,9 @@ function eventComponents(state: EventState): ActionRow[] {
 export function buildEventMessage(
   state: EventState,
   siteUrl?: string,
+  checkinEnabled = false,
 ): { embeds: Embed[]; components: ActionRow[] } {
-  return { embeds: [eventEmbed(state, siteUrl)], components: eventComponents(state) };
+  return { embeds: [eventEmbed(state, siteUrl)], components: eventComponents(state, checkinEnabled) };
 }
 
 export interface DiscordEventIds {
@@ -217,7 +222,8 @@ export async function syncEventToDiscord(env: Env, eventId: number): Promise<Dis
   try {
     const channelId = (await loadAnnouncementConfig(db)).channelId;
     if (channelId) {
-      const message = buildEventMessage(state, cfg.siteUrl);
+      const checkinEnabled = (await loadAttendanceConfig(env, db)).mode !== 'officers';
+      const message = buildEventMessage(state, cfg.siteUrl, checkinEnabled);
       if (ids.discordMessageId) {
         await rest.editMessage(channelId, ids.discordMessageId, message);
       } else {
@@ -246,7 +252,8 @@ export async function refreshEventMessage(env: Env, eventId: number): Promise<vo
   try {
     const channelId = (await loadAnnouncementConfig(db)).channelId;
     if (channelId) {
-      await rest.editMessage(channelId, state.event.discordMessageId, buildEventMessage(state, cfg.siteUrl));
+      const checkinEnabled = (await loadAttendanceConfig(env, db)).mode !== 'officers';
+      await rest.editMessage(channelId, state.event.discordMessageId, buildEventMessage(state, cfg.siteUrl, checkinEnabled));
     }
   } catch (err) {
     console.error('Event message refresh failed', err);

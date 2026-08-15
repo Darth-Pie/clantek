@@ -5,6 +5,7 @@
  *   evt:role:<eventId>:<roleId>   → attend as that role
  *   evt:role:<eventId>:none       → attend with no specific role
  *   evt:withdraw:<eventId>        → withdraw
+ *   evt:checkin:<eventId>         → check in (record attendance), window-gated
  *
  * Runs after a deferred-update ack (index.ts): it writes the same event_signups
  * rows the website uses, refreshes the source message with new counts, and
@@ -20,6 +21,9 @@ import type { Env } from '../env';
 import { loadConfig } from '../config';
 import { setSignup, removeSignup, loadEventState } from '../events/signups';
 import { buildEventMessage } from './events';
+import { loadAttendanceConfig, checkIn } from '../attendance';
+import { selfCheckinOpen } from '../../shared/attendance';
+import { awardActivityMedals } from '../medals/activity';
 import { editOriginalMessage, followUpEphemeral, type Interaction } from './interactions';
 
 /** True if this component interaction is one of our event buttons. */
@@ -53,6 +57,20 @@ export async function handleEventComponent(env: Env, i: Interaction): Promise<vo
     const roleId = arg === 'none' ? null : Number(arg);
     const res = await setSignup(db, eventId, user.id, roleId);
     note = res.ok ? '✅ You’re signed up.' : `⚠️ ${res.error}`;
+  } else if (kind === 'checkin') {
+    const cfg = await loadAttendanceConfig(env, db);
+    const event = await db.query.events.findFirst({ where: eq(s.events.id, eventId) });
+    if (cfg.mode === 'officers') {
+      note = '⚠️ Self check-in is off — an officer records attendance for this event.';
+    } else if (!event) {
+      note = '⚠️ That event no longer exists.';
+    } else if (!selfCheckinOpen(event, Math.floor(Date.now() / 1000), cfg.checkinWindowHours)) {
+      note = '⚠️ Check-in isn’t open for this event yet (or has closed).';
+    } else {
+      const res = await checkIn(db, { eventId, userId: user.id, source: 'discord', eventStartsAt: event.startsAt });
+      note = res.created ? '✅ Checked in — thanks for coming!' : '✅ You were already checked in.';
+      if (res.created) await awardActivityMedals(db, { userId: user.id }).catch(() => {});
+    }
   } else {
     note = 'Unknown action.';
   }
@@ -62,7 +80,8 @@ export async function handleEventComponent(env: Env, i: Interaction): Promise<vo
     const state = await loadEventState(db, eventId);
     if (state) {
       const { siteUrl } = await loadConfig(env, db);
-      await editOriginalMessage(i.application_id, i.token, buildEventMessage(state, siteUrl));
+      const checkinEnabled = (await loadAttendanceConfig(env, db)).mode !== 'officers';
+      await editOriginalMessage(i.application_id, i.token, buildEventMessage(state, siteUrl, checkinEnabled));
     }
   } catch (err) {
     console.error('Event component message refresh failed', err);

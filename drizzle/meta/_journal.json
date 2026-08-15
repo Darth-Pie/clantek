@@ -176,6 +176,13 @@
       "when": 1786633976470,
       "tag": "0024_aspiring_calypso",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1786810441684,
+      "tag": "0025_sour_steve_rogers",
+      "breakpoints": true
     }
   ]
 }

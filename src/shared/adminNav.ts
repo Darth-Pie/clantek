@@ -36,6 +36,10 @@ export interface AdminItem {
   tabs: AdminTab[];
   /** Only shown on the mustr.gg showcase host — never in a buyer's install. */
   mustrOnly?: boolean;
+  /** Only shown to a God. For actions above every permission (e.g. Backups):
+   *  God bypasses `can()`, so a permission gate can't stay God-exclusive. The
+   *  server routes enforce this too — the flag is only for hiding the nav item. */
+  godOnly?: boolean;
 }
 
 export interface AdminGroup {

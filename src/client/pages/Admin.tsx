@@ -33,6 +33,7 @@ import {
   GraduationCap,
   Rocket,
   Bell,
+  History,
 } from 'lucide';
 import { useSession } from '../lib/session';
 import { api } from '../lib/api';
@@ -66,6 +67,7 @@ import TrainingAdmin from './TrainingAdmin';
 import MustrGgAdmin from './MustrGgAdmin';
 import AdminMenuAdmin from './AdminMenuAdmin';
 import NotificationsAdmin from './NotificationsAdmin';
+import SnapshotsAdmin from './SnapshotsAdmin';
 import AuditLog from './AuditLog';
 
 /** Cached admin-menu arrangement, so the sidebar renders in the saved order on
@@ -88,6 +90,7 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
   appearance: Palette,
   notifications: Bell,
   logs: ScrollText,
+  backups: History,
   mustrgg: Rocket,
 };
 
@@ -117,12 +120,13 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   audit: () => <AuditLog />,
   adminmenu: () => <AdminMenuAdmin />,
   notifications: () => <NotificationsAdmin />,
+  backups: () => <SnapshotsAdmin />,
   mustrgg: () => <MustrGgAdmin />,
 };
 
 export default function Admin() {
   const { item: itemParam, tab: tabParam } = useParams();
-  const { can } = useSession();
+  const { can, viewer } = useSession();
 
   // Section rail open/closed. Persisted so a chosen state sticks; defaults open
   // on desktop and closed on mobile (there the rail is a drawer over the tool).
@@ -191,7 +195,7 @@ export default function Admin() {
     };
   }, []);
 
-  const groups = visibleAdminGroups(can, isMustrHost(), override);
+  const groups = visibleAdminGroups(can, isMustrHost(), override, !!viewer?.isGod);
   if (groups.length === 0) {
     return <div className="empty">You don’t have access to any admin tools.</div>;
   }

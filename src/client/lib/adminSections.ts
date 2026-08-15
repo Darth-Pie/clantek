@@ -104,6 +104,15 @@ export const ADMIN_GROUPS: AdminGroup[] = [
       { key: 'notifications', label: 'Notifications', tabs: [{ key: 'notifications', label: 'Notifications', permission: 'settings.manage' }] },
       { key: 'logs', label: 'Logs', tabs: [{ key: 'audit', label: 'Logs', permission: 'audit.view' }] },
       {
+        key: 'backups',
+        label: 'Backups',
+        // God-only: a restore wipes and reloads the whole database, so it sits
+        // above every permission (see requireGod on the server). The tab's own
+        // permission is only a formality — the godOnly gate is what hides it.
+        godOnly: true,
+        tabs: [{ key: 'backups', label: 'Backups', permission: 'settings.manage' }],
+      },
+      {
         key: 'mustrgg',
         label: 'mustr.gg',
         mustrOnly: true,
@@ -116,20 +125,24 @@ export const ADMIN_GROUPS: AdminGroup[] = [
 type Can = (permission: Permission) => boolean;
 
 /** The tree pruned to what a viewer may see: tabs → items → groups they can reach.
- *  `onMustrHost` gates mustr.gg-only items (hidden everywhere else). An optional
- *  saved `override` re-orders and relabels first (via applyAdminNav, which can't
- *  widen access — every item keeps its code-defined tabs), then we filter. */
+ *  `onMustrHost` gates mustr.gg-only items (hidden everywhere else); `isGod` gates
+ *  god-only items (e.g. Backups). An optional saved `override` re-orders and
+ *  relabels first (via applyAdminNav, which can't widen access — every item keeps
+ *  its code-defined tabs), then we filter. */
 export function visibleAdminGroups(
   can: Can,
   onMustrHost = false,
   override?: AdminNavOverride | null,
+  isGod = false,
 ): AdminGroup[] {
   return applyAdminNav(ADMIN_GROUPS, override)
     .map((g) => ({
       ...g,
       items: g.items
         .map((i) => ({ ...i, tabs: i.tabs.filter((t) => can(t.permission)) }))
-        .filter((i) => i.tabs.length > 0 && (!i.mustrOnly || onMustrHost)),
+        .filter(
+          (i) => i.tabs.length > 0 && (!i.mustrOnly || onMustrHost) && (!i.godOnly || isGod),
+        ),
     }))
     .filter((g) => g.items.length > 0);
 }

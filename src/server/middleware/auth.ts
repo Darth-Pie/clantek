@@ -73,6 +73,20 @@ export const requireUser = createMiddleware<AppContext>(async (c, next) => {
 });
 
 /**
+ * Requires God status — the recovery hatch, above every permission. Used for the
+ * few actions too dangerous to hand out via a role (e.g. wiping and restoring the
+ * whole database). A permission can't stand in here: God bypasses `can()`, so any
+ * permission-gated route is also reachable by whoever holds that permission —
+ * this is the only gate that stays God-exclusive.
+ */
+export const requireGod = createMiddleware<AppContext>(async (c, next) => {
+  const viewer = c.get('viewer');
+  if (!viewer) return c.json({ error: 'Authentication required' }, 401);
+  if (!viewer.isGod) return c.json({ error: 'Forbidden' }, 403);
+  await next();
+});
+
+/**
  * Requires a specific permission. God bypasses this — see can() for why that
  * escape hatch exists.
  */

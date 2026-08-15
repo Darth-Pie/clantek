@@ -796,3 +796,35 @@ export const notificationReads = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.notificationId] })],
 );
+
+/* ------------------------------------------------------------------ *
+ * Site snapshots — the God-only "restore point" safety net. Each row is a
+ * full capture of the database at a moment in time; the actual JSON payload
+ * lives in R2 (key in `r2Key`), deliberately NOT in D1, so restoring a
+ * snapshot — which wipes and reloads every content/config/roster table —
+ * can never delete the snapshots themselves. This table is excluded from
+ * both capture and restore for the same reason (see server/snapshot.ts).
+ * ------------------------------------------------------------------ */
+
+export const siteSnapshots = sqliteTable(
+  'site_snapshots',
+  {
+    id: text('id').primaryKey(), // uuid
+    name: text('name').notNull(),
+    note: text('note'),
+    // R2 object key holding the JSON payload (under snapshots/…).
+    r2Key: text('r2_key').notNull(),
+    sizeBytes: integer('size_bytes').notNull().default(0),
+    // Per-table row counts at capture time, for the UI summary. { table: n }.
+    tableCounts: text('table_counts', { mode: 'json' })
+      .$type<Record<string, number>>()
+      .notNull()
+      .default({}),
+    // 'manual' = a God saved it on purpose; 'auto' = the safety copy taken
+    // automatically right before a restore, so a restore can itself be undone.
+    kind: text('kind', { enum: ['manual', 'auto'] }).notNull().default('manual'),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at').notNull().default(now),
+  },
+  (t) => [index('site_snapshots_created_idx').on(t.createdAt)],
+);

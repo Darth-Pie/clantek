@@ -43,6 +43,7 @@ import members from './routes/members';
 import bansRoutes from './routes/bans';
 import training from './routes/training';
 import setupRoutes from './routes/setup';
+import snapshotsRoutes from './routes/snapshots';
 import { aboutPageHtml } from './marketing/about';
 import { productPageHtml } from './marketing/product';
 import { setupGuideHtml } from './marketing/setup-guide';
@@ -445,6 +446,7 @@ app.route('/api/sc', scVerifyRoutes);
 app.route('/api/orgchart', orgChartRoutes);
 app.route('/api/auth/tokens', tokensRoutes);
 app.route('/api/setup', setupRoutes);
+app.route('/api/snapshots', snapshotsRoutes);
 
 app.get('/api/health', (c) => c.json({ ok: true, service: 'mustr' }));
 

@@ -21,14 +21,14 @@ export interface HangarItem {
   /** RSI media URL — absolute https, or a same-origin "/media/…" path. */
   image: string;
   /**
-   * RSI's "Contains:" line for the pledge, e.g. "Kraken Privateer and 2 items".
-   * A CCU-upgraded pledge keeps its ORIGINAL name (a HoverQuad pledge upgraded to
-   * something pricier still reads "…HoverQuad"), so this line — not `name` — names
-   * the ship it actually is NOW. Absent on hangars imported before it was captured.
+   * RSI's "Contains:" line for the pledge, e.g. "Railen and 6 items". A
+   * CCU-upgraded pledge keeps its ORIGINAL name (a "Mirai Pulse … Referral
+   * Reward" upgraded to a Railen still reads "Mirai Pulse …"), so this line —
+   * not `name` — names the ship it actually is NOW; the "and N items" are bundled
+   * extras (paints/insurance), not additional ships. Absent on hangars imported
+   * before it was captured.
    */
   contains?: string;
-  /** Ships inside a package (best-effort, from RSI's nameable-ships data). */
-  ships?: string[];
 }
 
 export interface HangarCategory {
@@ -81,13 +81,19 @@ export function hangarValueNum(i: HangarItem): number {
   return Number.isFinite(n) ? n : -1;
 }
 
-/** Strip RSI's pledge-type wrapper from a name ("Standalone Ship - Aurora MR" → "Aurora MR"). */
+/**
+ * Strip only a leading pledge-CATEGORY wrapper from a name
+ * ("Standalone Ships - Zeus Mk II MR …" → "Zeus Mk II MR …"). Deliberately does
+ * NOT split on any " - ": real names like "Mirai Pulse - Referral Reward" must
+ * stay whole (splitting them would leave "Referral Reward").
+ */
 function stripPledgeWrapper(name: string): string {
-  const i = name.indexOf(' - ');
-  return (i >= 0 ? name.slice(i + 3) : name).trim();
+  const m = name.match(/^(?:standalone ships?|combo(?: pack)?|game package|package)\s*-\s*(.+)$/i);
+  return (m?.[1] ?? name).trim();
 }
 
-/** The flagship named in a "Contains:" line ("Kraken Privateer and 2 items" → "Kraken Privateer"). */
+/** The flagship named in a "Contains:" line ("Railen and 6 items" → "Railen"). The
+ *  "and N items" are bundled extras (paints/insurance), not ships. */
 export function containsFlagship(contains: string): string {
   return contains.replace(/\s+(?:and|\+|,)\s+\d+\s+item.*$/i, '').trim();
 }
@@ -96,17 +102,12 @@ export function containsFlagship(contains: string): string {
  * The ship to DISPLAY for a pledge. A CCU-upgraded pledge keeps its ORIGINAL
  * name even though it's now a different, pricier ship — RSI's "Contains:" line
  * names what it actually is now, so that wins. Falls back to the pledge name
- * with RSI's type wrapper stripped (still an improvement over the raw name).
+ * (leading category wrapper stripped) when no "Contains:" line was captured
+ * (e.g. an older import).
  */
 export function hangarShipName(i: HangarItem): string {
   const flagship = i.contains ? containsFlagship(i.contains) : '';
   return flagship || stripPledgeWrapper(i.name) || i.name;
-}
-
-/** The original pledge name (wrapper stripped) — shown as context only when the
- *  current ship differs from it (i.e. an upgrade was detected). */
-export function hangarOriginalName(i: HangarItem): string {
-  return stripPledgeWrapper(i.name) || i.name;
 }
 
 const MAX_ITEMS = 3000;
@@ -129,9 +130,6 @@ export function sanitizeHangar(raw: unknown): HangarItem[] {
     const image = str(o.image, 400);
     const safeImage = (image.startsWith('/') && !image.startsWith('//')) || /^https?:\/\//i.test(image) ? image : '';
     const contains = str(o.contains, 200);
-    const ships = Array.isArray(o.ships)
-      ? [...new Set((o.ships as unknown[]).map((x) => str(x, 100)).filter(Boolean))].slice(0, 100)
-      : [];
     items.push({
       id: str(o.id, 40),
       name: str(o.name, 200),
@@ -142,7 +140,6 @@ export function sanitizeHangar(raw: unknown): HangarItem[] {
       created: str(o.created, 40),
       image: safeImage,
       ...(contains ? { contains } : {}),
-      ...(ships.length ? { ships } : {}),
     });
   }
   return items;
@@ -153,4 +150,4 @@ export function sanitizeHangar(raw: unknown): HangarItem[] {
  * list and copies it to the clipboard. Kept here (String.raw so the regex
  * backslashes survive) so the profile import UI can show it verbatim.
  */
-export const SC_HANGAR_BOOKMARKLET = String.raw`javascript:(()=>{const q=(e,s)=>e.querySelector(s),v=(e,s)=>{const n=q(e,s);return n?n.value:null},pj=(e,s)=>{const n=q(e,s);if(!n)return null;try{return JSON.parse((n.textContent||'').trim())}catch(_){return null}},bg=e=>{const n=q(e,'.image'),m=n&&((n.getAttribute('style')||'').match(/url\(['"]?([^'")]+)/));return m?m[1]:null},cr=e=>{const m=(e.innerText||'').match(/Created:\s*([A-Za-z0-9, ]+)/);return m?m[1].trim():null},co=e=>{const m=(e.innerText||'').match(/Contains:\s*([^\n]+)/i);return m?m[1].trim():null},ns=e=>{const j=pj(e,'.js-pledge-nameable-ships');if(!Array.isArray(j))return null;const o=j.map(x=>x&&typeof x==='object'?(x.name||x.model||x.ship||null):(typeof x==='string'?x:null)).filter(Boolean);return o.length?o:null};const items=[...document.querySelectorAll('ul.list-items.js-inventory > li')].map(li=>{const t=(q(li,'h3')?.textContent||'').replace(/\s+/g,' ').trim();return{id:v(li,'.js-pledge-id'),name:v(li,'.js-pledge-name'),type:t.includes(' - ')?t.split(' - ')[0].trim():null,value:v(li,'.js-pledge-value'),currency:v(li,'.js-pledge-currency'),availability:(q(li,'.availability')?.textContent||'').trim()||null,created:cr(li),contains:co(li),ships:ns(li),image:bg(li)}});if(!items.length){alert('No hangar items found. Open your RSI hangar (robertsspaceindustries.com/en/account/pledges), let it load, then click again.');return;}navigator.clipboard.writeText(JSON.stringify(items)).then(()=>alert('Copied '+items.length+' hangar items. Paste them into your profile on the site.'),()=>{const ta=document.createElement('textarea');ta.value=JSON.stringify(items);document.body.appendChild(ta);ta.select();alert('Auto-copy was blocked — select-all + copy the box that appeared, then paste into the site.')});})();`;
+export const SC_HANGAR_BOOKMARKLET = String.raw`javascript:(()=>{const q=(e,s)=>e.querySelector(s),v=(e,s)=>{const n=q(e,s);return n?n.value:null},pj=(e,s)=>{const n=q(e,s);if(!n)return null;try{return JSON.parse((n.textContent||'').trim())}catch(_){return null}},bg=e=>{const n=q(e,'.image'),m=n&&((n.getAttribute('style')||'').match(/url\(['"]?([^'")]+)/));return m?m[1]:null},cr=e=>{const m=(e.innerText||'').match(/Created:\s*([A-Za-z0-9, ]+)/);return m?m[1].trim():null},co=e=>{const m=(e.innerText||'').match(/Contains:\s*([^\n]+)/i);return m?m[1].trim():null};const items=[...document.querySelectorAll('ul.list-items.js-inventory > li')].map(li=>{const t=(q(li,'h3')?.textContent||'').replace(/\s+/g,' ').trim();return{id:v(li,'.js-pledge-id'),name:v(li,'.js-pledge-name'),type:t.includes(' - ')?t.split(' - ')[0].trim():null,value:v(li,'.js-pledge-value'),currency:v(li,'.js-pledge-currency'),availability:(q(li,'.availability')?.textContent||'').trim()||null,created:cr(li),contains:co(li),image:bg(li)}});if(!items.length){alert('No hangar items found. Open your RSI hangar (robertsspaceindustries.com/en/account/pledges), let it load, then click again.');return;}navigator.clipboard.writeText(JSON.stringify(items)).then(()=>alert('Copied '+items.length+' hangar items. Paste them into your profile on the site.'),()=>{const ta=document.createElement('textarea');ta.value=JSON.stringify(items);document.body.appendChild(ta);ta.select();alert('Auto-copy was blocked — select-all + copy the box that appeared, then paste into the site.')});})();`;

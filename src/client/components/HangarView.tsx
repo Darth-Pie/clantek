@@ -12,7 +12,6 @@ import {
   hangarImageUrl,
   hangarValueNum,
   hangarShipName,
-  hangarOriginalName,
   shipHangarItems,
   type HangarItem,
 } from '../../shared/hangar';
@@ -155,15 +154,7 @@ export default function HangarView({ userId, refreshKey = 0 }: { userId: number;
               return (
                 <tr key={i.id || idx}>
                   <td>{src && <img className="hangar-thumb" loading="lazy" src={src} alt="" />}</td>
-                  <td className="hangar-name">
-                    <span className="hangar-ship">{hangarShipName(i)}</span>
-                    {hangarOriginalName(i).toLowerCase() !== hangarShipName(i).toLowerCase() && (
-                      <span className="hangar-was muted small">upgraded from {hangarOriginalName(i)}</span>
-                    )}
-                    {i.ships && i.ships.length > 0 && (
-                      <span className="hangar-contains muted small">Contains: {i.ships.join(', ')}</span>
-                    )}
-                  </td>
+                  <td className="hangar-name">{hangarShipName(i)}</td>
                   {showValue && <td>{i.value}</td>}
                   <td className="muted small">{i.availability}</td>
                 </tr>

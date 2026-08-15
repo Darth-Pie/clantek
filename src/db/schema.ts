@@ -777,6 +777,10 @@ export const notifications = sqliteTable(
     link: text('link'),
     /** Role ids allowed to see this; a viewer needs one of them (god bypasses). */
     roleIds: text('role_ids', { mode: 'json' }).$type<number[]>().notNull().default([]),
+    // Shared "reviewed by" — the first recipient to claim it. Once set, everyone
+    // who can see the notification sees who reviewed it. NULL = not yet reviewed.
+    reviewedBy: integer('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
+    reviewedAt: integer('reviewed_at'),
     createdAt: integer('created_at').notNull().default(now),
   },
   (t) => [index('notification_created_idx').on(t.createdAt)],

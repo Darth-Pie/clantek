@@ -116,4 +116,35 @@ audit.get('/', requirePermission('audit.view'), async (c) => {
   return c.json({ entries, limit, offset, hasMore: rows.length === limit });
 });
 
+/**
+ * The distinct members who appear as an actor in the log — for the "by person"
+ * filter dropdown. Only people who actually did something show up, so the list
+ * stays short and relevant (no full-roster dump). Ordered by name.
+ */
+audit.get('/actors', requirePermission('audit.view'), async (c) => {
+  const database = db(c.env);
+  const rows = await database
+    .selectDistinct({
+      id: s.users.id,
+      username: s.users.username,
+      globalName: s.users.globalName,
+      displayName: s.users.displayName,
+    })
+    .from(s.auditLog)
+    .innerJoin(s.users, eq(s.users.id, s.auditLog.actorId));
+
+  const actors = rows
+    .map((r) => ({
+      id: r.id,
+      name: memberName({
+        displayName: r.displayName,
+        globalName: r.globalName,
+        username: r.username ?? 'unknown',
+      }),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return c.json({ actors });
+});
+
 export default audit;

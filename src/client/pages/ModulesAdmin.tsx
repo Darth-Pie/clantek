@@ -185,73 +185,72 @@ export default function ModulesAdmin() {
       ) : (
         <div className="module-settings">
           {scOpen && sc && (
-            <>
-              <OptionSet title="Star Citizen — org identity" hint="Used by account verification">
-                <label className="option-field">
-                  Org SID
-                  <div className="module-config-row">
-                    <input
-                      type="text"
-                      value={orgSidDraft}
-                      placeholder="e.g. F919"
-                      maxLength={20}
-                      disabled={busy}
-                      onChange={(e) => setOrgSidDraft(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="primary small"
-                      disabled={busy || orgSidDraft.trim() === sc.orgSid}
-                      onClick={() => void saveSc({ ...sc, orgSid: orgSidDraft.trim() })}
-                    >
-                      Save
-                    </button>
-                  </div>
-                  <span className="muted small">
-                    Your org’s RSI Spectrum Identification (the tag in your org URL{' '}
-                    <code>/orgs/&lt;SID&gt;</code>). Used to confirm a member’s verified RSI account
-                    actually lists your org.
-                  </span>
-                </label>
-              </OptionSet>
+            <OptionSet title="Star Citizen" hint="Org identity & feature kill switches">
+              <label className="option-field">
+                Org SID
+                <div className="module-config-row">
+                  <input
+                    type="text"
+                    value={orgSidDraft}
+                    placeholder="e.g. F919"
+                    maxLength={20}
+                    disabled={busy}
+                    onChange={(e) => setOrgSidDraft(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="primary small"
+                    disabled={busy || orgSidDraft.trim() === sc.orgSid}
+                    onClick={() => void saveSc({ ...sc, orgSid: orgSidDraft.trim() })}
+                  >
+                    Save
+                  </button>
+                </div>
+                <span className="muted small">
+                  Your org’s RSI Spectrum Identification (the tag in your org URL{' '}
+                  <code>/orgs/&lt;SID&gt;</code>). Used to confirm a member’s verified RSI account
+                  actually lists your org.
+                </span>
+              </label>
 
-              <OptionSet title="Star Citizen — feature kill switches" hint="Turn any of these off instantly">
-                <p className="muted small">
+              <div className="option-subhead">
+                <span className="option-subhead-title">Feature kill switches</span>
+                <span className="muted small">
                   Each feature can be switched off on its own (e.g. if RSI / Cloud Imperium requests
                   it). Turning the whole module off above disables all of them.
-                </p>
-                <div className="module-row">
-                  <div className="module-info">
-                    <span className="module-name">Hangar import &amp; display</span>
-                    <span className="muted small">
-                      Members export their own hangar (client-side bookmarklet) and it shows on
-                      profiles. No server-side access to RSI.
-                    </span>
-                  </div>
-                  <Switch
-                    checked={sc.hangarEnabled}
-                    disabled={busy}
-                    label="Hangar import and display"
-                    onChange={(v) => void saveSc({ ...sc, hangarEnabled: v })}
-                  />
+                </span>
+              </div>
+              <div className="module-row">
+                <div className="module-info">
+                  <span className="module-name">Hangar import &amp; display</span>
+                  <span className="muted small">
+                    Members export their own hangar (client-side bookmarklet) and it shows on
+                    profiles. No server-side access to RSI.
+                  </span>
                 </div>
-                <div className="module-row">
-                  <div className="module-info">
-                    <span className="module-name">RSI account verification</span>
-                    <span className="muted small">
-                      Reads a member’s public RSI profile to confirm account ownership + org
-                      membership. This is the only feature that fetches RSI server-side.
-                    </span>
-                  </div>
-                  <Switch
-                    checked={sc.verifyEnabled}
-                    disabled={busy}
-                    label="RSI account verification"
-                    onChange={(v) => void saveSc({ ...sc, verifyEnabled: v })}
-                  />
+                <Switch
+                  checked={sc.hangarEnabled}
+                  disabled={busy}
+                  label="Hangar import and display"
+                  onChange={(v) => void saveSc({ ...sc, hangarEnabled: v })}
+                />
+              </div>
+              <div className="module-row">
+                <div className="module-info">
+                  <span className="module-name">RSI account verification</span>
+                  <span className="muted small">
+                    Reads a member’s public RSI profile to confirm account ownership + org
+                    membership. This is the only feature that fetches RSI server-side.
+                  </span>
                 </div>
-              </OptionSet>
-            </>
+                <Switch
+                  checked={sc.verifyEnabled}
+                  disabled={busy}
+                  label="RSI account verification"
+                  onChange={(v) => void saveSc({ ...sc, verifyEnabled: v })}
+                />
+              </div>
+            </OptionSet>
           )}
 
           {galOpen && gal && (

@@ -34,7 +34,29 @@ const PAGE_SIZE = 50;
 export default function Roster() {
   const { can } = useSession();
   const canFullList = can('roster.view');
-  const [view, setView] = useState<'tree' | 'list'>('tree');
+
+  // Members who can see the full roster land on it by default, and we remember
+  // the last view they picked (sessionStorage) so returning from a member's
+  // profile reopens the same view instead of snapping back to the leadership
+  // chart. A viewer without roster.view only ever sees the tree.
+  const [stored, setStored] = useState<'tree' | 'list' | null>(() => {
+    try {
+      const v = sessionStorage.getItem('ct-roster-view');
+      if (v === 'tree' || v === 'list') return v;
+    } catch {
+      /* private mode — the choice just won't persist */
+    }
+    return null;
+  });
+  const view: 'tree' | 'list' = canFullList ? (stored ?? 'list') : 'tree';
+  const setView = (v: 'tree' | 'list') => {
+    setStored(v);
+    try {
+      sessionStorage.setItem('ct-roster-view', v);
+    } catch {
+      /* private mode */
+    }
+  };
 
   return (
     <section className="panel">

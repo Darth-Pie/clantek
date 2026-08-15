@@ -338,6 +338,23 @@ export default function TrainingAdmin() {
             />
             <span className="muted small">Sort A–Z on page</span>
           </div>
+          <div className="training-add-section">
+            <input
+              type="text"
+              value={newSection}
+              placeholder="New section name (e.g. Onboarding)"
+              onChange={(e) => setNewSection(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void addSection();
+                }
+              }}
+            />
+            <button type="button" className="mini" disabled={busy || !newSection.trim()} onClick={() => void addSection()}>
+              + Add section
+            </button>
+          </div>
           {!draft && (
             <button type="button" className="primary" onClick={startNew}>
               + New course
@@ -479,24 +496,6 @@ export default function TrainingAdmin() {
             {ungrouped.map(courseRow)}
           </ul>
         </div>
-      </div>
-
-      <div className="training-add-section">
-        <input
-          type="text"
-          value={newSection}
-          placeholder="New section name (e.g. Onboarding)"
-          onChange={(e) => setNewSection(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              void addSection();
-            }
-          }}
-        />
-        <button type="button" className="mini" disabled={busy || !newSection.trim()} onClick={() => void addSection()}>
-          + Add section
-        </button>
       </div>
     </section>
   );

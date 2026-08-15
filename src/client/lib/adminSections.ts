@@ -31,7 +31,14 @@ export const ADMIN_GROUPS: AdminGroup[] = [
     key: 'content',
     label: 'Content',
     items: [
-      { key: 'pages', label: 'Pages', tabs: [{ key: 'pages', label: 'Pages', permission: 'pages.manage' }] },
+      {
+        key: 'pages',
+        label: 'Pages',
+        tabs: [
+          { key: 'pages', label: 'Pages', permission: 'pages.manage' },
+          { key: 'builtinpages', label: 'Built-in pages', permission: 'pages.manage' },
+        ],
+      },
       {
         key: 'navigation',
         label: 'Navigation',
@@ -101,7 +108,14 @@ export const ADMIN_GROUPS: AdminGroup[] = [
           { key: 'footer', label: 'Footer', permission: 'settings.manage' },
         ],
       },
-      { key: 'notifications', label: 'Notifications', tabs: [{ key: 'notifications', label: 'Notifications', permission: 'settings.manage' }] },
+      {
+        key: 'notifications',
+        label: 'Notifications',
+        tabs: [
+          { key: 'notifinbox', label: 'Your notifications', permission: 'settings.manage' },
+          { key: 'notifrules', label: 'Settings', permission: 'settings.manage' },
+        ],
+      },
       { key: 'logs', label: 'Logs', tabs: [{ key: 'audit', label: 'Logs', permission: 'audit.view' }] },
       {
         key: 'backups',

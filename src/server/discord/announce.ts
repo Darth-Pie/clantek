@@ -22,25 +22,96 @@ import { discordClient } from '../config';
 
 export type AnnouncementEventKey = 'medalAward' | 'warRecordAward' | 'promotion';
 
+export const ANNOUNCEMENT_EVENT_KEYS: AnnouncementEventKey[] = ['medalAward', 'warRecordAward', 'promotion'];
+
+/** Per-event customization. Any field left blank falls back to the built-in. */
+export interface AnnouncementTemplate {
+  /** Overrides the embed title (the bold headline). */
+  title?: string;
+  /** Overrides the body text; supports {placeholders} (see PLACEHOLDERS below). */
+  text?: string;
+  /** A banner image for this event, overriding the shared one. /media or http(s). */
+  imageUrl?: string;
+}
+
 export interface AnnouncementConfig {
   channelId: string | null;
   events: Record<AnnouncementEventKey, boolean>;
+  /** Embed accent colour ('#rrggbb'); null → each event's built-in colour. */
+  accentColor: string | null;
+  /** Footer line shown under every announcement (e.g. your org name); null → none. */
+  footer: string | null;
+  /** A shared banner image shown on every announcement; per-event overrides win. */
+  imageUrl: string | null;
+  /** Per-event title/text/image overrides. */
+  templates: Partial<Record<AnnouncementEventKey, AnnouncementTemplate>>;
 }
+
+/** The placeholder tokens each event's custom text may use. */
+export const PLACEHOLDERS: Record<AnnouncementEventKey, string[]> = {
+  medalAward: ['{member}', '{medal}', '{citation}'],
+  warRecordAward: ['{member}', '{record}', '{game}', '{citation}'],
+  promotion: ['{member}', '{rank}', '{by}'],
+};
 
 export const DEFAULT_ANNOUNCEMENTS: AnnouncementConfig = {
   channelId: null,
   events: { medalAward: false, warRecordAward: false, promotion: false },
+  accentColor: null,
+  footer: null,
+  imageUrl: null,
+  templates: {},
 };
 
 type DB = ReturnType<typeof drizzle<typeof s>>;
 
+/** Accept a same-origin ('/media/…') or absolute http(s) URL; anything else → ''. */
+function cleanImageUrl(v: unknown): string {
+  if (typeof v !== 'string') return '';
+  const t = v.trim();
+  if (!t) return '';
+  if (t.startsWith('/') && !t.startsWith('//')) return t.slice(0, 500);
+  if (/^https?:\/\//i.test(t)) return t.slice(0, 500);
+  return '';
+}
+
+/**
+ * Coerce arbitrary JSON into a valid AnnouncementConfig. Unknown keys are
+ * dropped, strings are length-capped, and only a well-formed hex colour / URL is
+ * kept — so a stored blob can never inject markup or an off-site colour value.
+ */
+export function cleanAnnouncementConfig(raw: unknown): AnnouncementConfig {
+  const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+
+  const events = { ...DEFAULT_ANNOUNCEMENTS.events };
+  const rawEvents = (o.events ?? {}) as Record<string, unknown>;
+  for (const k of ANNOUNCEMENT_EVENT_KEYS) events[k] = Boolean(rawEvents[k]);
+
+  const templates: AnnouncementConfig['templates'] = {};
+  const rawTemplates = (o.templates ?? {}) as Record<string, unknown>;
+  for (const k of ANNOUNCEMENT_EVENT_KEYS) {
+    const t = (rawTemplates[k] ?? {}) as Record<string, unknown>;
+    const title = typeof t.title === 'string' ? t.title.trim().slice(0, 200) : '';
+    const text = typeof t.text === 'string' ? t.text.trim().slice(0, 600) : '';
+    const imageUrl = cleanImageUrl(t.imageUrl);
+    if (title || text || imageUrl) {
+      templates[k] = { ...(title && { title }), ...(text && { text }), ...(imageUrl && { imageUrl }) };
+    }
+  }
+
+  const accent = typeof o.accentColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.accentColor.trim())
+    ? o.accentColor.trim().toLowerCase()
+    : null;
+  const footer = typeof o.footer === 'string' && o.footer.trim() ? o.footer.trim().slice(0, 150) : null;
+  const imageUrl = cleanImageUrl(o.imageUrl) || null;
+  const channelId = typeof o.channelId === 'string' && /^\d+$/.test(o.channelId) ? o.channelId : null;
+
+  return { channelId, events, accentColor: accent, footer, imageUrl, templates };
+}
+
 export async function loadAnnouncementConfig(db: DB): Promise<AnnouncementConfig> {
   const row = await db.query.settings.findFirst({ where: eq(s.settings.key, 'announcements') });
-  const stored = (row?.value as Partial<AnnouncementConfig> | undefined) ?? {};
-  return {
-    channelId: stored.channelId ?? null,
-    events: { ...DEFAULT_ANNOUNCEMENTS.events, ...(stored.events ?? {}) },
-  };
+  return cleanAnnouncementConfig(row?.value);
 }
 
 interface MemberRef {
@@ -63,52 +134,70 @@ export type AnnounceEvent =
 const COLORS = { medalAward: 0xc0392b, warRecordAward: 0xd4af37, promotion: 0x2f9e5f };
 
 /** Absolute-ise a stored /media/ URL so Discord can fetch it; pass through http(s) URLs. */
-function absolute(url: string | null, baseUrl?: string): string | undefined {
+function absolute(url: string | null | undefined, baseUrl?: string): string | undefined {
   if (!url) return undefined;
   if (/^https?:\/\//i.test(url)) return url;
   return baseUrl ? `${baseUrl}${url}` : undefined;
 }
 
-function buildEmbed(event: AnnounceEvent, baseUrl?: string): Embed {
-  const author = { name: event.memberName, icon_url: event.memberAvatarUrl };
+/** Fill {placeholders} in a custom template with the event's values. */
+function fillTemplate(text: string, vars: Record<string, string>): string {
+  return text.replace(/\{(\w+)\}/g, (m, key: string) => (key in vars ? vars[key]! : m));
+}
+
+/** The default (built-in) title, body and item art for each event type. */
+function defaults(event: AnnounceEvent): { title: string; description: string; art: string | null; vars: Record<string, string> } {
   switch (event.type) {
     case 'medalAward':
       return {
-        author,
-        color: COLORS.medalAward,
         title: '🎖️ Medal awarded',
-        description: `**${event.memberName}** was awarded the **${event.medalName}** medal.${
-          event.citation ? `\n*“${event.citation}”*` : ''
-        }`,
-        thumbnail: absolute(event.medalImageUrl, baseUrl)
-          ? { url: absolute(event.medalImageUrl, baseUrl)! }
-          : undefined,
+        description: `**${event.memberName}** was awarded the **${event.medalName}** medal.${event.citation ? `\n*“${event.citation}”*` : ''}`,
+        art: event.medalImageUrl,
+        vars: { member: event.memberName, medal: event.medalName, citation: event.citation ?? '' },
       };
     case 'warRecordAward':
       return {
-        author,
-        color: COLORS.warRecordAward,
         title: '🏆 War record awarded',
-        description: `**${event.memberName}** earned the **${event.recordName}** war record${
-          event.gameName ? ` (${event.gameName})` : ''
-        }.${event.citation ? `\n*“${event.citation}”*` : ''}`,
-        thumbnail: absolute(event.recordImageUrl, baseUrl)
-          ? { url: absolute(event.recordImageUrl, baseUrl)! }
-          : undefined,
+        description: `**${event.memberName}** earned the **${event.recordName}** war record${event.gameName ? ` (${event.gameName})` : ''}.${event.citation ? `\n*“${event.citation}”*` : ''}`,
+        art: event.recordImageUrl,
+        vars: { member: event.memberName, record: event.recordName, game: event.gameName ?? '', citation: event.citation ?? '' },
       };
     case 'promotion':
       return {
-        author,
-        color: COLORS.promotion,
         title: '⬆️ Promotion',
-        description: `**${event.memberName}** was promoted to **${event.rankName}**.${
-          event.byName ? `\n_by ${event.byName}_` : ''
-        }`,
-        thumbnail: absolute(event.rankImageUrl, baseUrl)
-          ? { url: absolute(event.rankImageUrl, baseUrl)! }
-          : undefined,
+        description: `**${event.memberName}** was promoted to **${event.rankName}**.${event.byName ? `\n_by ${event.byName}_` : ''}`,
+        art: event.rankImageUrl,
+        vars: { member: event.memberName, rank: event.rankName, by: event.byName ?? '' },
       };
   }
+}
+
+/**
+ * Build the embed for an event, layering the admin's customization over the
+ * built-in defaults: accent colour, footer line, a shared/per-event banner
+ * image, and per-event title/body overrides (with {placeholder} substitution).
+ * The member's own item art (medal/record/rank image) stays the thumbnail.
+ */
+function buildEmbed(event: AnnounceEvent, config: AnnouncementConfig, baseUrl?: string): Embed {
+  const author = { name: event.memberName, icon_url: event.memberAvatarUrl };
+  const base = defaults(event);
+  const tpl = config.templates[event.type] ?? {};
+
+  const color = config.accentColor ? parseInt(config.accentColor.slice(1), 16) : COLORS[event.type];
+  const title = tpl.title?.trim() ? fillTemplate(tpl.title, base.vars) : base.title;
+  const description = tpl.text?.trim() ? fillTemplate(tpl.text, base.vars) : base.description;
+  const banner = absolute(tpl.imageUrl ?? config.imageUrl, baseUrl);
+  const thumb = absolute(base.art, baseUrl);
+
+  return {
+    author,
+    color,
+    title,
+    description,
+    ...(thumb ? { thumbnail: { url: thumb } } : {}),
+    ...(banner ? { image: { url: banner } } : {}),
+    ...(config.footer ? { footer: { text: config.footer } } : {}),
+  };
 }
 
 /**
@@ -126,7 +215,7 @@ export async function announce(env: Env, event: AnnounceEvent, baseUrl?: string)
 
     await rest.createMessage(config.channelId, {
       content: `<@${event.memberDiscordId}>`,
-      embeds: [buildEmbed(event, baseUrl)],
+      embeds: [buildEmbed(event, config, baseUrl)],
       allowed_mentions: { users: [event.memberDiscordId] },
     });
   } catch (err) {

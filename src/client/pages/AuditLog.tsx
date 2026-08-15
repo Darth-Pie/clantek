@@ -125,9 +125,16 @@ function whenLabel(unixSec: number): string {
   return new Date(then).toLocaleDateString();
 }
 
+interface ActorOpt {
+  id: number;
+  name: string;
+}
+
 export default function AuditLog() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [category, setCategory] = useState('all');
+  const [actorId, setActorId] = useState<number | null>(null);
+  const [actors, setActors] = useState<ActorOpt[]>([]);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -138,6 +145,7 @@ export default function AuditLog() {
     async (nextOffset: number, replace: boolean) => {
       const params = new URLSearchParams({ limit: String(PAGE), offset: String(nextOffset) });
       if (prefix) params.set('action', prefix);
+      if (actorId) params.set('actorId', String(actorId));
       const { entries: page, hasMore } = await api.get<{ entries: AuditEntry[]; hasMore: boolean }>(
         `/audit?${params.toString()}`,
       );
@@ -145,10 +153,18 @@ export default function AuditLog() {
       setOffset(nextOffset + page.length);
       setHasMore(hasMore);
     },
-    [prefix],
+    [prefix, actorId],
   );
 
   const { run, busy, error, notice, warning } = useAction();
+
+  // The set of people who appear in the log, for the "by person" filter.
+  useEffect(() => {
+    api
+      .get<{ actors: ActorOpt[] }>('/audit/actors')
+      .then((d) => setActors(d.actors ?? []))
+      .catch(() => setActors([]));
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -179,6 +195,22 @@ export default function AuditLog() {
             {ct.label}
           </button>
         ))}
+
+        <label className="audit-person">
+          <span className="muted small">By person</span>
+          <select
+            value={actorId ?? ''}
+            disabled={busy || actors.length === 0}
+            onChange={(e) => setActorId(e.target.value ? Number(e.target.value) : null)}
+          >
+            <option value="">Everyone</option>
+            {actors.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {loading ? (

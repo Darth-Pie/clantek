@@ -7,8 +7,8 @@
  * another group, or give a group/tool a custom name.
  *
  * Reordering is native drag-and-drop via a dedicated grip handle (so the label
- * inputs stay selectable). Drag doesn't work on touch, so a "move to group"
- * select stays as a fallback there. Saved to /api/admin-nav as an order+label
+ * inputs stay selectable) — reorder within a group or drag a tool across groups.
+ * Saved to /api/admin-nav as an order+label
  * override; the sidebar re-reads it live via the `ct-adminnav-changed` event. A
  * tool added in a future version that the saved arrangement never mentions still
  * shows up (it's appended to its home group) — arranging can never hide a tool.
@@ -360,23 +360,6 @@ export default function AdminMenuAdmin() {
                     aria-label={`Name for the ${it.defaultLabel} tool`}
                     onChange={(e) => setItemLabel(gIdx, iIdx, e.target.value)}
                   />
-                  {groups.length > 1 && (
-                    <select
-                      className="adminmenu-into"
-                      value=""
-                      title="Move to another group (touch-friendly alternative to dragging)"
-                      onChange={(e) => e.target.value && moveItem(g.key, it.key, e.target.value, null, false)}
-                    >
-                      <option value="">To ▾</option>
-                      {groups
-                        .filter((other) => other.key !== g.key)
-                        .map((other) => (
-                          <option key={other.key} value={other.key}>
-                            {other.label.trim() || other.defaultLabel}
-                          </option>
-                        ))}
-                    </select>
-                  )}
                 </li>
               ))}
               {g.items.length === 0 && (

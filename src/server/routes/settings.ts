@@ -37,9 +37,7 @@ import {
 } from '../config';
 import {
   loadAnnouncementConfig,
-  DEFAULT_ANNOUNCEMENTS,
-  type AnnouncementConfig,
-  type AnnouncementEventKey,
+  cleanAnnouncementConfig,
 } from '../discord/announce';
 import { fetchRates } from './usage';
 
@@ -400,16 +398,12 @@ settings.get('/announcements', requirePermission('settings.manage'), async (c) =
 });
 
 settings.put('/announcements', requirePermission('settings.manage'), async (c) => {
-  const body = await c.req.json<Partial<AnnouncementConfig>>();
+  const body = await c.req.json<unknown>();
 
-  // Only keep the known event flags as booleans, and a plain channel id string.
-  const events = {} as AnnouncementConfig['events'];
-  for (const key of Object.keys(DEFAULT_ANNOUNCEMENTS.events) as AnnouncementEventKey[]) {
-    events[key] = Boolean(body.events?.[key]);
-  }
-  const channelId =
-    typeof body.channelId === 'string' && /^\d+$/.test(body.channelId) ? body.channelId : null;
-  const clean: AnnouncementConfig = { channelId, events };
+  // The shared sanitiser is the authority on shape: known event flags, a plain
+  // channel id, a hex accent colour, a footer line, a shared banner image, and
+  // per-event title/text/image overrides — everything else is dropped.
+  const clean = cleanAnnouncementConfig(body);
 
   const viewer = c.get('viewer')!;
   await db(c.env)

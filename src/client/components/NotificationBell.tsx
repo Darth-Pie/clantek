@@ -13,6 +13,10 @@ import { MorphIcon } from 'morphicons/react';
 import { Bell } from 'lucide';
 import { api } from '../lib/api';
 
+interface Reviewer {
+  id: number;
+  name: string;
+}
 interface Notif {
   id: number;
   type: string;
@@ -21,6 +25,8 @@ interface Notif {
   link: string | null;
   createdAt: number;
   read: boolean;
+  reviewedAt: number | null;
+  reviewer: Reviewer | null;
 }
 
 function timeAgo(sec: number): string {
@@ -84,6 +90,15 @@ export default function NotificationBell() {
     }
   };
 
+  // Claim a notification as reviewed. Shared, first-come: the server may return a
+  // different reviewer if someone beat us to it, so we adopt whatever it says.
+  const review = (id: number) => {
+    api
+      .post<{ reviewedAt: number | null; reviewer: Reviewer | null }>(`/notifications/${id}/review`)
+      .then((d) => setItems((prev) => prev.map((n) => (n.id === id ? { ...n, reviewedAt: d.reviewedAt, reviewer: d.reviewer } : n))))
+      .catch(() => {});
+  };
+
   return (
     <div className="notif" ref={ref}>
       <button
@@ -121,6 +136,15 @@ export default function NotificationBell() {
                     ) : (
                       <div className="notif-link">{inner}</div>
                     )}
+                    <div className="notif-review">
+                      {n.reviewer ? (
+                        <span className="notif-reviewed muted small">✓ Reviewed by {n.reviewer.name}</span>
+                      ) : (
+                        <button type="button" className="notif-review-btn" onClick={() => review(n.id)}>
+                          Mark as reviewed
+                        </button>
+                      )}
+                    </div>
                   </li>
                 );
               })}

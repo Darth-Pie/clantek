@@ -59,6 +59,7 @@ import BrandingAdmin from './BrandingAdmin';
 import SeoAdmin from './SeoAdmin';
 import FooterAdmin from './FooterAdmin';
 import PagesAdmin from './PagesAdmin';
+import BuiltinPagesAdmin from './BuiltinPagesAdmin';
 import NavAdmin from './NavAdmin';
 import OrgChartDesigner from './OrgChartDesigner';
 import ApplicantsAdmin from './ApplicantsAdmin';
@@ -67,6 +68,7 @@ import TrainingAdmin from './TrainingAdmin';
 import MustrGgAdmin from './MustrGgAdmin';
 import AdminMenuAdmin from './AdminMenuAdmin';
 import NotificationsAdmin from './NotificationsAdmin';
+import NotificationsInbox from './NotificationsInbox';
 import SnapshotsAdmin from './SnapshotsAdmin';
 import AuditLog from './AuditLog';
 
@@ -97,6 +99,7 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
 /** Tab key → its component. Every tab key in adminSections.ts needs an entry. */
 const TAB_RENDERERS: Record<string, () => ReactNode> = {
   pages: () => <PagesAdmin />,
+  builtinpages: () => <BuiltinPagesAdmin />,
   navigation: () => <NavAdmin />,
   news: () => <NewsAdmin />,
   gallery: () => <GalleryAdmin />,
@@ -119,7 +122,8 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   footer: () => <FooterAdmin />,
   audit: () => <AuditLog />,
   adminmenu: () => <AdminMenuAdmin />,
-  notifications: () => <NotificationsAdmin />,
+  notifinbox: () => <NotificationsInbox />,
+  notifrules: () => <NotificationsAdmin />,
   backups: () => <SnapshotsAdmin />,
   mustrgg: () => <MustrGgAdmin />,
 };

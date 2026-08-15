@@ -6590,6 +6590,22 @@ a.notif-link:hover {
   }
 }
 
+/* A sub-heading inside a single OptionSet (e.g. Star Citizen kill switches
+ * under the org-identity field), separating grouped controls without a second
+ * accordion. */
+.option-subhead {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 1rem 0 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.option-subhead-title {
+  font-weight: 600;
+}
+
 /* ------------------------------------------------------------------ *
  * Backups (God-only Snapshots admin)
  * ------------------------------------------------------------------ */
@@ -6761,4 +6777,138 @@ a.notif-link:hover {
   .restore-overlay-card .spinner {
     animation-duration: 2s;
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Activity Log — "by person" filter
+ * ------------------------------------------------------------------ */
+.audit-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+.audit-person select {
+  max-width: 14rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Notifications — shared review state (bell + inbox)
+ * ------------------------------------------------------------------ */
+.notif-review {
+  padding: 0 0.75rem 0.5rem;
+}
+.notif-review-btn {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.5rem;
+}
+.notif-reviewed {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.notif-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.notif-inbox-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.notif-inbox-row.unread {
+  border-left: 3px solid var(--color-accent);
+}
+.notif-inbox-main {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+.notif-inbox-title {
+  font-weight: 600;
+}
+.notif-inbox-when {
+  margin-top: 0.2rem;
+}
+.notif-inbox-review {
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Bot Settings (Discord announcements) customization
+ * ------------------------------------------------------------------ */
+.announce-appearance,
+.announce-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+.announce-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.announce-field-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.announce-event-block {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.7rem;
+}
+.announce-event-block:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+.announce-customize {
+  margin: 0.35rem 0 0 2.6rem;
+}
+.announce-customize > summary {
+  cursor: pointer;
+  color: var(--color-accent);
+  font-size: 0.85rem;
+}
+.announce-customize-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0 0.2rem;
+}
+.announce-customize-body code {
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+.announce-image {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+.announce-image-preview {
+  max-width: 100%;
+  max-height: 120px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+}
+
+/* Built-in pages helper text */
+.builtin-page-hint {
+  display: block;
+}
+.builtin-pages-pointer {
+  margin-top: 1rem;
 }

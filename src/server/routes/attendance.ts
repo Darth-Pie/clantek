@@ -163,8 +163,11 @@ attendance.get('/heatmap/:userId', requireAuth, async (c) => {
   const canView = viewer.isGod || isSelf || viewer.roles.some((r) => cfg.heatmapViewRoleIds.includes(r.id));
   if (!canView) return c.json({ error: 'Forbidden' }, 403);
 
-  const days = await heatmap(db(c.env), userId, HEATMAP_DAYS);
-  return c.json({ days, window: HEATMAP_DAYS });
+  const [days, score] = await Promise.all([
+    heatmap(db(c.env), userId, HEATMAP_DAYS),
+    memberScore(db(c.env), userId, cfg.recentWindowDays),
+  ]);
+  return c.json({ days, window: HEATMAP_DAYS, score, recentWindowDays: cfg.recentWindowDays });
 });
 
 /** Admin config: mode, window, heatmap visibility, public leaderboard + role list. */

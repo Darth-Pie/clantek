@@ -19,6 +19,7 @@ import * as s from '../../db/schema';
 import type { AppContext } from '../env';
 import { db, requirePermission } from '../middleware/auth';
 import { loadPageAccess } from '../pageAccess';
+import { loadAttendanceConfig } from '../attendance';
 import { renderLayoutBody } from '../pages/render';
 import {
   defaultLayout,
@@ -82,9 +83,10 @@ pages.get('/nav', async (c) => {
  * just be bounced to /login. Two-segment path so it can't collide with /:slug.
  */
 pages.get('/public/list', async (c) => {
-  const [rows, access] = await Promise.all([
+  const [rows, access, attendance] = await Promise.all([
     db(c.env).select({ slug: s.pageLayouts.slug, isPublic: s.pageLayouts.isPublic }).from(s.pageLayouts),
     loadPageAccess(c.env, db(c.env)),
+    loadAttendanceConfig(c.env, db(c.env)),
   ]);
   const slugs = rows.filter((r) => r.isPublic).map((r) => r.slug);
   // A fresh install has no 'home' row yet; home defaults to public in that case.
@@ -93,6 +95,8 @@ pages.get('/public/list', async (c) => {
   // double as nav/route targets, and 'news' etc. are reserved so never collide
   // with a custom page slug.
   for (const [key, audience] of Object.entries(access)) if (audience === 'public') slugs.push(key);
+  // The attendance leaderboard opts in via its own flag.
+  if (attendance.leaderboardPublic) slugs.push('leaderboard');
   return c.json({ slugs });
 });
 

@@ -51,6 +51,10 @@ export const BUILTIN_TARGETS: Record<string, BuiltinTarget> = {
   news: { key: 'news', path: '/news', label: 'News' },
   roster: { key: 'roster', path: '/roster', label: 'Roster' },
   events: { key: 'events', path: '/events', label: 'Events', permission: 'events.view' },
+  // Any signed-in member; reachable by logged-out visitors only when the admin
+  // flips the leaderboard public (surfaced via /pages/public/list). No static
+  // `public` flag, so anonymous visibility follows that runtime flag.
+  leaderboard: { key: 'leaderboard', path: '/leaderboard', label: 'Leaderboard' },
   // Public because the gallery holds public albums; the page itself decides
   // what a given viewer actually gets. The link is additionally hidden when the
   // gallery module is off — see SiteNav, which gates on the module flag.

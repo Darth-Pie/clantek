@@ -19,6 +19,7 @@ import HangarView from '../components/HangarView';
 import HangarImport from '../components/HangarImport';
 import ScVerify from '../components/ScVerify';
 import MemberTraining from '../components/MemberTraining';
+import MemberActivity from '../components/MemberActivity';
 
 interface Role {
   id: number;
@@ -596,6 +597,10 @@ export default function MemberDetail() {
                 )
               ))}
           </section>
+
+          {/* Renders itself only when the viewer may see this member's activity
+              (self, a permitted role, or god) and the feature is on. */}
+          <MemberActivity userId={member.id} />
 
           {(isSelf || can('training.view')) && (
             <div className="block">

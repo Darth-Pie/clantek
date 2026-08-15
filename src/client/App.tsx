@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
 import AccountSettings from './pages/AccountSettings';
 import Roster from './pages/Roster';
+import Leaderboard from './pages/Leaderboard';
 import Home from './pages/Home';
 import CustomPage from './pages/CustomPage';
 import News from './pages/News';
@@ -317,6 +318,14 @@ export default function App() {
               <Protected>
                 <Roster />
               </Protected>
+            }
+          />
+          <Route
+            path="/leaderboard"
+            element={
+              <PublicOr pageKey="leaderboard" publicSlugs={publicSlugs} ready={accessReady}>
+                <Leaderboard />
+              </PublicOr>
             }
           />
           <Route path="/p/:slug" element={<CustomPage />} />

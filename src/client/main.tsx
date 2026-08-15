@@ -5,7 +5,12 @@ import App from './App';
 import { SessionProvider } from './lib/session';
 import { ThemeProvider } from './lib/theme';
 import { BrandingProvider } from './lib/branding';
+import { applyA11yPrefs, loadA11yPrefs } from './lib/a11y';
 import './styles.css';
+
+// Apply the viewer's personal text-size / high-contrast prefs before the first
+// paint, so there's no flash of default size or colours.
+applyA11yPrefs(loadA11yPrefs());
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

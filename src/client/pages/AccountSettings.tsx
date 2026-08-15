@@ -8,6 +8,16 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useSession } from '../lib/session';
+import Switch from '../components/Switch';
+import {
+  loadA11yPrefs,
+  saveA11yPrefs,
+  FONT_MIN,
+  FONT_MAX,
+  FONT_STEP,
+  FONT_DEFAULT,
+  type A11yPrefs,
+} from '../lib/a11y';
 
 interface ApiToken {
   id: number;
@@ -29,6 +39,10 @@ function when(ts: number | null): string {
 
 export default function AccountSettings() {
   const { viewer } = useSession();
+  // Personal accessibility prefs (per-device). Changes apply + persist instantly.
+  const [a11y, setA11y] = useState<A11yPrefs>(() => loadA11yPrefs());
+  const setFontScale = (n: number) => setA11y((p) => saveA11yPrefs({ ...p, fontScale: n }));
+  const setHighContrast = (v: boolean) => setA11y((p) => saveA11yPrefs({ ...p, highContrast: v }));
   const [tokens, setTokens] = useState<ApiToken[] | null>(null);
   const [label, setLabel] = useState('');
   const [busy, setBusy] = useState(false);
@@ -92,6 +106,40 @@ export default function AccountSettings() {
           <p className="muted">Signed in as {viewer ? viewer.username : ''}. Manage access for apps and scripts below.</p>
         </div>
       </header>
+
+      <h3 className="account-subhead">Accessibility</h3>
+      <p className="muted">Personal to you and saved on this device — they don’t change what anyone else sees.</p>
+      <div className="a11y-settings">
+        <div className="a11y-row">
+          <label htmlFor="a11y-font" className="a11y-label">Text size</label>
+          <span className="a11y-aa small" aria-hidden>A</span>
+          <input
+            id="a11y-font"
+            type="range"
+            className="a11y-slider"
+            min={FONT_MIN}
+            max={FONT_MAX}
+            step={FONT_STEP}
+            value={a11y.fontScale}
+            onChange={(e) => setFontScale(Number(e.target.value))}
+            aria-valuetext={`${a11y.fontScale} percent`}
+          />
+          <span className="a11y-aa" aria-hidden>A</span>
+          <span className="a11y-value">{a11y.fontScale}%</span>
+          {a11y.fontScale !== FONT_DEFAULT && (
+            <button type="button" className="ghost mini" onClick={() => setFontScale(FONT_DEFAULT)}>
+              Reset
+            </button>
+          )}
+        </div>
+        <div className="a11y-row">
+          <div className="a11y-toggle-text">
+            <span className="a11y-label">High contrast</span>
+            <span className="muted small">Stronger colours and borders for easier reading.</span>
+          </div>
+          <Switch checked={a11y.highContrast} onChange={setHighContrast} label="High contrast mode" />
+        </div>
+      </div>
 
       <h3 className="account-subhead">API access</h3>
       <p className="muted">

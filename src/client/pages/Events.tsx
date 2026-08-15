@@ -10,6 +10,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
+import { selfCheckinOpen, type AttendanceMode } from '../../shared/attendance';
 
 interface RoleState {
   id: number;
@@ -33,6 +34,7 @@ interface EventItem {
   roles: RoleState[];
   signupCount: number;
   mySignup: { roleId: number | null } | null;
+  attended: boolean;
 }
 interface GameOption {
   id: number;
@@ -87,6 +89,7 @@ export default function Events() {
   const canSeeAttendees = can('events.attendees');
   const [events, setEvents] = useState<EventItem[]>([]);
   const [games, setGames] = useState<GameOption[]>([]);
+  const [att, setAtt] = useState<{ mode: AttendanceMode; checkinWindowHours: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -105,6 +108,10 @@ export default function Events() {
       canManage
         ? api.get<{ games: GameOption[] }>('/games').then(({ games }) => setGames(games)).catch(() => setGames([]))
         : Promise.resolve(),
+      api
+        .get<{ mode: AttendanceMode; checkinWindowHours: number }>('/attendance/settings')
+        .then((a) => setAtt({ mode: a.mode, checkinWindowHours: a.checkinWindowHours }))
+        .catch(() => setAtt(null)),
     ]).finally(() => setLoading(false));
   }, [canManage]);
 
@@ -139,6 +146,18 @@ export default function Events() {
     run(async () => {
       await api.del(`/events/${eventId}/signup`);
       return 'Withdrawn from the event.';
+    });
+
+  const checkin = (eventId: number) =>
+    run(async () => {
+      await api.post(`/attendance/event/${eventId}/checkin`);
+      return 'Checked in — thanks for coming!';
+    });
+
+  const uncheckin = (eventId: number) =>
+    run(async () => {
+      await api.del(`/attendance/event/${eventId}/checkin`);
+      return 'Check-in removed.';
     });
 
   if (loading) return <div className="loading">Loading events…</div>;
@@ -197,6 +216,17 @@ export default function Events() {
                   onSignup={(roleId) => void signup(ev.id, roleId)}
                   onWithdraw={() => void withdraw(ev.id)}
                 />
+
+                {att && (
+                  <CheckInControl
+                    event={ev}
+                    mode={att.mode}
+                    windowHours={att.checkinWindowHours}
+                    busy={busy}
+                    onCheckin={() => void checkin(ev.id)}
+                    onUncheckin={() => void uncheckin(ev.id)}
+                  />
+                )}
 
                 {canSeeAttendees && <AttendeeRoster eventId={ev.id} count={ev.signupCount} />}
 
@@ -283,6 +313,55 @@ function SignupControls({
           Withdraw
         </button>
       )}
+    </div>
+  );
+}
+
+/**
+ * Attendance check-in for the member themselves. Distinct from RSVP: it records
+ * that you were actually there. Available while the check-in window is open (from
+ * the event's start until a few hours after it ends) and only when the site's
+ * attendance mode lets members check themselves in. Once attended, it shows so —
+ * and offers an undo while the window is still open.
+ */
+function CheckInControl({
+  event,
+  mode,
+  windowHours,
+  busy,
+  onCheckin,
+  onUncheckin,
+}: {
+  event: EventItem;
+  mode: AttendanceMode;
+  windowHours: number;
+  busy: boolean;
+  onCheckin: () => void;
+  onUncheckin: () => void;
+}) {
+  const now = Math.floor(Date.now() / 1000);
+  const selfAllowed = mode === 'self' || mode === 'both';
+  const open = selfCheckinOpen(event, now, windowHours);
+
+  if (event.attended) {
+    return (
+      <div className="checkin-control">
+        <span className="checkin-done">✓ You attended</span>
+        {selfAllowed && open && (
+          <button className="mini" disabled={busy} onClick={onUncheckin} title="Remove your check-in">
+            Undo
+          </button>
+        )}
+      </div>
+    );
+  }
+  if (!selfAllowed || !open) return null;
+  return (
+    <div className="checkin-control">
+      <button className="primary small" disabled={busy} onClick={onCheckin}>
+        ✋ I’m here — check in
+      </button>
+      <span className="muted small">Confirms you attended (counts toward your participation).</span>
     </div>
   );
 }

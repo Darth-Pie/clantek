@@ -16,12 +16,13 @@ import { deleteMediaByUrl } from './media';
 
 const medals = new Hono<AppContext>();
 
-/** NULL, or a positive whole number of months. Anything else is a 400. */
-function parseAutoGrantMonths(v: unknown): number | null | undefined {
-  if (v === undefined) return undefined; // field omitted — leave unchanged
+/** NULL, or a positive whole number. Anything else is a 400. `undefined` (field
+ *  omitted) leaves the value unchanged; `label` names it in the error. */
+function parsePositiveOrNull(v: unknown, label: string): number | null | undefined {
+  if (v === undefined) return undefined;
   if (v === null || v === '') return null;
   const n = Number(v);
-  if (!Number.isInteger(n) || n <= 0) throw new Error('Auto-grant months must be a positive whole number.');
+  if (!Number.isInteger(n) || n <= 0) throw new Error(`${label} must be a positive whole number.`);
   return n;
 }
 
@@ -35,6 +36,7 @@ medals.get('/', requireAuth, async (c) => {
       imageUrl: s.medals.imageUrl,
       gameId: s.medals.gameId,
       autoGrantMonths: s.medals.autoGrantMonths,
+      autoGrantAttendance: s.medals.autoGrantAttendance,
       sortOrder: s.medals.sortOrder,
       awardCount: sql<number>`(select count(*) from member_medals where member_medals.medal_id = medals.id)`,
     })
@@ -50,13 +52,16 @@ medals.post('/', requirePermission('medals.manage'), async (c) => {
     description?: string;
     imageUrl?: string;
     autoGrantMonths?: number | null;
+    autoGrantAttendance?: number | null;
   }>();
 
   if (!body.name?.trim()) return c.json({ error: 'Name is required' }, 400);
 
   let autoGrantMonths: number | null;
+  let autoGrantAttendance: number | null;
   try {
-    autoGrantMonths = parseAutoGrantMonths(body.autoGrantMonths) ?? null;
+    autoGrantMonths = parsePositiveOrNull(body.autoGrantMonths, 'Auto-grant months') ?? null;
+    autoGrantAttendance = parsePositiveOrNull(body.autoGrantAttendance, 'Auto-grant events') ?? null;
   } catch (err) {
     return c.json({ error: (err as Error).message }, 400);
   }
@@ -74,6 +79,7 @@ medals.post('/', requirePermission('medals.manage'), async (c) => {
         description: body.description?.trim() || null,
         imageUrl: body.imageUrl?.trim() || null,
         autoGrantMonths,
+        autoGrantAttendance,
         sortOrder: (highest[0]?.max ?? -1) + 1,
       })
       .returning()
@@ -97,6 +103,7 @@ medals.patch('/:id', requirePermission('medals.manage'), async (c) => {
     description?: string | null;
     imageUrl?: string | null;
     autoGrantMonths?: number | null;
+    autoGrantAttendance?: number | null;
   }>();
 
   const database = db(c.env);
@@ -118,7 +125,14 @@ medals.patch('/:id', requirePermission('medals.manage'), async (c) => {
   }
   if (body.autoGrantMonths !== undefined) {
     try {
-      patch.autoGrantMonths = parseAutoGrantMonths(body.autoGrantMonths) ?? null;
+      patch.autoGrantMonths = parsePositiveOrNull(body.autoGrantMonths, 'Auto-grant months') ?? null;
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  }
+  if (body.autoGrantAttendance !== undefined) {
+    try {
+      patch.autoGrantAttendance = parsePositiveOrNull(body.autoGrantAttendance, 'Auto-grant events') ?? null;
     } catch (err) {
       return c.json({ error: (err as Error).message }, 400);
     }

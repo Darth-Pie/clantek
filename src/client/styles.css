@@ -6912,3 +6912,42 @@ a.notif-link:hover {
 .builtin-pages-pointer {
   margin-top: 1rem;
 }
+
+/* ------------------------------------------------------------------ *
+ * Attendance & participation
+ * ------------------------------------------------------------------ */
+.checkin-control {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+.checkin-done {
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.attendance-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 1rem 0;
+}
+.attendance-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  margin: 1rem 0;
+}
+.attendance-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.1rem;
+  margin-top: 0.4rem;
+}
+.attendance-role {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}

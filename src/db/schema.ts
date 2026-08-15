@@ -473,6 +473,10 @@ export const medals = sqliteTable(
     // reaches this many months in the guild (6, 12, 24, …). NULL = awarded by
     // hand only. The auto-grant sweep lives in server/medals/tenure.ts.
     autoGrantMonths: integer('auto_grant_months'),
+    // Activity medals: when set, granted automatically once a member has attended
+    // this many events (10, 50, 100, …). NULL = not an activity medal. The
+    // auto-grant sweep lives in server/medals/activity.ts.
+    autoGrantAttendance: integer('auto_grant_attendance'),
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: integer('created_at').notNull().default(now),
   },
@@ -641,6 +645,61 @@ export const eventRoles = sqliteTable(
     sortOrder: integer('sort_order').notNull().default(0),
   },
   (t) => [index('event_roles_event_idx').on(t.eventId)],
+);
+
+/**
+ * Attendance — who ACTUALLY showed up to an event, as opposed to who RSVP'd
+ * (eventSignups). One row per member per event. Fed by a member checking
+ * themselves in during the check-in window, an officer marking them, or a
+ * Discord "I'm here" button. Distinct from signups so "planned to come" and
+ * "was there" never get confused. Powers the participation score, leaderboards,
+ * and the attendance source of the activity heatmap.
+ */
+export const eventAttendance = sqliteTable(
+  'event_attendance',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    eventId: integer('event_id')
+      .notNull()
+      .references(() => events.id, { onDelete: 'cascade' }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    // How the check-in happened. 'self' = the member; 'officer' = someone with
+    // events.manage marked them; 'discord' = the Discord check-in button.
+    source: text('source', { enum: ['self', 'officer', 'discord'] }).notNull().default('self'),
+    // The officer who marked it (source='officer'); null otherwise.
+    markedBy: integer('marked_by').references(() => users.id, { onDelete: 'set null' }),
+    checkedInAt: integer('checked_in_at').notNull().default(now),
+  },
+  (t) => [
+    uniqueIndex('event_attendance_event_user_idx').on(t.eventId, t.userId),
+    index('event_attendance_user_idx').on(t.userId),
+  ],
+);
+
+/**
+ * Per-member daily activity, for the profile heatmap (a GitHub-style calendar).
+ * One row per member per day per source; `count` is that day's intensity. `day`
+ * is the unix day number (floor(unixSeconds / 86400), UTC) so a date range is a
+ * cheap integer scan. `source` is pluggable — 'web' (site visits) and 'event'
+ * (attended an event that day) today, 'discord' reserved for a future gateway
+ * component that can see chat activity.
+ */
+export const memberActivity = sqliteTable(
+  'member_activity',
+  {
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    day: integer('day').notNull(),
+    source: text('source', { enum: ['web', 'event', 'discord'] }).notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.day, t.source] }),
+    index('member_activity_user_idx').on(t.userId),
+  ],
 );
 
 /**

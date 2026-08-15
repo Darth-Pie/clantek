@@ -37,6 +37,8 @@ import { handleEventComponent, isEventComponent } from './discord/eventInteracti
 import { loadConfig, discordClient } from './config';
 import { syncMemberRankRoles, reconcileBatch } from './discord/sync';
 import { awardTenureMedals } from './medals/tenure';
+import { awardActivityMedals } from './medals/activity';
+import { recordActivity } from './attendance';
 import { materializeRecurringEvents } from './events/recurrence';
 import ranks from './routes/ranks';
 import members from './routes/members';
@@ -44,6 +46,7 @@ import bansRoutes from './routes/bans';
 import training from './routes/training';
 import setupRoutes from './routes/setup';
 import snapshotsRoutes from './routes/snapshots';
+import attendanceRoutes from './routes/attendance';
 import { aboutPageHtml } from './marketing/about';
 import { productPageHtml } from './marketing/product';
 import { setupGuideHtml } from './marketing/setup-guide';
@@ -405,7 +408,13 @@ app.post('/api/auth/logout', async (c) => {
 /** What the React app calls on boot to learn who it is talking to. */
 app.get('/api/me', async (c) => {
   const { siteName } = await loadConfig(c.env);
-  return c.json({ viewer: c.get('viewer'), siteName, authKind: c.get('authKind') });
+  const viewer = c.get('viewer');
+  // A member loading the app is one "web" activity dot for the heatmap. Members
+  // only (never pending applicants), best-effort so it never blocks the boot.
+  if (viewer && !viewer.pending) {
+    c.executionCtx.waitUntil(recordActivity(db(c.env), viewer.id, 'web').catch(() => {}));
+  }
+  return c.json({ viewer, siteName, authKind: c.get('authKind') });
 });
 
 /**
@@ -447,6 +456,7 @@ app.route('/api/orgchart', orgChartRoutes);
 app.route('/api/auth/tokens', tokensRoutes);
 app.route('/api/setup', setupRoutes);
 app.route('/api/snapshots', snapshotsRoutes);
+app.route('/api/attendance', attendanceRoutes);
 
 app.get('/api/health', (c) => c.json({ ok: true, service: 'mustr' }));
 
@@ -668,6 +678,12 @@ export default {
         awardTenureMedals(database)
           .then((r) => console.log('Hourly tenure award:', r.awarded.length, 'granted'))
           .catch((err) => console.error('Tenure award failed', err)),
+      );
+      // Activity medals — same cheap DB-only sweep, based on events attended.
+      ctx.waitUntil(
+        awardActivityMedals(database)
+          .then((r) => console.log('Hourly activity award:', r.awarded.length, 'granted'))
+          .catch((err) => console.error('Activity award failed', err)),
       );
       // Roll ended recurring events forward to their next occurrence. Safe with
       // or without the bot (the Discord sync no-ops when it's absent).

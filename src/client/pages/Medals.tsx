@@ -19,6 +19,7 @@ interface Medal {
   imageUrl: string | null;
   gameId: number | null;
   autoGrantMonths: number | null;
+  autoGrantAttendance: number | null;
   sortOrder: number;
   awardCount: number;
 }
@@ -30,6 +31,14 @@ const TENURE_PRESETS: [label: string, months: number][] = [
   ['2 years', 24],
   ['3 years', 36],
   ['5 years', 60],
+];
+
+// Common attendance milestones for activity medals.
+const ATTENDANCE_PRESETS: [label: string, events: number][] = [
+  ['10 events', 10],
+  ['25 events', 25],
+  ['50 events', 50],
+  ['100 events', 100],
 ];
 
 export default function Medals() {
@@ -104,6 +113,7 @@ export default function Medals() {
                 </span>
                 <span className="medal-name">{medal.name}</span>
                 {medal.autoGrantMonths != null && <span className="tag">tenure</span>}
+                {medal.autoGrantAttendance != null && <span className="tag">activity</span>}
                 <span className="count">{medal.awardCount}</span>
               </button>
             </li>
@@ -160,18 +170,25 @@ function MedalEditor({
   const [months, setMonths] = useState<string>(
     medal.autoGrantMonths != null ? String(medal.autoGrantMonths) : '',
   );
+  const [events, setEvents] = useState<string>(
+    medal.autoGrantAttendance != null ? String(medal.autoGrantAttendance) : '',
+  );
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const parsedMonths = months.trim() === '' ? null : Number(months);
   const monthsValid =
     parsedMonths === null || (Number.isInteger(parsedMonths) && parsedMonths > 0);
+  const parsedEvents = events.trim() === '' ? null : Number(events);
+  const eventsValid =
+    parsedEvents === null || (Number.isInteger(parsedEvents) && parsedEvents > 0);
 
   const dirty =
     name !== medal.name ||
     description !== (medal.description ?? '') ||
     imageUrl !== medal.imageUrl ||
-    parsedMonths !== medal.autoGrantMonths;
+    parsedMonths !== medal.autoGrantMonths ||
+    parsedEvents !== medal.autoGrantAttendance;
 
   async function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -272,15 +289,53 @@ function MedalEditor({
         {!monthsValid && <p className="small warn">Enter a positive whole number of months.</p>}
       </fieldset>
 
+      <fieldset className="tenure">
+        <legend>Auto-award by events attended</legend>
+        <div className="tenure-row">
+          <NumberField
+            min={1}
+            step={1}
+            value={events}
+            placeholder="e.g. 50"
+            ariaLabel="Events attended"
+            onChange={setEvents}
+            disabled={busy}
+          />
+          <span className="muted small">
+            events attended. Turns this into an activity medal — leave blank for none.
+          </span>
+        </div>
+        <div className="tenure-presets">
+          {ATTENDANCE_PRESETS.map(([label, n]) => (
+            <button
+              key={n}
+              type="button"
+              className={parsedEvents === n ? 'preset active' : 'preset'}
+              disabled={busy}
+              onClick={() => setEvents(String(n))}
+            >
+              {label}
+            </button>
+          ))}
+          {parsedEvents !== null && (
+            <button type="button" className="preset" disabled={busy} onClick={() => setEvents('')}>
+              Clear
+            </button>
+          )}
+        </div>
+        {!eventsValid && <p className="small warn">Enter a positive whole number of events.</p>}
+      </fieldset>
+
       <button
         className="primary"
-        disabled={busy || uploading || !dirty || !monthsValid || !name.trim()}
+        disabled={busy || uploading || !dirty || !monthsValid || !eventsValid || !name.trim()}
         onClick={() =>
           onSave({
             name: name.trim(),
             description,
             imageUrl,
             autoGrantMonths: parsedMonths,
+            autoGrantAttendance: parsedEvents,
           })
         }
       >

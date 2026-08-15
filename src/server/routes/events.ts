@@ -133,8 +133,8 @@ events.get('/', requirePermission('events.view'), async (c) => {
   const ids = rows.map((r) => r.id);
   if (ids.length === 0) return c.json({ events: [] });
 
-  // Three bounded queries regardless of how many events are listed.
-  const [roleRows, countRows, mine] = await Promise.all([
+  // Four bounded queries regardless of how many events are listed.
+  const [roleRows, countRows, mine, attendedRows] = await Promise.all([
     database
       .select()
       .from(s.eventRoles)
@@ -149,7 +149,12 @@ events.get('/', requirePermission('events.view'), async (c) => {
       .select({ eventId: s.eventSignups.eventId, roleId: s.eventSignups.eventRoleId })
       .from(s.eventSignups)
       .where(and(inArray(s.eventSignups.eventId, ids), eq(s.eventSignups.userId, viewer.id))),
+    database
+      .select({ eventId: s.eventAttendance.eventId })
+      .from(s.eventAttendance)
+      .where(and(inArray(s.eventAttendance.eventId, ids), eq(s.eventAttendance.userId, viewer.id))),
   ]);
+  const attendedSet = new Set(attendedRows.map((a) => a.eventId));
 
   const totalByEvent = new Map<number, number>();
   const roleCount = new Map<string, number>();
@@ -180,6 +185,7 @@ events.get('/', requirePermission('events.view'), async (c) => {
     roles: rolesByEvent.get(r.id) ?? [],
     signupCount: totalByEvent.get(r.id) ?? 0,
     mySignup: mineByEvent.has(r.id) ? { roleId: mineByEvent.get(r.id) ?? null } : null,
+    attended: attendedSet.has(r.id),
   }));
 
   return c.json({ events: enriched });

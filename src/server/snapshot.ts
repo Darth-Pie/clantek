@@ -54,6 +54,7 @@ const TABLES: { name: string; table: SQLiteTable }[] = [
   { name: 'scHangars', table: s.scHangars },
   { name: 'scCcuBoards', table: s.scCcuBoards },
   { name: 'scVerifications', table: s.scVerifications },
+  { name: 'memberActivity', table: s.memberActivity },
   // Join / leaf tables (depend on the above).
   { name: 'rolePermissions', table: s.rolePermissions },
   { name: 'userRoles', table: s.userRoles },
@@ -65,6 +66,7 @@ const TABLES: { name: string; table: SQLiteTable }[] = [
   { name: 'matchParticipants', table: s.matchParticipants },
   { name: 'eventRoles', table: s.eventRoles },
   { name: 'eventSignups', table: s.eventSignups },
+  { name: 'eventAttendance', table: s.eventAttendance },
   { name: 'galleryItems', table: s.galleryItems },
   { name: 'notificationReads', table: s.notificationReads },
 ];

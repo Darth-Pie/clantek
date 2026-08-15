@@ -54,5 +54,23 @@
     "esbuild@0.25.12": true,
     "esbuild@0.28.1": true,
     "workerd@1.20260730.1": true
+  },
+  "cloudflare": {
+    "label": "mustr — community tools for gaming orgs",
+    "products": ["Workers", "D1", "R2"],
+    "bindings": {
+      "SETUP_TOKEN": {
+        "description": "A password **you invent** (letters and numbers only — avoid `+ / =`) that unlocks the one-time setup wizard the first time your site loads, so nobody can claim your site before you do. You paste it once, then you're done. Generate a safe one with `openssl rand -hex 24`."
+      },
+      "SESSION_SECRET": {
+        "description": "A long random string (letters and numbers) used to sign login/session cookies — keep it secret. Generate one with `openssl rand -hex 32`."
+      },
+      "DB": {
+        "description": "Your site's database (Cloudflare D1). Created automatically — nothing to enter. The schema builds itself on first run."
+      },
+      "MEDIA": {
+        "description": "File storage for uploaded images (Cloudflare R2). Created automatically — nothing to enter."
+      }
+    }
   }
 }

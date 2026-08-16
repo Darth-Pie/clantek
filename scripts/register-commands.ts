@@ -43,6 +43,38 @@ const COMMANDS = [
       },
     ],
   },
+  {
+    name: 'event',
+    description: 'Show the next few upcoming events',
+  },
+  {
+    name: 'tournament',
+    description: 'Show the active and upcoming tournaments',
+  },
+  {
+    name: 'medals',
+    description: 'List a member’s medals',
+    options: [
+      {
+        name: 'member',
+        description: 'The member to look up',
+        type: OptionType.USER,
+        required: true,
+      },
+    ],
+  },
+  {
+    name: 'rank',
+    description: 'Show a member’s current rank',
+    options: [
+      {
+        name: 'member',
+        description: 'The member to look up',
+        type: OptionType.USER,
+        required: true,
+      },
+    ],
+  },
 ];
 
 /** Secrets only. Public config lives in wrangler.jsonc. */

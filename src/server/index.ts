@@ -34,6 +34,7 @@ import {
 } from './discord/interactions';
 import { handleCommand } from './discord/commands';
 import { handleEventComponent, isEventComponent } from './discord/eventInteractions';
+import { handleTournamentComponent, isTournamentComponent } from './discord/tournamentInteractions';
 import { loadConfig, discordClient } from './config';
 import { syncMemberRankRoles, reconcileBatch } from './discord/sync';
 import { awardTenureMedals } from './medals/tenure';
@@ -73,6 +74,7 @@ import scVerifyRoutes from './routes/scVerify';
 import { loadSeo, renderHead } from './seo';
 import tokensRoutes from './routes/tokens';
 import orgChartRoutes from './routes/orgchart';
+import tournamentsRoutes from './routes/tournaments';
 import { escapeHtml, renderLayoutBody } from './pages/render';
 
 const app = new Hono<AppContext>();
@@ -150,6 +152,14 @@ app.post('/api/discord/interactions', async (c) => {
       c.executionCtx.waitUntil(
         handleEventComponent(c.env, interaction).catch((err) =>
           console.error('Event component handler failed', err),
+        ),
+      );
+      return c.json(deferUpdate());
+    }
+    if (isTournamentComponent(interaction)) {
+      c.executionCtx.waitUntil(
+        handleTournamentComponent(c.env, interaction).catch((err) =>
+          console.error('Tournament component handler failed', err),
         ),
       );
       return c.json(deferUpdate());
@@ -457,6 +467,7 @@ app.route('/api/auth/tokens', tokensRoutes);
 app.route('/api/setup', setupRoutes);
 app.route('/api/snapshots', snapshotsRoutes);
 app.route('/api/attendance', attendanceRoutes);
+app.route('/api/tournaments', tournamentsRoutes);
 
 app.get('/api/health', (c) => c.json({ ok: true, service: 'mustr' }));
 
@@ -703,5 +714,15 @@ export default {
         .then((r) => console.log('Reconcile batch:', JSON.stringify(r)))
         .catch((err) => console.error('Reconcile batch failed', err)),
     );
+    // Backstop keepalive for the Discord Gateway listener (no-ops unless the
+    // chat-activity feature is on). Its own alarm is the steady-state heartbeat;
+    // this restarts it if the DO ever fully died. Best-effort.
+    ctx.waitUntil(
+      env.DISCORD_GATEWAY.getByName('main')
+        .start()
+        .catch((err) => console.error('Gateway keepalive failed', err)),
+    );
   },
 } satisfies ExportedHandler<Env>;
+
+export { DiscordGateway } from './discord/gateway';

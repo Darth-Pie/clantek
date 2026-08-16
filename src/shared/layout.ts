@@ -30,7 +30,8 @@ export type ModuleType =
   | 'warrecords'
   | 'games'
   | 'training'
-  | 'leaderboard';
+  | 'leaderboard'
+  | 'tournaments';
 
 export interface LayoutModule {
   /** Stable id for React keys and drag-and-drop; not meaningful to the server. */
@@ -124,7 +125,8 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
       secondaryHref: '',
       chips: [
         '⚡ Real-Time Discord Role Sync',
-        '🎖️ Custom Medals & Service Records',
+        '🏆 Tournaments & Brackets',
+        '📊 Attendance & Leaderboards',
         '📅 Native Discord Event RSVPs',
         '🎨 Fully Customizable Web Hubs',
       ],
@@ -233,6 +235,12 @@ export const MODULE_SPECS: readonly ModuleSpec[] = [
     label: 'Leaderboard',
     description: 'Most active members by events attended (recent or all-time).',
     defaultConfig: { title: 'Most Active', limit: 10, window: 'recent' },
+  },
+  {
+    type: 'tournaments',
+    label: 'Tournaments',
+    description: 'Active and upcoming tournaments, linking to their brackets.',
+    defaultConfig: { title: 'Tournaments', limit: 5 },
   },
 ];
 

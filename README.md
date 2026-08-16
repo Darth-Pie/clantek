@@ -29,15 +29,20 @@ It's the modern rebuild of **ClanTek**, a clan site first built back in 2003.
 ## What it does
 
 - 🪖 **Roster, ranks & roles** — a rank ladder and roles that stay in **two-way sync with Discord** (promote on the site, Discord roles and nicknames update themselves)
-- 📅 **Events wired to Discord** — sign-up slots, RSVPs on the site *or* in Discord, one shared list
+- 📅 **Events wired to Discord** — sign-up slots and RSVPs on the site *or* in Discord, recurring events, and one-tap **check-in** — all on one shared list
+- 🏆 **Tournaments** — run single/double elimination, round-robin, or Swiss brackets for individuals *or* teams; auto-seeding, auto-advancing results, live standings, and a champion medal
+- 📊 **Attendance & participation** — check-in scores, leaderboards, and a GitHub-style activity heatmap on every profile, with milestone medals awarded automatically
 - 🎖️ **Medals & service records** — recognize the people who show up
 - 🎓 **Training** — embed Google Slides, mark courses required per rank, track who's completed them
 - 🖼️ **Galleries & media** — image galleries with a lightbox + embedded YouTube/Twitch (no video-hosting bills)
-- 🕸️ **Org chart** — a drag-and-drop leadership tree
+- 🕸️ **Org chart** — a drag-and-drop leadership tree that doubles as your public roster
 - 🤝 **Apply-to-join & bans** — approve applicants, keep a real ban list
-- 🧩 **Build your own pages** — drag-and-drop modules, a dozen themes, your own logo & colors
-- 📜 **Audit log** — every promotion, demotion, and medal logged with a reason
-- 🚀 **Game modules** — optional per-game extras (first up: a Star Citizen hangar import)
+- 🧩 **Build your own pages** — drag-and-drop modules, a dozen themes, your own logo & colors, installable as an app (PWA)
+- ♿ **Accessible by default** — a per-person text-size slider and a high-contrast theme, for members who need them
+- 🛟 **One-click backups** — the owner can snapshot the whole site and restore it in a click if someone breaks something
+- 🔔 **Notifications & audit log** — role-gated announcements, plus every promotion, demotion, and medal logged with a reason
+- 🤖 **A Discord bot that does more than sync** — slash commands (`/whois`, `/roster`, `/event`, `/tournament`, `/medals`, `/rank`, `/promote`) and sign-up / check-in / tournament buttons right in your server
+- 🚀 **Game modules** — optional per-game extras (first up: a Star Citizen hangar import + CCU planner)
 
 **[→ See it all in action](https://mustr.gg/product)**
 

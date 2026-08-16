@@ -14,6 +14,8 @@ import MemberDetail from './pages/MemberDetail';
 import AccountSettings from './pages/AccountSettings';
 import Roster from './pages/Roster';
 import Leaderboard from './pages/Leaderboard';
+import Tournaments from './pages/Tournaments';
+import TournamentDetail from './pages/TournamentDetail';
 import Home from './pages/Home';
 import CustomPage from './pages/CustomPage';
 import News from './pages/News';
@@ -328,6 +330,11 @@ export default function App() {
               </PublicOr>
             }
           />
+          {/* Public-capable like the gallery: the list/detail APIs filter by each
+              tournament's isPublic flag, so an anonymous visitor only ever sees
+              public tournaments. Left unwrapped for the same reason. */}
+          <Route path="/tournaments" element={<Tournaments />} />
+          <Route path="/tournaments/:key" element={<TournamentDetail />} />
           <Route path="/p/:slug" element={<CustomPage />} />
           {/* Public-capable and deliberately unwrapped: the gallery API filters
               albums by audience, so whatever a visitor gets back is theirs to

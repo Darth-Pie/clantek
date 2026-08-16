@@ -155,6 +155,24 @@ export default function AttendanceAdmin() {
       </div>
 
       {cfg.heatmapEnabled && (
+        <div className="module-row">
+          <div className="module-info">
+            <span className="module-name">Track Discord chat activity</span>
+            <span className="muted small">
+              Count members’ Discord messages toward the activity heatmap. This runs a persistent bot
+              connection (a Durable Object) and needs the bot in your server — leave off if you don’t want it.
+            </span>
+          </div>
+          <Switch
+            checked={cfg.discordActivity}
+            disabled={busy}
+            label="Track Discord chat activity"
+            onChange={(v) => patch({ discordActivity: v })}
+          />
+        </div>
+      )}
+
+      {cfg.heatmapEnabled && (
         <div className="attendance-field">
           <div className="field-label">Who can view other members’ heatmaps</div>
           <span className="muted small">

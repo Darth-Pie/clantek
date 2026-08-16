@@ -76,6 +76,14 @@
     }
   ],
 
+  // Durable Object that holds the Discord Gateway websocket for the optional
+  // chat-activity heatmap (src/server/discord/gateway.ts). It stays idle (no
+  // socket) until an admin turns the feature on in Attendance settings.
+  "durable_objects": {
+    "bindings": [{ "name": "DISCORD_GATEWAY", "class_name": "DiscordGateway" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DiscordGateway"] }],
+
   "vars": {
     // Non-secret config only. Real secrets (client secret, bot token, session
     // secret) go in .dev.vars locally and `wrangler secret put` in production.

@@ -56,6 +56,13 @@
     }
   ],
 
+  // Durable Object for the optional Discord chat-activity heatmap
+  // (src/server/discord/gateway.ts). Idle until enabled in Attendance settings.
+  "durable_objects": {
+    "bindings": [{ "name": "DISCORD_GATEWAY", "class_name": "DiscordGateway" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DiscordGateway"] }],
+
   // Non-secret defaults only. Everything Discord (client id, guild, public key)
   // and your canonical URL are entered in the setup wizard and stored in the
   // database, so they stay blank here. SETUP_TOKEN and SESSION_SECRET are

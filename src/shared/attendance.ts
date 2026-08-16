@@ -25,6 +25,10 @@ export interface AttendanceConfig {
   /** When true, the attendance leaderboard is readable by logged-out visitors
    *  (for a public "active community" page). Off by default — members only. */
   leaderboardPublic: boolean;
+  /** When true, a Discord Gateway listener (a Durable Object) counts members'
+   *  chat activity into the heatmap. Off by default — it holds a persistent
+   *  bot connection, so it only runs once an admin opts in. */
+  discordActivity: boolean;
 }
 
 export const DEFAULT_ATTENDANCE: AttendanceConfig = {
@@ -34,6 +38,7 @@ export const DEFAULT_ATTENDANCE: AttendanceConfig = {
   heatmapEnabled: true,
   heatmapViewRoleIds: [],
   leaderboardPublic: false,
+  discordActivity: false,
 };
 
 const clampInt = (v: unknown, min: number, max: number, fallback: number): number => {
@@ -56,6 +61,7 @@ export function sanitizeAttendanceConfig(raw: unknown): AttendanceConfig {
     heatmapEnabled: o.heatmapEnabled !== false,
     heatmapViewRoleIds: roleIds,
     leaderboardPublic: o.leaderboardPublic === true,
+    discordActivity: o.discordActivity === true,
   };
 }
 

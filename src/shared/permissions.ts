@@ -40,6 +40,8 @@ export const PERMISSIONS = {
   'events.manage': 'Create, edit, and cancel events',
   'events.attendees': 'See who has signed up for an event',
 
+  'tournaments.manage': 'Create tournaments, seed brackets, and report match results',
+
   // Viewing a gallery needs no permission — each album carries its own audience
   // (everyone / members / one role). This is only the right to build them.
   'gallery.manage': 'Create gallery albums, upload media, and set who can see each album',

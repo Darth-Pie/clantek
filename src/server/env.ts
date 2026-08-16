@@ -34,6 +34,11 @@ export interface Env {
   // via `wrangler secret put CLOUDFLARE_API_TOKEN`. Absent → storage gauges only.
   CLOUDFLARE_ACCOUNT_ID?: string;
   CLOUDFLARE_API_TOKEN?: string;
+
+  // Durable Object holding the Discord Gateway websocket for the chat-activity
+  // heatmap (opt-in; see discord/gateway.ts). Present once the DO is bound in
+  // wrangler; the feature no-ops when it's off or the bot isn't configured.
+  DISCORD_GATEWAY: DurableObjectNamespace<import('./discord/gateway').DiscordGateway>;
 }
 
 export interface Variables {

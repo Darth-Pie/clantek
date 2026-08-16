@@ -55,6 +55,10 @@ export const BUILTIN_TARGETS: Record<string, BuiltinTarget> = {
   // flips the leaderboard public (surfaced via /pages/public/list). No static
   // `public` flag, so anonymous visibility follows that runtime flag.
   leaderboard: { key: 'leaderboard', path: '/leaderboard', label: 'Leaderboard' },
+  // Any signed-in member; anonymous visitors see a tournament only when it's
+  // been marked public (the list/detail APIs enforce that per-tournament), so
+  // like the leaderboard there's no static `public` flag.
+  tournaments: { key: 'tournaments', path: '/tournaments', label: 'Tournaments' },
   // Public because the gallery holds public albums; the page itself decides
   // what a given viewer actually gets. The link is additionally hidden when the
   // gallery module is off — see SiteNav, which gates on the module flag.
@@ -224,6 +228,7 @@ export function defaultNavConfig(navPages: { slug: string; title: string | null 
     { id: newNavId(), type: 'link', label: '', kind: 'builtin', target: 'news' },
     { id: newNavId(), type: 'link', label: '', kind: 'builtin', target: 'roster' },
     { id: newNavId(), type: 'link', label: '', kind: 'builtin', target: 'events' },
+    { id: newNavId(), type: 'link', label: '', kind: 'builtin', target: 'tournaments' },
     // Present in the default menu but hidden until the gallery module is turned
     // on (SiteNav gates it on the flag), so enabling the module surfaces the
     // link without an admin having to go and build one.

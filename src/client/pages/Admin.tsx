@@ -35,6 +35,7 @@ import {
   Bell,
   History,
   Activity,
+  Trophy,
 } from 'lucide';
 import { useSession } from '../lib/session';
 import { api } from '../lib/api';
@@ -64,6 +65,7 @@ import BuiltinPagesAdmin from './BuiltinPagesAdmin';
 import NavAdmin from './NavAdmin';
 import OrgChartDesigner from './OrgChartDesigner';
 import AttendanceAdmin from './AttendanceAdmin';
+import TournamentsAdmin from './TournamentsAdmin';
 import ApplicantsAdmin from './ApplicantsAdmin';
 import BansAdmin from './BansAdmin';
 import TrainingAdmin from './TrainingAdmin';
@@ -90,6 +92,7 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
   'medals-records': Award,
   'org-chart': Network,
   attendance: Activity,
+  tournaments: Trophy,
   discord: Bot,
   analytics: Gauge,
   appearance: Palette,
@@ -116,6 +119,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   games: () => <Games />,
   orgchart: () => <OrgChartDesigner />,
   attendance: () => <AttendanceAdmin />,
+  tournaments: () => <TournamentsAdmin />,
   announcements: () => <Announcements />,
   identity: () => <IdentityAdmin />,
   analytics: () => <AnalyticsAdmin />,

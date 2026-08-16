@@ -1010,6 +1010,65 @@ function TrainingModule({ config }: { config: Config }) {
   );
 }
 
+/* ------------------------------------------------------------------ *
+ * Tournaments — active and upcoming tournaments, newest first. Hides quietly
+ * for a logged-out visitor with no public tournaments.
+ * ------------------------------------------------------------------ */
+
+interface TournamentCardRow {
+  id: number;
+  name: string;
+  slug: string;
+  status: string;
+  competitorType: string;
+  entrantCount: number;
+}
+
+const T_STATUS: Record<string, string> = {
+  draft: 'Draft',
+  registration: 'Registration open',
+  seeding: 'Seeding',
+  in_progress: 'In progress',
+  complete: 'Complete',
+};
+
+function TournamentsModule({ config }: { config: Config }) {
+  const title = str(config, 'title', 'Tournaments');
+  const limit = num(config, 'limit', 5);
+  const [rows, setRows] = useState<TournamentCardRow[] | null>(null);
+
+  useEffect(() => {
+    api
+      .get<{ tournaments: TournamentCardRow[] }>('/tournaments')
+      .then(({ tournaments }) => setRows(tournaments))
+      .catch(() => setRows([]));
+  }, []);
+
+  if (rows === null) return <ModuleCard title={title}><p className="muted">Loading…</p></ModuleCard>;
+  // Active first (not complete), then the rest — and only as many as `limit`.
+  const active = rows.filter((t) => t.status !== 'complete');
+  const shown = (active.length ? active : rows).slice(0, limit);
+  if (shown.length === 0) return null;
+
+  return (
+    <ModuleCard title={title} action={<Link className="btn-link" to="/tournaments">All</Link>}>
+      <ul className="module-tournaments">
+        {shown.map((t) => (
+          <li key={t.id}>
+            <Link to={`/tournaments/${t.slug}`} className="module-tournament">
+              <span className="module-tournament-name">{t.name}</span>
+              <span className="module-tournament-meta">
+                <span className={`status-chip status-${t.status}`}>{T_STATUS[t.status] ?? t.status}</span>
+                <span className="muted small">{t.entrantCount} {t.competitorType === 'team' ? 'teams' : 'entrants'}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </ModuleCard>
+  );
+}
+
 export const MODULE_RENDERERS: Record<ModuleType, (props: { config: Config }) => ReactNode> = {
   heading: HeadingModule,
   text: TextModule,
@@ -1028,4 +1087,5 @@ export const MODULE_RENDERERS: Record<ModuleType, (props: { config: Config }) =>
   games: GamesModule,
   training: TrainingModule,
   leaderboard: LeaderboardModule,
+  tournaments: TournamentsModule,
 };

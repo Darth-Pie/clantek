@@ -83,6 +83,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
       },
       { key: 'org-chart', label: 'Org Chart', tabs: [{ key: 'orgchart', label: 'Org Chart', permission: 'ranks.manage' }] },
       { key: 'attendance', label: 'Attendance', tabs: [{ key: 'attendance', label: 'Attendance', permission: 'settings.manage' }] },
+      { key: 'tournaments', label: 'Tournaments', tabs: [{ key: 'tournaments', label: 'Tournaments', permission: 'tournaments.manage' }] },
     ],
   },
   {

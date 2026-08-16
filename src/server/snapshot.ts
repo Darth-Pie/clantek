@@ -47,6 +47,7 @@ const TABLES: { name: string; table: SQLiteTable }[] = [
   { name: 'pageLayouts', table: s.pageLayouts },
   { name: 'galleryAlbums', table: s.galleryAlbums },
   { name: 'notifications', table: s.notifications },
+  { name: 'tournaments', table: s.tournaments },
   { name: 'settings', table: s.settings },
   { name: 'auditLog', table: s.auditLog },
   { name: 'bans', table: s.bans },
@@ -69,6 +70,11 @@ const TABLES: { name: string; table: SQLiteTable }[] = [
   { name: 'eventAttendance', table: s.eventAttendance },
   { name: 'galleryItems', table: s.galleryItems },
   { name: 'notificationReads', table: s.notificationReads },
+  // Tournament entrants/roster/matches (entrants before matches, which
+  // reference them via entrant1/2/winner → set null).
+  { name: 'tournamentEntrants', table: s.tournamentEntrants },
+  { name: 'tournamentTeamMembers', table: s.tournamentTeamMembers },
+  { name: 'tournamentMatches', table: s.tournamentMatches },
 ];
 
 export const SNAPSHOT_VERSION = 1 as const;

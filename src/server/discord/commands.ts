@@ -76,9 +76,83 @@ export async function handleCommand(env: Env, i: Interaction, baseUrl?: string) 
       return roster(db);
     case 'promote':
       return promote(env, db, viewer, i, baseUrl);
+    case 'event':
+      return upcomingEvents(db, baseUrl);
+    case 'tournament':
+      return activeTournaments(db, baseUrl);
+    case 'medals':
+      return memberMedals(db, i);
+    case 'rank':
+      return memberRank(db, i);
     default:
       return ephemeral(`Unknown command: ${i.data?.name}`);
   }
+}
+
+async function upcomingEvents(db: DB, baseUrl?: string) {
+  const now = Math.floor(Date.now() / 1000);
+  const rows = await db
+    .select({ id: s.events.id, title: s.events.title, startsAt: s.events.startsAt, location: s.events.location })
+    .from(s.events)
+    .where(sql`${s.events.status} = 'scheduled' and ${s.events.startsAt} >= ${now}`)
+    .orderBy(asc(s.events.startsAt))
+    .limit(5);
+  if (!rows.length) return reply('No upcoming events scheduled.');
+  const lines = rows.map((e) => `• **${e.title}** — <t:${e.startsAt}:F> · ${e.location}`);
+  const link = baseUrl ? `\n\n${baseUrl}/events` : '';
+  return reply(`**Upcoming events**\n${lines.join('\n')}${link}`);
+}
+
+async function activeTournaments(db: DB, baseUrl?: string) {
+  const rows = await db
+    .select({
+      name: s.tournaments.name,
+      slug: s.tournaments.slug,
+      status: s.tournaments.status,
+      n: sql<number>`(select count(*) from tournament_entrants where tournament_entrants.tournament_id = tournaments.id)`,
+    })
+    .from(s.tournaments)
+    .where(sql`${s.tournaments.status} != 'complete'`)
+    .orderBy(desc(s.tournaments.createdAt))
+    .limit(8);
+  if (!rows.length) return reply('No active tournaments right now.');
+  const label: Record<string, string> = {
+    draft: 'Draft',
+    registration: 'Registration open',
+    seeding: 'Seeding',
+    in_progress: 'In progress',
+  };
+  const lines = rows.map(
+    (t) =>
+      `• **${t.name}** — ${label[t.status] ?? t.status} · ${t.n} entered` +
+      (baseUrl ? ` · ${baseUrl}/tournaments/${t.slug}` : ''),
+  );
+  return reply(`**Active tournaments**\n${lines.join('\n')}`);
+}
+
+async function memberMedals(db: DB, i: Interaction) {
+  const targetId = optionValue<string>(i, 'member');
+  if (!targetId) return ephemeral('Specify a member.');
+  const user = await db.query.users.findFirst({ where: eq(s.users.discordId, targetId) });
+  if (!user) return ephemeral('That person has no mustr account.');
+  const rows = await db
+    .select({ name: s.medals.name, awardedAt: s.memberMedals.awardedAt })
+    .from(s.memberMedals)
+    .innerJoin(s.medals, eq(s.medals.id, s.memberMedals.medalId))
+    .where(eq(s.memberMedals.userId, user.id))
+    .orderBy(desc(s.memberMedals.awardedAt));
+  if (!rows.length) return reply(`**${memberName(user)}** has no medals yet.`);
+  const lines = rows.map((m) => `🎖️ ${m.name}`);
+  return reply(`**${memberName(user)}** — ${rows.length} medal${rows.length === 1 ? '' : 's'}\n${lines.join('\n')}`);
+}
+
+async function memberRank(db: DB, i: Interaction) {
+  const targetId = optionValue<string>(i, 'member');
+  if (!targetId) return ephemeral('Specify a member.');
+  const user = await db.query.users.findFirst({ where: eq(s.users.discordId, targetId) });
+  if (!user) return ephemeral('That person has no mustr account.');
+  const rank = user.rankId ? await db.query.ranks.findFirst({ where: eq(s.ranks.id, user.rankId) }) : null;
+  return reply(`**${memberName(user)}** — ${rank?.name ?? 'no rank'}`);
 }
 
 async function whois(db: DB, i: Interaction) {

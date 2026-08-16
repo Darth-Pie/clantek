@@ -105,12 +105,16 @@ app.use('*', async (c, next) => {
 app.post('/api/discord/interactions', async (c) => {
   const raw = await c.req.text();
 
-  const { discord } = await loadConfig(c.env);
+  // Verify with the public key from the env var when present (instant, no D1),
+  // falling back to the stored config only when it isn't (buyer installs enter
+  // it in the setup wizard). Keeping D1 off this path means the 3-second Discord
+  // ack deadline is never at the mercy of a cold database read.
+  const publicKey = c.env.DISCORD_PUBLIC_KEY || (await loadConfig(c.env)).discord.publicKey;
   const valid = await verifySignature(
     raw,
     c.req.header('x-signature-ed25519') ?? null,
     c.req.header('x-signature-timestamp') ?? null,
-    discord.publicKey,
+    publicKey,
   );
   // Discord probes with bad signatures on purpose when you save the endpoint
   // URL; 401 here is what proves the endpoint is genuine.

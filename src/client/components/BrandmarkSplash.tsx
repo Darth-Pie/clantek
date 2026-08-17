@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 import { useBrandmark } from '../lib/brandmark';
 import { useSigil } from '../lib/sigil';
 import { useBranding } from '../lib/branding';
-import SigilMark from './SigilMark';
+import { brandmarkToRecipe } from '../../shared/brandmark';
 import SigilStage from './SigilStage';
 
 const SESSION_KEY = 'mustr:brandmark:shown';
@@ -43,29 +43,18 @@ export default function BrandmarkSplash() {
     window.setTimeout(() => setPhase('done'), 650);
   };
 
+  // Preserve the old "blank accent = live theme accent" behaviour for the legacy
+  // image Brandmark path.
+  const themeAccent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
+  const recipe = useSigilRecipe ? sigil.recipe : brandmarkToRecipe(brandmark, bmSrc, themeAccent);
+
   return (
     <div
       className={`brandmark-splash${phase === 'closing' ? ' closing' : ''}`}
       role="presentation"
       onClick={close}
     >
-      {useSigilRecipe ? (
-        <SigilStage
-          recipe={sigil.recipe}
-          className="splash-mark"
-          onDone={() => window.setTimeout(close, 1100)}
-        />
-      ) : (
-        <SigilMark
-          src={bmSrc}
-          archetype={brandmark.archetype}
-          speed={brandmark.speed}
-          density={brandmark.density}
-          accent={brandmark.accent}
-          className="splash-mark"
-          onDone={() => window.setTimeout(close, 1100)}
-        />
-      )}
+      <SigilStage recipe={recipe} className="splash-mark" onDone={() => window.setTimeout(close, 1100)} />
     </div>
   );
 }

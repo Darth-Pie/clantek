@@ -9,8 +9,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useBrandmark } from '../lib/brandmark';
 import { useBranding } from '../lib/branding';
-import { BRANDMARK_ARCHETYPES, type BrandmarkArchetype, type BrandmarkConfig } from '../../shared/brandmark';
-import SigilMark from '../components/SigilMark';
+import { BRANDMARK_ARCHETYPES, brandmarkToRecipe, type BrandmarkArchetype, type BrandmarkConfig } from '../../shared/brandmark';
+import SigilStage from '../components/SigilStage';
 
 const ARCH_LABELS: Record<BrandmarkArchetype, string> = {
   assemble: 'Assemble',
@@ -43,6 +43,7 @@ export default function BrandmarkAdmin() {
   };
 
   const src = draft.imageUrl || branding.logoUrl || '';
+  const themeAccent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
 
   async function onSave() {
     setSaving(true);
@@ -78,14 +79,7 @@ export default function BrandmarkAdmin() {
         <div className="brandmark-preview-col">
           <div className="brandmark-stage">
             {src ? (
-              <SigilMark
-                src={src}
-                archetype={draft.archetype}
-                speed={draft.speed}
-                density={draft.density}
-                accent={draft.accent}
-                playKey={playKey}
-              />
+              <SigilStage recipe={brandmarkToRecipe(draft, src, themeAccent)} playKey={playKey} />
             ) : (
               <p className="muted small">Upload a mark, or set a header logo under Branding, to preview.</p>
             )}

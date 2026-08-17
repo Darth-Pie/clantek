@@ -8,6 +8,8 @@
  * The full studio (compose, trace, 11 styles) is a later phase.
  */
 
+import { DEFAULT_RECIPE, sanitizeRecipe, type SigilRecipe } from './sigil';
+
 export type BrandmarkArchetype = 'assemble' | 'constellation' | 'dissolve' | 'wipe';
 
 export const BRANDMARK_ARCHETYPES: BrandmarkArchetype[] = ['assemble', 'constellation', 'dissolve', 'wipe'];
@@ -55,6 +57,24 @@ function cleanHex(v: unknown): string {
 function clamp(n: unknown, lo: number, hi: number, dflt: number): number {
   const v = Number(n);
   return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt;
+}
+
+/**
+ * Adapt the legacy image-only Brandmark config to a full SigilRecipe, so the one
+ * SigilStage engine renders both (the older image Brandmark and the newer Forge
+ * sigil). `src` is the resolved image (imageUrl or the header logo); `themeAccent`
+ * preserves the old "blank accent = theme accent" behaviour.
+ */
+export function brandmarkToRecipe(bm: BrandmarkConfig, src: string, themeAccent = ''): SigilRecipe {
+  return sanitizeRecipe({
+    ...DEFAULT_RECIPE,
+    source: 'image',
+    imageUrl: src,
+    style: bm.archetype,
+    speed: bm.speed,
+    density: bm.density,
+    accent: bm.accent || themeAccent || DEFAULT_RECIPE.accent,
+  });
 }
 
 /** Validate/normalise stored or submitted config — never trust the raw blob. */

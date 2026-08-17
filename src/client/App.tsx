@@ -8,6 +8,7 @@ import type { Permission } from '../shared/permissions';
 import AccountMenu from './components/AccountMenu';
 import NotificationBell from './components/NotificationBell';
 import SiteNav from './components/SiteNav';
+import SigilLoader from './components/SigilLoader';
 import type { NavItem } from '../shared/nav';
 import Login from './pages/Login';
 import MemberDetail from './pages/MemberDetail';
@@ -71,7 +72,7 @@ function Protected({
   children: ReactNode;
 }) {
   const { viewer, loading, can } = useSession();
-  if (loading) return <div className="loading">Loading…</div>;
+  if (loading) return <SigilLoader />;
   if (!viewer) return <Navigate to="/login" replace />;
   // A pending applicant (not in demo preview mode) can only reach their own
   // profile; every other members-only area shows the "in review" notice.
@@ -102,7 +103,7 @@ function PublicOr({
   children: ReactNode;
 }) {
   const { viewer, loading } = useSession();
-  if (loading || (!viewer && !ready)) return <div className="loading">Loading…</div>;
+  if (loading || (!viewer && !ready)) return <SigilLoader />;
   if (viewer) return <>{children}</>;
   return publicSlugs.has(pageKey) ? <>{children}</> : <Navigate to="/login" replace />;
 }
@@ -212,7 +213,7 @@ export default function App() {
     };
   }, [viewer]);
 
-  if (loading || setupStatus === undefined) return <div className="loading">Loading…</div>;
+  if (loading || setupStatus === undefined) return <SigilLoader />;
 
   // A fresh install with no owner yet: the setup wizard is the only thing that
   // should render, full-bleed, regardless of the requested route.
@@ -222,7 +223,7 @@ export default function App() {
   // chrome), outside the app shell and with no login — a link works for anyone.
   if (location.pathname === '/forge') {
     return (
-      <Suspense fallback={<div className="loading">Loading…</div>}>
+      <Suspense fallback={<SigilLoader />}>
         <ForgeShare />
       </Suspense>
     );
@@ -300,7 +301,7 @@ export default function App() {
       )}
 
       <main className="content">
-        <Suspense fallback={<div className="loading">Loading…</div>}>
+        <Suspense fallback={<SigilLoader />}>
           <Routes>
           <Route path="/login" element={<Login />} />
           {/* Setup only renders (full-bleed, above) while unclaimed; once claimed,

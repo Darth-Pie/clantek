@@ -7539,3 +7539,14 @@ a.button.primary { background: var(--color-accent); color: var(--color-accent-te
 .fsp-btn:hover { filter: brightness(1.06); }
 .fsp-foot { margin-top: 1.5rem; font-size: 0.8rem; color: rgba(220, 210, 245, 0.4); }
 .fsp-foot a { color: #c9a2ff; }
+
+/* Brand kit — the saved sigil reused across in-app surfaces. */
+.sigil-loader { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; padding: 2.5rem 1rem; }
+.sigil-loader-mark { width: 84px; height: 84px; animation: sigil-pulse 1.8s ease-in-out infinite; }
+.sigil-loader-mark .sigilstage { width: 100%; height: 100%; }
+.sigil-loader .loading-label { color: var(--color-muted); font-size: 0.9rem; }
+@keyframes sigil-pulse { 0%, 100% { opacity: 0.62; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.02); } }
+@media (prefers-reduced-motion: reduce) { .sigil-loader-mark { animation: none; opacity: 1; } }
+
+.login-sigil { width: 128px; height: 128px; margin: 0 auto 0.4rem; }
+.login-sigil .sigilstage { width: 100%; height: 100%; }

@@ -28,6 +28,9 @@ interface Props {
   playKey?: number;
   /** Replay forever (studio preview / share page). */
   loop?: boolean;
+  /** Render the finished mark instantly, with no animation — a crisp emblem for
+   *  loaders, crests, and other brand-kit surfaces. */
+  static?: boolean;
   onDone?: () => void;
   className?: string;
 }
@@ -109,7 +112,7 @@ function composeMark(recipe: SigilRecipe): ResolvedMark {
   return { vb: [0, 0, S, S], paths: [], raster: { w: S * HR, h: S * HR, data, url: cnv.toDataURL('image/png'), alphaOnly: true } };
 }
 
-export default function SigilStage({ recipe: rawRecipe, playKey = 0, loop = false, onDone, className }: Props) {
+export default function SigilStage({ recipe: rawRecipe, playKey = 0, loop = false, static: staticMode = false, onDone, className }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const gradId = `sg-grad-${uid}`, haloId = `sg-halo-${uid}`, clipId = `sg-clip-${uid}`;
@@ -464,6 +467,14 @@ export default function SigilStage({ recipe: rawRecipe, playKey = 0, loop = fals
       T(() => { t0 = 0; raf = requestAnimationFrame(travel); }, 620 * s);
     }
 
+    // Static mode: render the finished mark instantly (emblem), no particles.
+    const revealStatic = () => {
+      renderMark(); updateGrad();
+      halo.style.transition = 'none'; halo.style.opacity = '1';
+      if (onDone && !dead) onDone();
+    };
+    const start = () => (staticMode ? revealStatic() : play());
+
     // For an uploaded image, load + sample first, then animate. Otherwise go now.
     if (recipe.source === 'image' && recipe.imageUrl) {
       const image = new Image(); image.crossOrigin = 'anonymous';
@@ -479,17 +490,19 @@ export default function SigilStage({ recipe: rawRecipe, playKey = 0, loop = fals
           mark = { vb: [0, 0, cw, ch], paths: [], raster: { w: cw, h: ch, data, url: recipe.imageUrl, alphaOnly: false } };
           vb = mark.vb;
         } catch { /* keep default builtin fallback */ }
-        play();
+        start();
       };
-      image.onerror = () => { if (!dead) { const m = BUILTIN_MARKS[0]!; mark = { vb: [0, 0, 100, 100], paths: m.paths, raster: null }; vb = mark.vb; play(); } };
+      image.onerror = () => { if (!dead) { const m = BUILTIN_MARKS[0]!; mark = { vb: [0, 0, 100, 100], paths: m.paths, raster: null }; vb = mark.vb; start(); } };
       image.src = recipe.imageUrl;
+    } else if (staticMode) {
+      revealStatic();
     } else {
       renderMark();
       T(play, 60);
     }
 
     return cleanup;
-  }, [rawRecipe, playKey, loop, onDone, gradId, haloId, clipId]);
+  }, [rawRecipe, playKey, loop, staticMode, onDone, gradId, haloId, clipId]);
 
   return (
     <div className={`sigilstage${className ? ' ' + className : ''}`} ref={rootRef}>

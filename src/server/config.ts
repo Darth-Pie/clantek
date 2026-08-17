@@ -22,6 +22,7 @@ import * as schema from '../db/schema';
 import * as s from '../db/schema';
 import type { Env } from './env';
 import { DiscordRest } from './discord/rest';
+import { sanitizeSiteSigil } from '../shared/sigil';
 
 /** settings key under which the identity/Discord blob is stored. */
 export const IDENTITY_KEY = 'identity';
@@ -38,6 +39,10 @@ export interface AppConfig {
   siteName: string;
   siteUrl: string;
   discord: DiscordConfig;
+  /** Hosted PNG of the org's Sigil Forge mark, but only when the sigil is
+   *  enabled — blank otherwise. Used as static brand art (Discord embed
+   *  thumbnails, OG image fallback). Same-origin "/media/…" path. */
+  siteSigilPng: string;
 }
 
 /** The shape persisted in settings['identity']. Every field optional — a blank
@@ -72,10 +77,24 @@ export async function loadConfig(env: Env, database?: DB): Promise<AppConfig> {
   } catch {
     // No settings row/table yet (fresh install) → fall back to env entirely.
   }
+  // The org's sigil PNG, but only while the sigil is enabled (so turning the
+  // sigil on/off toggles all its brand-kit surfaces together). Never throws.
+  let siteSigilPng = '';
+  try {
+    const srow = await dbi.query.settings.findFirst({ where: eq(s.settings.key, 'sigil') });
+    if (srow?.value) {
+      const sg = sanitizeSiteSigil(srow.value);
+      if (sg.enabled) siteSigilPng = sg.pngUrl;
+    }
+  } catch {
+    // no settings row/table yet
+  }
+
   const d = stored.discord ?? {};
   return {
     siteName: firstNonEmpty(stored.siteName, env.SITE_NAME, 'mustr'),
     siteUrl: firstNonEmpty(stored.siteUrl, env.SITE_URL),
+    siteSigilPng,
     discord: {
       clientId: firstNonEmpty(d.clientId, env.DISCORD_CLIENT_ID),
       guildId: firstNonEmpty(d.guildId, env.DISCORD_GUILD_ID),

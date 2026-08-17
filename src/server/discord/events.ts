@@ -88,7 +88,7 @@ const RECURRENCE_LABEL: Record<string, string> = {
   monthly: 'Monthly',
 };
 
-function eventEmbed(state: EventState, siteUrl?: string): Embed {
+function eventEmbed(state: EventState, siteUrl?: string, sigilPng?: string): Embed {
   const { event, gameName } = state;
   const lines = [
     event.description || undefined,
@@ -123,6 +123,8 @@ function eventEmbed(state: EventState, siteUrl?: string): Embed {
   if (fields.length) embed.fields = fields;
   const img = absoluteMedia(siteUrl, event.imageUrl);
   if (img) embed.image = { url: img };
+  const crest = absoluteMedia(siteUrl, sigilPng ?? null);
+  if (crest) embed.thumbnail = { url: crest };
   return embed;
 }
 
@@ -169,8 +171,9 @@ export function buildEventMessage(
   state: EventState,
   siteUrl?: string,
   checkinEnabled = false,
+  sigilPng?: string,
 ): { embeds: Embed[]; components: ActionRow[] } {
-  return { embeds: [eventEmbed(state, siteUrl)], components: eventComponents(state, checkinEnabled) };
+  return { embeds: [eventEmbed(state, siteUrl, sigilPng)], components: eventComponents(state, checkinEnabled) };
 }
 
 export interface DiscordEventIds {
@@ -223,7 +226,7 @@ export async function syncEventToDiscord(env: Env, eventId: number): Promise<Dis
     const channelId = (await loadAnnouncementConfig(db)).channelId;
     if (channelId) {
       const checkinEnabled = (await loadAttendanceConfig(env, db)).mode !== 'officers';
-      const message = buildEventMessage(state, cfg.siteUrl, checkinEnabled);
+      const message = buildEventMessage(state, cfg.siteUrl, checkinEnabled, cfg.siteSigilPng);
       if (ids.discordMessageId) {
         await rest.editMessage(channelId, ids.discordMessageId, message);
       } else {
@@ -253,7 +256,7 @@ export async function refreshEventMessage(env: Env, eventId: number): Promise<vo
     const channelId = (await loadAnnouncementConfig(db)).channelId;
     if (channelId) {
       const checkinEnabled = (await loadAttendanceConfig(env, db)).mode !== 'officers';
-      await rest.editMessage(channelId, state.event.discordMessageId, buildEventMessage(state, cfg.siteUrl, checkinEnabled));
+      await rest.editMessage(channelId, state.event.discordMessageId, buildEventMessage(state, cfg.siteUrl, checkinEnabled, cfg.siteSigilPng));
     }
   } catch (err) {
     console.error('Event message refresh failed', err);

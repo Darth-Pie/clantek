@@ -71,7 +71,10 @@ export async function loadSeo(env: Env, database?: DB): Promise<ResolvedSeo> {
   } catch {
     // no branding row yet
   }
-  return { ...stored, siteName: cfg.siteName || 'mustr', siteUrl: cfg.siteUrl || '', favicon };
+  // Fall back the OG image to the org's sigil PNG (when enabled) if no explicit
+  // social image is set — so link unfurls carry the mark for free.
+  const ogImage = stored.ogImage || cfg.siteSigilPng || '';
+  return { ...stored, ogImage, siteName: cfg.siteName || 'mustr', siteUrl: cfg.siteUrl || '', favicon };
 }
 
 /* --------------------------- validation --------------------------- */

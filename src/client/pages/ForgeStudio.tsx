@@ -10,6 +10,7 @@ import { useMemo, useState } from 'react';
 import { useSigil } from '../lib/sigil';
 import SigilStage from '../components/SigilStage';
 import { api } from '../lib/api';
+import { rasterizeSigilToPng } from '../lib/sigilRaster';
 import {
   BUILTIN_MARKS,
   DEFAULT_RECIPE,
@@ -98,7 +99,22 @@ export default function ForgeStudio() {
     setSaving(true);
     setMsg(null);
     try {
-      await save({ enabled, recipe });
+      // Render a static PNG of the mark and host it once, so it can be reused as
+      // static art (Discord embeds, OG images). Image sigils reuse their upload.
+      // Non-fatal: if it fails, we still save the recipe (art falls back to the logo).
+      let pngUrl = '';
+      try {
+        if (recipe.source === 'image') {
+          pngUrl = recipe.imageUrl;
+        } else {
+          const file = await rasterizeSigilToPng(recipe);
+          const res = await api.upload<{ url: string }>('/media/branding', file);
+          pngUrl = res.url;
+        }
+      } catch {
+        pngUrl = '';
+      }
+      await save({ enabled, recipe, pngUrl });
       setMsg(
         enabled
           ? 'Saved. Your sigil now plays once when a visitor loads the site.'

@@ -174,13 +174,17 @@ export interface SiteSigil {
   /** Play this sigil as the boot splash on site load. */
   enabled: boolean;
   recipe: SigilRecipe;
+  /** A hosted static PNG of the mark, rendered client-side at save time. Used as
+   *  static art (Discord embeds, OG images) where a raster URL is required.
+   *  Blank until first saved, or when rasterization failed. */
+  pngUrl: string;
 }
 
-export const DEFAULT_SITE_SIGIL: SiteSigil = { enabled: false, recipe: DEFAULT_RECIPE };
+export const DEFAULT_SITE_SIGIL: SiteSigil = { enabled: false, recipe: DEFAULT_RECIPE, pngUrl: '' };
 
 export function sanitizeSiteSigil(raw: unknown): SiteSigil {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  return { enabled: r.enabled === true, recipe: sanitizeRecipe(r.recipe) };
+  return { enabled: r.enabled === true, recipe: sanitizeRecipe(r.recipe), pngUrl: cleanUrl(r.pngUrl) };
 }
 
 /* ------------------------------------------------------------------ *

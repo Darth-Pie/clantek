@@ -11,6 +11,7 @@ import { useSigil } from '../lib/sigil';
 import SigilStage from '../components/SigilStage';
 import { api } from '../lib/api';
 import { rasterizeSigilToPng } from '../lib/sigilRaster';
+import { exportSigilGif } from '../lib/sigilExport';
 import {
   BUILTIN_MARKS,
   DEFAULT_RECIPE,
@@ -47,6 +48,8 @@ export default function ForgeStudio() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportPct, setExportPct] = useState(0);
 
   const edit = (patch: Partial<SigilRecipe>) => {
     setRecipe((r) => sanitizeRecipe({ ...r, ...patch }));
@@ -127,6 +130,28 @@ export default function ForgeStudio() {
     }
   }
 
+  async function downloadGif() {
+    setExporting(true);
+    setExportPct(0);
+    setMsg(null);
+    try {
+      const blob = await exportSigilGif(recipe, { onProgress: setExportPct });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sigil.gif';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      setMsg('Downloaded your animated sigil (GIF).');
+    } catch {
+      setMsg('Could not render the GIF — try a built-in or composed mark.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function copyShare() {
     if (!shareUrl) return;
     try {
@@ -182,6 +207,13 @@ export default function ForgeStudio() {
             ) : (
               <p className="muted small">Uploaded images can’t ride in a link (they’re too big for a URL). Compose a mark or pick a built-in one to get a shareable link.</p>
             )}
+          </div>
+
+          <div className="forge-export">
+            <button type="button" className="ghost" disabled={exporting} onClick={() => void downloadGif()}>
+              {exporting ? `Rendering… ${Math.round(exportPct * 100)}%` : '⬇ Download animated GIF'}
+            </button>
+            <span className="muted small">A looping GIF you can post anywhere — watermarked with mustr.</span>
           </div>
         </div>
 

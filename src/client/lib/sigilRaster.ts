@@ -34,8 +34,10 @@ function gradStops(r: SigilRecipe): [string, string, string] {
     : [lerpC(r.accent, '#ffffff', 0.45), r.accent, lerpC(r.accent, '#000000', 0.3)];
 }
 
-/** A self-contained SVG string of the finished mark on a dark stage. */
-export function buildSigilSvg(recipe: SigilRecipe, size: number): string {
+/** A self-contained SVG string of the finished mark, on a dark stage by default
+ *  (pass `background: false` for a transparent mark-only image). */
+export function buildSigilSvg(recipe: SigilRecipe, size: number, opts: { background?: boolean } = {}): string {
+  const background = opts.background !== false;
   const [s0, s1, s2] = gradStops(recipe);
   const glow = lerpC(recipe.accent, '#000000', 0.55);
 
@@ -63,7 +65,7 @@ export function buildSigilSvg(recipe: SigilRecipe, size: number): string {
     `<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${s0}"/><stop offset="0.5" stop-color="${s1}"/><stop offset="1" stop-color="${s2}"/></linearGradient>` +
     `<radialGradient id="bg" cx="50%" cy="44%" r="60%"><stop offset="0" stop-color="${glow}"/><stop offset="100%" stop-color="#0c0918"/></radialGradient>` +
     `</defs>` +
-    `<rect width="100" height="100" fill="url(#bg)"/>` +
+    (background ? `<rect width="100" height="100" fill="url(#bg)"/>` : '') +
     `<g transform="translate(14,14) scale(0.72)">${markSvg}</g>` +
     `</svg>`
   );

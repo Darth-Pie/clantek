@@ -28,6 +28,7 @@
     "@tiptap/starter-kit": "^3.29.2",
     "dompurify": "^3.4.13",
     "drizzle-orm": "^0.45.2",
+    "gifenc": "^1.0.3",
     "hono": "^4.12.34",
     "lucide": "^1.28.0",
     "morphicons": "^1.4.0",
@@ -57,7 +58,11 @@
   },
   "cloudflare": {
     "label": "mustr — community tools for gaming orgs",
-    "products": ["Workers", "D1", "R2"],
+    "products": [
+      "Workers",
+      "D1",
+      "R2"
+    ],
     "bindings": {
       "SETUP_TOKEN": {
         "description": "A password **you invent** (letters and numbers only — avoid `+ / =`) that unlocks the one-time setup wizard the first time your site loads, so nobody can claim your site before you do. You paste it once, then you're done. Generate a safe one with `openssl rand -hex 24`."

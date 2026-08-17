@@ -20,6 +20,7 @@ import HangarImport from '../components/HangarImport';
 import ScVerify from '../components/ScVerify';
 import MemberTraining from '../components/MemberTraining';
 import MemberActivity from '../components/MemberActivity';
+import SigilEmblem from '../components/SigilEmblem';
 
 interface Role {
   id: number;
@@ -320,6 +321,7 @@ export default function MemberDetail() {
       )}
 
       <header className="member-head">
+        <SigilEmblem className="member-crest" />
         <AvatarBlock
           member={member}
           canEdit={canEditProfile}
@@ -509,7 +511,10 @@ export default function MemberDetail() {
           <section className="block">
             <h3>Medals</h3>
             {member.medals.length === 0 ? (
-              <p className="muted">No medals yet.</p>
+              <div className="crest-empty">
+                <SigilEmblem className="crest-empty-mark" />
+                <span className="muted">No medals yet.</span>
+              </div>
             ) : (
               <ul className="member-medals">
                 {member.medals.map((m) => (
@@ -555,7 +560,10 @@ export default function MemberDetail() {
           <section className="block">
             <h3>War Records</h3>
             {member.warRecords.length === 0 ? (
-              <p className="muted">No war records yet.</p>
+              <div className="crest-empty">
+                <SigilEmblem className="crest-empty-mark" />
+                <span className="muted">No war records yet.</span>
+              </div>
             ) : (
               <ul className="member-medals">
                 {member.warRecords.map((w) => (

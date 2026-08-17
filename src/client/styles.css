@@ -820,7 +820,27 @@ button.active {
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.25rem;
+  position: relative;
+  overflow: hidden;
 }
+/* The org's sigil as a subtle crest watermark behind the header (only when a
+   site sigil is enabled — SigilEmblem renders nothing otherwise). */
+.member-crest {
+  position: absolute;
+  top: 50%;
+  right: -0.5rem;
+  transform: translateY(-50%);
+  width: 128px;
+  height: 128px;
+  opacity: 0.08;
+  z-index: 0;
+  pointer-events: none;
+}
+.member-head > *:not(.member-crest) { position: relative; z-index: 1; }
+
+/* Crest empty-state (medals / war records with none yet). */
+.crest-empty { display: flex; align-items: center; gap: 0.7rem; }
+.crest-empty-mark { width: 40px; height: 40px; opacity: 0.5; flex: none; }
 
 .member-head img {
   border-radius: 50%;

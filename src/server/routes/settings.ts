@@ -19,6 +19,7 @@ import { cleanFooter } from '../../shared/footer';
 import { botInviteUrl } from '../../shared/botPermissions';
 import { sanitizeCustomThemes } from '../../shared/customThemes';
 import { sanitizeBrandmark } from '../../shared/brandmark';
+import { sanitizeSiteSigil } from '../../shared/sigil';
 import { registerGuildCommands } from '../discord/commandDefs';
 import { loadPageAccess, PAGE_ACCESS_KEY } from '../pageAccess';
 import { cleanPageAccess } from '../../shared/pageAccess';
@@ -402,6 +403,27 @@ settings.put('/brandmark', requirePermission('settings.manage'), async (c) => {
       set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
     });
   return c.json({ ok: true, brandmark: clean });
+});
+
+/* Site sigil (Sigil Forge) — public GET (boot splash reads it before login),
+ * settings.manage PUT. Additive to brandmark; when enabled, takes over the splash. */
+settings.get('/sigil', async (c) => {
+  const row = await db(c.env).query.settings.findFirst({ where: eq(s.settings.key, 'sigil') });
+  return c.json({ sigil: sanitizeSiteSigil(row?.value) });
+});
+
+settings.put('/sigil', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ sigil?: unknown }>();
+  const clean = sanitizeSiteSigil(body.sigil);
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: 'sigil', value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  return c.json({ ok: true, sigil: clean });
 });
 
 /* ------------------------------------------------------------------ *

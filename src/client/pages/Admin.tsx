@@ -59,6 +59,7 @@ import ModulesAdmin from './ModulesAdmin';
 import Theme from './Theme';
 import BrandingAdmin from './BrandingAdmin';
 import BrandmarkAdmin from './BrandmarkAdmin';
+import ForgeStudio from './ForgeStudio';
 import SeoAdmin from './SeoAdmin';
 import FooterAdmin from './FooterAdmin';
 import PagesAdmin from './PagesAdmin';
@@ -128,6 +129,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   theme: () => <Theme />,
   branding: () => <BrandingAdmin />,
   brandmark: () => <BrandmarkAdmin />,
+  forge: () => <ForgeStudio />,
   seo: () => <SeoAdmin />,
   footer: () => <FooterAdmin />,
   audit: () => <AuditLog />,

@@ -37,6 +37,11 @@ const Admin = lazy(() => import('./pages/Admin'));
 const Gallery = lazy(() => import('./pages/Gallery'));
 const GalleryAlbum = lazy(() => import('./pages/GalleryAlbum'));
 
+// The public Sigil Forge share page carries the whole animation engine; it's a
+// standalone viral landing, so load it on demand and keep it out of the app's
+// initial bundle.
+const ForgeShare = lazy(() => import('./pages/ForgeShare'));
+
 /** Shown to a pending applicant who lands on a members-only area. */
 function PendingNotice() {
   const { viewer } = useSession();
@@ -212,6 +217,16 @@ export default function App() {
   // A fresh install with no owner yet: the setup wizard is the only thing that
   // should render, full-bleed, regardless of the requested route.
   if (setupStatus && !setupStatus.claimed) return <Setup status={setupStatus} />;
+
+  // The public Sigil Forge share page renders full-bleed (its own cinematic
+  // chrome), outside the app shell and with no login — a link works for anyone.
+  if (location.pathname === '/forge') {
+    return (
+      <Suspense fallback={<div className="loading">Loading…</div>}>
+        <ForgeShare />
+      </Suspense>
+    );
+  }
 
   const hasLogo = !!branding.logoUrl;
   const collapsed = 38; // logo height (px) once docked inside the bar

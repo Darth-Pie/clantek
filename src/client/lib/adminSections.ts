@@ -107,6 +107,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
           { key: 'theme', label: 'Theme', permission: 'theme.manage' },
           { key: 'branding', label: 'Branding', permission: 'settings.manage' },
           { key: 'brandmark', label: 'Brandmark', permission: 'settings.manage' },
+          { key: 'forge', label: 'Sigil Forge', permission: 'settings.manage' },
           { key: 'seo', label: 'SEO & Sharing', permission: 'settings.manage' },
           { key: 'footer', label: 'Footer', permission: 'settings.manage' },
         ],

@@ -7453,3 +7453,89 @@ a.button.primary { background: var(--color-accent); color: var(--color-accent-te
 .brandmark-controls .chip:hover { color: var(--color-text); border-color: var(--color-accent); }
 .brandmark-controls .chip.on { color: var(--color-accent-text); background: var(--color-accent); border-color: transparent; }
 .brandmark-controls input[type="color"] { width: 44px; height: 30px; padding: 0; border: 1px solid var(--color-border); border-radius: 6px; background: none; cursor: pointer; }
+
+/* ---- Sigil Forge ---- */
+.sigilstage { position: relative; width: 100%; height: 100%; }
+.sigilstage svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+
+.forge-studio .forge-grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+@media (max-width: 820px) { .forge-studio .forge-grid { grid-template-columns: 1fr; } }
+
+.forge-preview-col { display: flex; flex-direction: column; gap: 0.8rem; position: sticky; top: 5rem; }
+@media (max-width: 820px) { .forge-preview-col { position: static; } }
+.forge-stage {
+  width: 100%; aspect-ratio: 1 / 1; display: grid; place-items: center; border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background:
+    radial-gradient(600px 300px at 50% 40%, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 70%),
+    color-mix(in srgb, var(--color-bg) 55%, #000);
+  overflow: hidden;
+}
+.forge-stage .sigilstage { width: 84%; height: 84%; }
+.forge-preview-actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+.toggle-inline { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--color-text); cursor: pointer; }
+.forge-enable { font-weight: 600; }
+.forge-share { display: flex; flex-direction: column; gap: 0.4rem; }
+.forge-share-row { display: flex; gap: 0.4rem; }
+.forge-share-row input {
+  flex: 1; min-width: 0; font: 0.78rem/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  padding: 0.5rem 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text);
+}
+
+.forge-controls { display: flex; flex-direction: column; gap: 1rem; }
+.forge-controls .field { display: flex; flex-direction: column; gap: 0.4rem; }
+.forge-controls .field-label { font-weight: 600; font-size: 0.9rem; }
+.forge-controls .chip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.forge-controls .chip {
+  cursor: pointer; font: 600 0.85rem/1 inherit; color: var(--color-muted);
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0.45rem 0.7rem;
+}
+.forge-controls .chip:hover { color: var(--color-text); border-color: var(--color-accent); }
+.forge-controls .chip.on { color: var(--color-accent-text); background: var(--color-accent); border-color: transparent; }
+.forge-controls .range-row { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.9rem; }
+.forge-controls .range-row input[type="range"] { width: 100%; accent-color: var(--color-accent); }
+.forge-controls input:where(:not([type]), [type="text"]) {
+  padding: 0.5rem 0.6rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text);
+}
+
+.seg { display: inline-flex; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden; }
+.seg-btn { cursor: pointer; font: 600 0.85rem/1 inherit; color: var(--color-muted); background: var(--color-surface); border: none; padding: 0.55rem 0.95rem; }
+.seg-btn + .seg-btn { border-left: 1px solid var(--color-border); }
+.seg-btn:hover { color: var(--color-text); }
+.seg-btn.on { color: var(--color-accent-text); background: var(--color-accent); }
+
+.forge-swatches { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+.forge-sw { width: 26px; height: 26px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; }
+.forge-sw.on { border-color: var(--color-text); }
+.forge-color { width: 40px; height: 28px; padding: 0; border: 1px solid var(--color-border); border-radius: 6px; background: none; cursor: pointer; }
+.forge-twotone { margin-top: 0.5rem; }
+
+/* Public share page — self-contained dark cinematic chrome (theme-independent). */
+.forge-share-page {
+  position: fixed; inset: 0; overflow: auto; display: grid; place-items: center; padding: 2rem 1.2rem;
+  background:
+    radial-gradient(1200px 700px at 80% -10%, rgba(120, 70, 220, 0.22), transparent 60%),
+    radial-gradient(900px 500px at 5% 110%, rgba(56, 225, 192, 0.08), transparent 60%),
+    linear-gradient(180deg, #0f0a1c, #0a0712);
+  color: #ece4ff; font-family: var(--font-body, system-ui, sans-serif);
+}
+.fsp-inner { width: min(560px, 100%); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+.fsp-eyebrow { font-size: 0.72rem; letter-spacing: 0.28em; text-transform: uppercase; color: #c9a2ff; margin: 0 0 0.6rem; }
+.fsp-stage {
+  width: min(64vmin, 380px); height: min(64vmin, 380px); display: grid; place-items: center; border-radius: 16px;
+  background: radial-gradient(circle at 50% 42%, rgba(150, 110, 240, 0.14), transparent 62%), #0c0918;
+  box-shadow: inset 0 0 0 1px rgba(180, 140, 255, 0.16), inset 0 0 60px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.fsp-stage .sigilstage { width: 84%; height: 84%; }
+.fsp-title { font-size: clamp(28px, 6vw, 44px); margin: 0.7rem 0 0; font-weight: 700; letter-spacing: -0.01em; }
+.fsp-lede { color: rgba(220, 210, 245, 0.7); max-width: 44ch; margin: 0.3rem 0 0; line-height: 1.5; }
+.fsp-actions { display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center; margin-top: 1.1rem; }
+.fsp-btn {
+  cursor: pointer; font: 600 0.95rem/1 inherit; color: #ece4ff; text-decoration: none;
+  background: rgba(139, 92, 246, 0.14); border: 1px solid rgba(180, 140, 255, 0.3); border-radius: 11px; padding: 0.75rem 1.2rem;
+}
+.fsp-btn.primary { color: #150c26; background: linear-gradient(180deg, #c9a2ff, #8b5cf6); border-color: transparent; }
+.fsp-btn:hover { filter: brightness(1.06); }
+.fsp-foot { margin-top: 1.5rem; font-size: 0.8rem; color: rgba(220, 210, 245, 0.4); }
+.fsp-foot a { color: #c9a2ff; }

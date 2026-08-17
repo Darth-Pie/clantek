@@ -5,6 +5,8 @@ import App from './App';
 import { SessionProvider } from './lib/session';
 import { ThemeProvider } from './lib/theme';
 import { BrandingProvider } from './lib/branding';
+import { BrandmarkProvider } from './lib/brandmark';
+import BrandmarkSplash from './components/BrandmarkSplash';
 import { applyA11yPrefs, loadA11yPrefs } from './lib/a11y';
 import './styles.css';
 
@@ -17,9 +19,12 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <ThemeProvider>
         <BrandingProvider>
-          <SessionProvider>
-            <App />
-          </SessionProvider>
+          <BrandmarkProvider>
+            <BrandmarkSplash />
+            <SessionProvider>
+              <App />
+            </SessionProvider>
+          </BrandmarkProvider>
         </BrandingProvider>
       </ThemeProvider>
     </BrowserRouter>

@@ -18,6 +18,7 @@ import { loadFooter, FOOTER_KEY } from '../footer';
 import { cleanFooter } from '../../shared/footer';
 import { botInviteUrl } from '../../shared/botPermissions';
 import { sanitizeCustomThemes } from '../../shared/customThemes';
+import { sanitizeBrandmark } from '../../shared/brandmark';
 import { loadPageAccess, PAGE_ACCESS_KEY } from '../pageAccess';
 import { cleanPageAccess } from '../../shared/pageAccess';
 import { mergeSeo, SEO_KEY, type StoredSeo } from '../seo';
@@ -376,6 +377,30 @@ settings.put('/site', requirePermission('settings.manage'), async (c) => {
     });
 
   return c.json({ ok: true, site: clean });
+});
+
+/* ------------------------------------------------------------------ *
+ * Brandmark — the animated boot-splash mark. GET is public (the splash plays
+ * before anyone signs in, like the theme and logo); only settings.manage writes.
+ * ------------------------------------------------------------------ */
+
+settings.get('/brandmark', async (c) => {
+  const row = await db(c.env).query.settings.findFirst({ where: eq(s.settings.key, 'brandmark') });
+  return c.json({ brandmark: sanitizeBrandmark(row?.value) });
+});
+
+settings.put('/brandmark', requirePermission('settings.manage'), async (c) => {
+  const body = await c.req.json<{ brandmark?: unknown }>();
+  const clean = sanitizeBrandmark(body.brandmark);
+  const viewer = c.get('viewer')!;
+  await db(c.env)
+    .insert(s.settings)
+    .values({ key: 'brandmark', value: clean, updatedBy: viewer.id })
+    .onConflictDoUpdate({
+      target: s.settings.key,
+      set: { value: clean, updatedBy: viewer.id, updatedAt: Math.floor(Date.now() / 1000) },
+    });
+  return c.json({ ok: true, brandmark: clean });
 });
 
 /* ------------------------------------------------------------------ *

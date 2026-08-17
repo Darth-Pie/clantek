@@ -58,6 +58,7 @@ import AnalyticsAdmin from './AnalyticsAdmin';
 import ModulesAdmin from './ModulesAdmin';
 import Theme from './Theme';
 import BrandingAdmin from './BrandingAdmin';
+import BrandmarkAdmin from './BrandmarkAdmin';
 import SeoAdmin from './SeoAdmin';
 import FooterAdmin from './FooterAdmin';
 import PagesAdmin from './PagesAdmin';
@@ -126,6 +127,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   modules: () => <ModulesAdmin />,
   theme: () => <Theme />,
   branding: () => <BrandingAdmin />,
+  brandmark: () => <BrandmarkAdmin />,
   seo: () => <SeoAdmin />,
   footer: () => <FooterAdmin />,
   audit: () => <AuditLog />,

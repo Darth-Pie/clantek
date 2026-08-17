@@ -19,6 +19,7 @@ import { cleanFooter } from '../../shared/footer';
 import { botInviteUrl } from '../../shared/botPermissions';
 import { sanitizeCustomThemes } from '../../shared/customThemes';
 import { sanitizeBrandmark } from '../../shared/brandmark';
+import { registerGuildCommands } from '../discord/commandDefs';
 import { loadPageAccess, PAGE_ACCESS_KEY } from '../pageAccess';
 import { cleanPageAccess } from '../../shared/pageAccess';
 import { mergeSeo, SEO_KEY, type StoredSeo } from '../seo';
@@ -527,6 +528,18 @@ settings.post('/identity/test', requirePermission('settings.manage'), async (c) 
   } catch (err) {
     return c.json({ ok: false, error: `Discord rejected the bot: ${(err as Error).message}` }, 502);
   }
+});
+
+/**
+ * (Re-)register the bot's slash commands with Discord. The first-run wizard does
+ * this automatically, but this covers the cases it can't: the bot was invited
+ * after setup, an update added or changed commands, or the first attempt failed.
+ */
+settings.post('/identity/register-commands', requirePermission('settings.manage'), async (c) => {
+  const cfg = await loadConfig(c.env, db(c.env));
+  const reg = await registerGuildCommands(cfg.discord.clientId, cfg.discord.guildId, cfg.discord.botToken);
+  if (!reg.ok) return c.json({ ok: false, error: reg.error }, 502);
+  return c.json({ ok: true, count: reg.count, names: reg.names });
 });
 
 /* ------------------------------------------------------------------ *

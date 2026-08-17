@@ -32,6 +32,8 @@ import {
   type StoredIdentityInput,
 } from '../config';
 import { ensureSchema } from '../setup/schema';
+import { botInviteUrl } from '../../shared/botPermissions';
+import { registerGuildCommands } from '../discord/commandDefs';
 import {
   isClaimed,
   isUnlocked,
@@ -89,6 +91,10 @@ setup.get('/status', async (c) => {
       redirect: abs(c, '/api/auth/callback'),
       claimRedirect: abs(c, '/api/setup/claim/callback'),
       interactions: abs(c, '/api/discord/interactions'),
+      // Pre-scoped, least-privilege bot invite — empty until the Client ID is set.
+      // The buyer must invite the bot (with applications.commands) before the
+      // connection test / command registration can succeed.
+      botInvite: botInviteUrl(cfg.discord.clientId),
     },
   });
 });
@@ -192,7 +198,21 @@ setup.post('/validate-discord', requireUnclaimed, requireUnlocked, async (c) => 
       });
     }
     const guild = (await g.json()) as { name?: string };
-    return c.json({ ok: true, bot: bot.username ?? 'bot', guild: guild.name ?? cfg.discord.guildId });
+
+    // The bot works and can see the guild — register its slash commands now, so
+    // the buyer's /whois, /roster, /event, … work the moment setup finishes. A
+    // registration failure (usually: bot lacks the applications.commands scope)
+    // is reported but does NOT fail the connection test — the fix is a re-invite.
+    const reg = await registerGuildCommands(cfg.discord.clientId, cfg.discord.guildId, cfg.discord.botToken);
+
+    return c.json({
+      ok: true,
+      bot: bot.username ?? 'bot',
+      guild: guild.name ?? cfg.discord.guildId,
+      commands: reg.ok
+        ? { ok: true, count: reg.count }
+        : { ok: false, error: reg.error },
+    });
   } catch (e) {
     return c.json({ ok: false, error: `Could not reach Discord: ${(e as Error).message}` });
   }
@@ -290,6 +310,13 @@ setup.get('/claim/callback', async (c) => {
     meta: { via: 'setup-wizard' },
     source: 'system',
   });
+
+  // Safety net: if the owner skipped the "test Discord" step, their slash
+  // commands were never registered. Do it now (best-effort — never throws, and
+  // must not block a successful claim). It's a no-op if it already ran.
+  if (discord.clientId && discord.guildId && discord.botToken) {
+    await registerGuildCommands(discord.clientId, discord.guildId, discord.botToken);
+  }
 
   // Log the owner straight in, and clear the setup + oauth-state cookies.
   const session = await createSession(database, userId, {

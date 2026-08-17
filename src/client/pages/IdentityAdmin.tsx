@@ -135,6 +135,15 @@ export default function IdentityAdmin() {
       return `Bot connected — it can see ${res.channelCount} text channel${res.channelCount === 1 ? '' : 's'}.`;
     });
 
+  const registerCommands = () =>
+    run(async () => {
+      const res = await api.post<{ ok: boolean; count?: number; error?: string }>(
+        '/settings/identity/register-commands',
+      );
+      if (!res.ok) return { warning: res.error ?? 'Could not register commands.' };
+      return `Registered ${res.count} slash command${res.count === 1 ? '' : 's'} with Discord.`;
+    });
+
   if (loading) return <div className="loading">Loading…</div>;
 
   // Deep-link straight to this app's pages once the Client ID is known; otherwise
@@ -303,6 +312,13 @@ export default function IdentityAdmin() {
           title="Check the saved bot token and Server ID actually reach Discord"
         >
           Test bot connection
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => void registerCommands()}
+          title="Push the bot's slash commands (/whois, /roster, /event, …) to your Discord server"
+        >
+          Register slash commands
         </button>
       </div>
     </section>

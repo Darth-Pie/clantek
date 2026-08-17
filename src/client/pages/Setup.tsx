@@ -16,6 +16,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { botInviteUrl } from '../../shared/botPermissions';
 
 export interface SetupStatus {
   claimed: boolean;
@@ -32,7 +33,7 @@ export interface SetupStatus {
       botTokenSet: boolean;
     };
   };
-  urls: { redirect: string; claimRedirect: string; interactions: string };
+  urls: { redirect: string; claimRedirect: string; interactions: string; botInvite: string };
 }
 
 export async function fetchSetupStatus(): Promise<SetupStatus | null> {
@@ -238,6 +239,9 @@ function IdentityStep({
   const [botToken, setBotToken] = useState('');
   const [validating, setValidating] = useState(false);
   const [validateMsg, setValidateMsg] = useState('');
+  // Pre-scoped invite, derived live from the typed Client ID (empty until valid),
+  // so the buyer can invite the bot before running the connection test.
+  const invite = botInviteUrl(clientId.trim());
 
   const save = async (): Promise<boolean> => {
     setBusy(true);
@@ -264,10 +268,24 @@ function IdentityStep({
     setValidating(true);
     setValidateMsg('');
     try {
-      const res = await api.post<{ ok: boolean; error?: string; bot?: string; guild?: string }>(
-        '/setup/validate-discord',
-      );
-      setValidateMsg(res.ok ? `✅ Connected as ${res.bot} — can see “${res.guild}”.` : `⚠️ ${res.error}`);
+      const res = await api.post<{
+        ok: boolean;
+        error?: string;
+        bot?: string;
+        guild?: string;
+        commands?: { ok: boolean; count?: number; error?: string };
+      }>('/setup/validate-discord');
+      if (!res.ok) {
+        setValidateMsg(`⚠️ ${res.error}`);
+      } else {
+        const cmd = res.commands;
+        const cmdMsg = cmd?.ok
+          ? ` Registered ${cmd.count} slash command${cmd.count === 1 ? '' : 's'}.`
+          : cmd
+            ? ` But commands weren’t registered: ${cmd.error}`
+            : '';
+        setValidateMsg(`✅ Connected as ${res.bot} — can see “${res.guild}”.${cmdMsg}`);
+      }
     } catch (e) {
       setValidateMsg(`⚠️ ${(e as { message?: string }).message ?? 'Validation failed.'}`);
     } finally {
@@ -346,6 +364,18 @@ function IdentityStep({
         <CopyRow label="OAuth2 redirect (setup claim)" value={status.urls.claimRedirect} />
         <CopyRow label="Interactions endpoint URL" value={status.urls.interactions} />
       </div>
+
+      {invite && (
+        <div className="setup-note">
+          <strong>Invite the bot to your server</strong> before testing — this link asks only for the
+          permissions mustr uses, never Administrator. Open it as the server owner and pick your server.
+          <div className="setup-actions" style={{ marginTop: '.5rem' }}>
+            <a className="setup-btn" href={invite} target="_blank" rel="noopener noreferrer">
+              Open bot invite ↗
+            </a>
+          </div>
+        </div>
+      )}
 
       {validateMsg && <div className="setup-note">{validateMsg}</div>}
 

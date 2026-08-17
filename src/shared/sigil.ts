@@ -50,7 +50,10 @@ export const BUILTIN_MARKS: { id: string; name: string; paths: string[] }[] = [
   { id: 'rune', name: 'Rune', paths: ['M50,8 L88,30 L88,70 L50,92 L12,70 L12,30 Z', 'M50,30 L70,42 L70,58 L50,70 L30,58 L30,42 Z', 'M50,42 L50,58'] },
   { id: 'bolt', name: 'Bolt', paths: ['M56,8 L28,54 L46,54 L40,92 L74,40 L54,40 Z'] },
   { id: 'gem', name: 'Gem', paths: ['M50,10 L80,40 L50,92 L20,40 Z', 'M20,40 L80,40', 'M50,10 L50,40', 'M35,40 L50,92', 'M65,40 L50,92'] },
-  { id: 'hexstar', name: 'Hexstar', paths: ['M50,6 L78,54 L22,54 Z', 'M50,94 L22,46 L78,46 Z'] },
+  // Two congruent triangles that share the centre (50,50) so they interlock into
+  // a symmetric Star of David — up-triangle apex top / base at y=72, down-triangle
+  // apex bottom / base at y=28. Each centroid lands exactly on 50,50.
+  { id: 'hexstar', name: 'Hexstar', paths: ['M50,6 L88,72 L12,72 Z', 'M50,94 L88,28 L12,28 Z'] },
 ];
 
 export const SIGIL_SWATCHES = ['#8b5cf6', '#38e1c0', '#ffb020', '#ff5d7d', '#5b8cff', '#c9a2ff'];

@@ -651,6 +651,10 @@ export const events = sqliteTable(
     recurrence: text('recurrence', { enum: ['none', 'daily', 'weekly', 'biweekly', 'monthly'] })
       .notNull()
       .default('none'),
+    // When true, creating (and cancelling) this event fans a broadcast out to
+    // allied orgs' Discords via alliance federation (see server/alliance/*).
+    // Set only by an alliance.manage holder; off by default.
+    shareAlliance: integer('share_alliance', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at').notNull().default(now),
     updatedAt: integer('updated_at').notNull().default(now),
   },

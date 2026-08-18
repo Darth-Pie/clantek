@@ -13,6 +13,8 @@ import type { AppContext } from '../env';
 import { db, requirePermission } from '../middleware/auth';
 import { syncEventToDiscord, removeEventFromDiscord, refreshEventMessage } from '../discord/events';
 import { loadEventState, setSignup, removeSignup } from '../events/signups';
+import { broadcastEvent } from '../alliance/triggers';
+import { can } from '../../shared/permissions';
 
 const events = new Hono<AppContext>();
 
@@ -35,6 +37,8 @@ interface EventBody {
   gameId?: number | null;
   roles?: RoleInput[];
   recurrence?: Recurrence;
+  /** Fan this event out to allied orgs' Discords. Honoured only for alliance.manage. */
+  shareAlliance?: boolean;
 }
 
 /** Validate the time/text fields shared by create and edit. Returns an error string or null. */
@@ -124,6 +128,7 @@ events.get('/', requirePermission('events.view'), async (c) => {
       gameName: s.games.name,
       createdBy: s.events.createdBy,
       recurrence: s.events.recurrence,
+      shareAlliance: s.events.shareAlliance,
     })
     .from(s.events)
     .leftJoin(s.games, eq(s.events.gameId, s.games.id))
@@ -206,6 +211,9 @@ events.post('/', requirePermission('events.manage'), async (c) => {
 
   const database = db(c.env);
   const viewer = c.get('viewer')!;
+  // Sharing to allied orgs is a bigger action than creating a local event, so it
+  // takes alliance.manage on top of events.manage.
+  const share = body.shareAlliance === true && can(viewer, 'alliance.manage');
   const created = (
     await database
       .insert(s.events)
@@ -219,6 +227,7 @@ events.post('/', requirePermission('events.manage'), async (c) => {
         gameId: body.gameId ?? null,
         createdBy: viewer.id,
         recurrence: body.recurrence ?? 'none',
+        shareAlliance: share,
       })
       .returning()
   )[0]!;
@@ -243,6 +252,8 @@ events.post('/', requirePermission('events.manage'), async (c) => {
     })(),
   );
 
+  if (created.shareAlliance) c.executionCtx.waitUntil(broadcastEvent(c.env, created));
+
   return c.json({ event: created }, 201);
 });
 
@@ -265,6 +276,9 @@ events.patch('/:id', requirePermission('events.manage'), async (c) => {
   if (body.endsAt !== undefined) patch.endsAt = body.endsAt;
   if (body.gameId !== undefined) patch.gameId = body.gameId ?? null;
   if (body.recurrence !== undefined) patch.recurrence = body.recurrence;
+  if (body.shareAlliance !== undefined) {
+    patch.shareAlliance = body.shareAlliance === true && can(c.get('viewer')!, 'alliance.manage');
+  }
 
   const updated = (await database.update(s.events).set(patch).where(eq(s.events.id, id)).returning())[0]!;
   if (body.roles !== undefined) await saveRoles(database, id, body.roles);
@@ -289,6 +303,7 @@ events.delete('/:id', requirePermission('events.manage'), async (c) => {
 
   await database.delete(s.events).where(eq(s.events.id, id));
   c.executionCtx.waitUntil(removeEventFromDiscord(c.env, event));
+  if (event.shareAlliance) c.executionCtx.waitUntil(broadcastEvent(c.env, event, { cancelled: true }));
 
   await database.insert(s.auditLog).values({
     actorId: c.get('viewer')!.id,

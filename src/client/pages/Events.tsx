@@ -10,6 +10,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import { useSession } from '../lib/session';
+import Switch from '../components/Switch';
 import { selfCheckinOpen, type AttendanceMode } from '../../shared/attendance';
 
 interface RoleState {
@@ -31,6 +32,7 @@ interface EventItem {
   gameName: string | null;
   createdBy: number | null;
   recurrence: Recurrence;
+  shareAlliance: boolean;
   roles: RoleState[];
   signupCount: number;
   mySignup: { roleId: number | null } | null;
@@ -453,6 +455,7 @@ interface EventPayload {
   location: string;
   gameId: number | null;
   recurrence: Recurrence;
+  shareAlliance: boolean;
   roles: RolePayload[];
 }
 
@@ -542,6 +545,8 @@ function EventForm({
   const [location, setLocation] = useState(initial?.location ?? '');
   const [gameId, setGameId] = useState<number | null>(initial?.gameId ?? null);
   const [recurrence, setRecurrence] = useState<Recurrence>(initial?.recurrence ?? 'none');
+  const { can } = useSession();
+  const [shareAlliance, setShareAlliance] = useState<boolean>(initial?.shareAlliance ?? false);
   const [roles, setRoles] = useState<RoleDraft[]>(
     initial?.roles.map((r) => ({
       id: r.id,
@@ -569,6 +574,7 @@ function EventForm({
       location: location.trim(),
       gameId,
       recurrence,
+      shareAlliance,
       roles: roles
         .filter((r) => r.name.trim())
         .map((r) => ({
@@ -629,6 +635,13 @@ function EventForm({
           </select>
         </label>
       </div>
+
+      {can('alliance.manage') && (
+        <label className="toggle-row">
+          <span>Share with alliance <span className="muted small">— posts to allied orgs’ Discords</span></span>
+          <Switch checked={shareAlliance} onChange={setShareAlliance} label="Share with alliance" />
+        </label>
+      )}
 
       <label>
         Description <span className="muted small">(optional)</span>

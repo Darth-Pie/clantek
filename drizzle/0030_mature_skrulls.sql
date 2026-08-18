@@ -1,0 +1,1 @@
+ALTER TABLE `events` ADD `share_alliance` integer DEFAULT false NOT NULL;

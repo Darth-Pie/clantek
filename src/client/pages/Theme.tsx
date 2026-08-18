@@ -16,6 +16,7 @@ import { useDragOrder } from '../lib/dragOrder';
 import { newThemeId, type CustomTheme } from '../../shared/customThemes';
 import { SKINS, DEFAULT_SKIN } from '../lib/skins';
 import ColorPicker from '../components/ColorPicker';
+import MorphingSegments from '../components/MorphingSegments';
 
 const TOKEN_KEYS = Object.keys(DEFAULT_THEME);
 
@@ -417,18 +418,14 @@ export default function Theme() {
                   Menu alignment
                   <code>--nav-justify</code>
                 </label>
-                <div className="theme-row-controls seg-control">
-                  {NAV_ALIGN.map((o) => (
-                    <button
-                      key={o.value}
-                      type="button"
-                      className={(draft['--nav-justify'] ?? 'flex-start') === o.value ? 'seg active' : 'seg'}
-                      disabled={busy}
-                      onClick={() => update('--nav-justify', o.value)}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
+                <div className="theme-row-controls">
+                  <MorphingSegments
+                    ariaLabel="Menu alignment"
+                    value={draft['--nav-justify'] ?? 'flex-start'}
+                    onChange={(v) => update('--nav-justify', v)}
+                    disabled={busy}
+                    options={NAV_ALIGN.map((o) => ({ key: o.value, label: o.label }))}
+                  />
                 </div>
               </div>
               <div className="theme-row-example">

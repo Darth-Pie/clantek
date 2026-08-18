@@ -9,7 +9,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api } from './api';
-import { DEFAULT_SKIN, SKIN_KEYS } from './skins';
+import { DEFAULT_SKIN } from './skins';
+import { applyEffectiveSkin } from './skinPref';
 
 export type ThemeTokens = Record<string, string>;
 
@@ -46,11 +47,9 @@ function apply(tokens: ThemeTokens) {
     // Only set custom properties; a stray key can't inject arbitrary CSS.
     if (key.startsWith('--')) root.style.setProperty(key, value);
   }
-  // Translate the surface-style token into a data-skin attribute the CSS keys
-  // off. Only a known skin is honoured; classic (the default) sets nothing.
-  const skin = (tokens['--skin'] ?? '').trim();
-  if (skin && skin !== DEFAULT_SKIN && SKIN_KEYS.includes(skin)) root.setAttribute('data-skin', skin);
-  else root.removeAttribute('data-skin');
+  // Resolve the surface-style token into a data-skin attribute the CSS keys off.
+  // A member's personal override (localStorage) wins over this org default.
+  applyEffectiveSkin(tokens['--skin'] ?? DEFAULT_SKIN);
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

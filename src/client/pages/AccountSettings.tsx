@@ -18,6 +18,8 @@ import {
   FONT_DEFAULT,
   type A11yPrefs,
 } from '../lib/a11y';
+import { SKINS } from '../lib/skins';
+import { loadSkinPref, saveSkinPref, reapplySkin } from '../lib/skinPref';
 
 interface ApiToken {
   id: number;
@@ -43,6 +45,13 @@ export default function AccountSettings() {
   const [a11y, setA11y] = useState<A11yPrefs>(() => loadA11yPrefs());
   const setFontScale = (n: number) => setA11y((p) => saveA11yPrefs({ ...p, fontScale: n }));
   const setHighContrast = (v: boolean) => setA11y((p) => saveA11yPrefs({ ...p, highContrast: v }));
+  // Personal skin override (null = follow the org default). Applies instantly.
+  const [skinPref, setSkinPref] = useState<string | null>(() => loadSkinPref());
+  const chooseSkin = (skin: string | null) => {
+    saveSkinPref(skin);
+    setSkinPref(skin);
+    reapplySkin();
+  };
   const [tokens, setTokens] = useState<ApiToken[] | null>(null);
   const [label, setLabel] = useState('');
   const [busy, setBusy] = useState(false);
@@ -139,6 +148,42 @@ export default function AccountSettings() {
           </div>
           <Switch checked={a11y.highContrast} onChange={setHighContrast} label="High contrast mode" />
         </div>
+      </div>
+
+      <h3 className="account-subhead">Appearance</h3>
+      <p className="muted">Pick a surface style just for you — it only changes how the site looks on this device.</p>
+      <div className="skin-picker">
+        <button
+          type="button"
+          className={`skin-option${skinPref === null ? ' active' : ''}`}
+          aria-pressed={skinPref === null}
+          onClick={() => chooseSkin(null)}
+        >
+          <span className="skin-swatch skin-swatch-classic" aria-hidden>
+            <span className="skin-swatch-card" />
+          </span>
+          <span className="skin-option-text">
+            <b>Site default</b>
+            <span className="muted small">Follow the style your org chose.</span>
+          </span>
+        </button>
+        {SKINS.map((sk) => (
+          <button
+            key={sk.key}
+            type="button"
+            className={`skin-option${skinPref === sk.key ? ' active' : ''}`}
+            aria-pressed={skinPref === sk.key}
+            onClick={() => chooseSkin(sk.key)}
+          >
+            <span className={`skin-swatch skin-swatch-${sk.key}`} aria-hidden>
+              <span className="skin-swatch-card" />
+            </span>
+            <span className="skin-option-text">
+              <b>{sk.label}</b>
+              <span className="muted small">{sk.desc}</span>
+            </span>
+          </button>
+        ))}
       </div>
 
       <h3 className="account-subhead">API access</h3>

@@ -9,11 +9,15 @@ import { BrandmarkProvider } from './lib/brandmark';
 import { SigilProvider } from './lib/sigil';
 import BrandmarkSplash from './components/BrandmarkSplash';
 import { applyA11yPrefs, loadA11yPrefs } from './lib/a11y';
+import { applySkinPrefEarly } from './lib/skinPref';
 import './styles.css';
 
 // Apply the viewer's personal text-size / high-contrast prefs before the first
 // paint, so there's no flash of default size or colours.
 applyA11yPrefs(loadA11yPrefs());
+// Same for a personal skin override, if the member set one — otherwise the theme
+// provider applies the org default skin as usual.
+applySkinPrefEarly();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

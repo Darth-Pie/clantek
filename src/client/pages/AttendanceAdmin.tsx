@@ -12,6 +12,7 @@ import { api } from '../lib/api';
 import { useAction, Alerts } from '../lib/action';
 import Switch from '../components/Switch';
 import NumberField from '../components/NumberField';
+import MorphingSegments from '../components/MorphingSegments';
 import { type AttendanceConfig, type AttendanceMode } from '../../shared/attendance';
 
 interface RoleOpt {
@@ -84,19 +85,13 @@ export default function AttendanceAdmin() {
 
       <div className="attendance-field">
         <div className="field-label">Who marks attendance</div>
-        <div className="seg-control">
-          {MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              className={cfg.mode === m.value ? 'seg active' : 'seg'}
-              disabled={busy}
-              onClick={() => patch({ mode: m.value })}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+        <MorphingSegments
+          ariaLabel="Who marks attendance"
+          value={cfg.mode}
+          onChange={(mode) => patch({ mode })}
+          disabled={busy}
+          options={MODES.map((m) => ({ key: m.value, label: m.label }))}
+        />
         <span className="muted small">{MODES.find((m) => m.value === cfg.mode)?.hint}</span>
       </div>
 

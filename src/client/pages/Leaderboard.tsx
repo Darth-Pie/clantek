@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { memberAvatar } from '../../shared/avatar';
+import MorphingSegments from '../components/MorphingSegments';
 
 interface LeaderRow {
   id: number;
@@ -48,14 +49,15 @@ export default function Leaderboard() {
           <h2>Leaderboard</h2>
           <p className="muted">Ranked by events attended{mode === 'recent' ? ` in the last ${recentDays} days` : ', all-time'}.</p>
         </div>
-        <div className="seg-control">
-          <button type="button" className={mode === 'recent' ? 'seg active' : 'seg'} onClick={() => setMode('recent')}>
-            Recent
-          </button>
-          <button type="button" className={mode === 'all' ? 'seg active' : 'seg'} onClick={() => setMode('all')}>
-            All-time
-          </button>
-        </div>
+        <MorphingSegments
+          ariaLabel="Leaderboard range"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { key: 'recent', label: 'Recent' },
+            { key: 'all', label: 'All-time' },
+          ]}
+        />
       </header>
 
       {loading ? (

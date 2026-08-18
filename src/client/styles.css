@@ -4008,6 +4008,43 @@ a.org-box:hover {
   cursor: default;
   opacity: 0.6;
 }
+/* The control clips to its rounded corners (overflow:hidden), which would crop an
+   outset focus ring — inset it so the keyboard focus stays fully visible. */
+.seg-control .seg:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Morphing variant (MorphingSegments): a filled pill slides between segments
+   instead of the accent background snapping. The container already clips to its
+   rounded corners (overflow:hidden), so the square pill reads as rounded. */
+.seg-control.morphing {
+  position: relative;
+}
+.seg-control.morphing .seg {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  border-right-color: transparent;
+  transition: color 0.2s ease;
+}
+.seg-control.morphing .seg.active {
+  background: transparent; /* the sliding pill provides the fill */
+  color: var(--color-accent-text);
+}
+.seg-pill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  background: var(--color-accent);
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), width 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .seg-pill {
+    transition: none;
+  }
+}
 
 /* Branding admin */
 .branding-grid {
@@ -7614,6 +7651,21 @@ a.button.primary { background: var(--color-accent); color: var(--color-accent-te
   --surface-radius: max(var(--radius), 12px);
 }
 
+/* Neon — accent-lit border and a soft accent glow. */
+:root[data-skin='neon'] {
+  --surface-border: 1px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  --surface-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 20%, transparent),
+    0 6px 22px -8px color-mix(in srgb, var(--color-accent) 42%, transparent);
+  --surface-radius: max(var(--radius), 10px);
+}
+
+/* Flat — no border, no shadow; panels lift via a subtly brighter fill. */
+:root[data-skin='flat'] {
+  --surface-bg: color-mix(in srgb, var(--color-surface) 91%, var(--color-text));
+  --surface-border: 1px solid transparent;
+  --surface-shadow: none;
+}
+
 /* --- Skin picker (Theme admin) --- */
 .skin-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.6rem; }
 .skin-option {
@@ -7635,3 +7687,5 @@ a.button.primary { background: var(--color-accent); color: var(--color-accent-te
 .skin-swatch-soft .skin-swatch-card { border: 1px solid transparent; border-radius: 7px; box-shadow: 0 3px 7px -2px color-mix(in srgb, #000 65%, transparent); }
 .skin-swatch-sharp .skin-swatch-card { border: 1px solid color-mix(in srgb, var(--color-border) 72%, var(--color-text)); border-radius: 0; }
 .skin-swatch-glass .skin-swatch-card { border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--color-surface) 55%, transparent); box-shadow: 0 4px 9px -3px color-mix(in srgb, #000 60%, transparent); }
+.skin-swatch-neon .skin-swatch-card { border: 1px solid color-mix(in srgb, var(--color-accent) 60%, transparent); border-radius: 5px; box-shadow: 0 0 6px color-mix(in srgb, var(--color-accent) 55%, transparent); }
+.skin-swatch-flat .skin-swatch-card { border: 1px solid transparent; border-radius: 4px; background: color-mix(in srgb, var(--color-surface) 88%, var(--color-text)); }

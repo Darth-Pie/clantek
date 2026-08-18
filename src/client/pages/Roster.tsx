@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import MorphingSegments from '../components/MorphingSegments';
 import { useSession } from '../lib/session';
 import { memberName } from '../../shared/names';
 import { memberAvatar } from '../../shared/avatar';
@@ -63,22 +64,15 @@ export default function Roster() {
       <header className="panel-head roster-head">
         <h2>Roster</h2>
         {canFullList && (
-          <div className="seg-control">
-            <button
-              type="button"
-              className={view === 'tree' ? 'seg active' : 'seg'}
-              onClick={() => setView('tree')}
-            >
-              Leadership
-            </button>
-            <button
-              type="button"
-              className={view === 'list' ? 'seg active' : 'seg'}
-              onClick={() => setView('list')}
-            >
-              All members
-            </button>
-          </div>
+          <MorphingSegments
+            ariaLabel="Roster view"
+            value={view}
+            onChange={setView}
+            options={[
+              { key: 'tree', label: 'Leadership' },
+              { key: 'list', label: 'All members' },
+            ]}
+          />
         )}
       </header>
 

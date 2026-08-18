@@ -26,6 +26,8 @@ export const SKINS: SkinDef[] = [
   { key: 'soft', label: 'Soft', desc: 'Borderless cards that float on gentle shadows. Rounder, friendlier.' },
   { key: 'sharp', label: 'Sharp', desc: 'Squared corners and crisp lines. Dense and utilitarian.' },
   { key: 'glass', label: 'Glass', desc: 'Frosted, translucent panels with a subtle blur. Sleek.' },
+  { key: 'neon', label: 'Neon', desc: 'Accent-lit borders with a soft glow. Built for gamers.' },
+  { key: 'flat', label: 'Flat', desc: 'No borders or shadows — clean, lifted panels.' },
 ];
 
 export const SKIN_KEYS = SKINS.map((s) => s.key);

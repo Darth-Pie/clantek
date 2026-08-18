@@ -14,6 +14,7 @@ import { useAction, Alerts } from '../lib/action';
 import { api } from '../lib/api';
 import { useDragOrder } from '../lib/dragOrder';
 import { newThemeId, type CustomTheme } from '../../shared/customThemes';
+import { SKINS, DEFAULT_SKIN } from '../lib/skins';
 import ColorPicker from '../components/ColorPicker';
 
 const TOKEN_KEYS = Object.keys(DEFAULT_THEME);
@@ -379,6 +380,36 @@ export default function Theme() {
           </fieldset>
 
           <fieldset className="theme-group">
+            <legend>Style</legend>
+            <p className="muted small" style={{ margin: '0 0 0.75rem' }}>
+              The surface look — borders, shadows, glass. Works with any colour palette above.
+            </p>
+            <div className="skin-picker">
+              {SKINS.map((sk) => {
+                const active = (draft['--skin'] ?? DEFAULT_SKIN) === sk.key;
+                return (
+                  <button
+                    key={sk.key}
+                    type="button"
+                    className={`skin-option${active ? ' active' : ''}`}
+                    disabled={busy}
+                    aria-pressed={active}
+                    onClick={() => update('--skin', sk.key)}
+                  >
+                    <span className={`skin-swatch skin-swatch-${sk.key}`} aria-hidden>
+                      <span className="skin-swatch-card" />
+                    </span>
+                    <span className="skin-option-text">
+                      <b>{sk.label}</b>
+                      <span className="muted small">{sk.desc}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <fieldset className="theme-group">
             <legend>Header menu</legend>
             <div className="theme-row">
               <div className="theme-row-main">
@@ -437,8 +468,8 @@ export default function Theme() {
                 key={p.name}
                 className="preset"
                 disabled={busy}
-                // A palette shouldn't reset a layout choice, so keep the current menu alignment.
-                onClick={() => applyTokens({ ...p.tokens, '--nav-justify': draft['--nav-justify'] ?? 'flex-start' })}
+                // A palette shouldn't reset layout/surface choices, so keep the current menu alignment + skin.
+                onClick={() => applyTokens({ ...p.tokens, '--nav-justify': draft['--nav-justify'] ?? 'flex-start', '--skin': draft['--skin'] ?? DEFAULT_SKIN })}
               >
                 <span className="preset-swatch" style={{ background: p.tokens['--color-accent'] }} />
                 {p.name}

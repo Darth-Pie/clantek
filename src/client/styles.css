@@ -294,9 +294,12 @@ select {
 }
 
 .panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  background: var(--surface-bg);
+  border: var(--surface-border);
+  border-radius: var(--surface-radius);
+  box-shadow: var(--surface-shadow);
+  -webkit-backdrop-filter: var(--surface-blur);
+  backdrop-filter: var(--surface-blur);
   padding: 1.25rem;
 }
 
@@ -1190,9 +1193,12 @@ button.active {
 
 .event-card {
   padding: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
+  border: var(--surface-border);
+  border-radius: var(--surface-radius);
+  background: var(--surface-bg);
+  box-shadow: var(--surface-shadow);
+  -webkit-backdrop-filter: var(--surface-blur);
+  backdrop-filter: var(--surface-blur);
 }
 .event-card h3 {
   margin: 0.15rem 0 0.35rem;
@@ -7568,3 +7574,64 @@ a.button.primary { background: var(--color-accent); color: var(--color-accent-te
 
 .login-sigil { width: 128px; height: 128px; margin: 0 auto 0.4rem; }
 .login-sigil .sigilstage { width: 100%; height: 100%; }
+
+/* ============================================================================
+   UI Skins — a surface-style layer on top of the colour theme (see lib/skins.ts).
+   Surface classes (.panel, .event-card) read these --surface-* variables instead
+   of hardcoding border/background/radius, so a skin only has to remap the
+   variables. The defaults below reproduce the "Classic" look exactly; each
+   :root[data-skin="…"] block overrides just what that skin changes. Colours and
+   radius still come from the theme, so any palette combines with any skin.
+   ========================================================================== */
+:root {
+  --surface-bg: var(--color-surface);
+  --surface-border: 1px solid var(--color-border);
+  --surface-radius: var(--radius);
+  --surface-shadow: none;
+  --surface-blur: none;
+}
+
+/* Soft — borderless cards floating on a gentle shadow, rounder corners. */
+:root[data-skin='soft'] {
+  --surface-border: 1px solid transparent;
+  --surface-shadow: 0 6px 22px -10px color-mix(in srgb, #000 62%, transparent);
+  --surface-radius: max(var(--radius), 14px);
+}
+
+/* Sharp — squared corners, no shadow, a crisper border. Dense/utilitarian. */
+:root[data-skin='sharp'] {
+  --surface-radius: 0px;
+  --surface-shadow: none;
+  --surface-border: 1px solid color-mix(in srgb, var(--color-border) 72%, var(--color-text));
+}
+
+/* Glass — frosted translucent panels with a backdrop blur. */
+:root[data-skin='glass'] {
+  --surface-bg: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  --surface-border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  --surface-shadow: 0 10px 34px -12px color-mix(in srgb, #000 68%, transparent);
+  --surface-blur: saturate(135%) blur(9px);
+  --surface-radius: max(var(--radius), 12px);
+}
+
+/* --- Skin picker (Theme admin) --- */
+.skin-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.6rem; }
+.skin-option {
+  display: flex; align-items: center; gap: 0.7rem; text-align: left; cursor: pointer;
+  padding: 0.7rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius);
+  background: var(--color-surface); color: var(--color-text); transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.skin-option:hover:not(:disabled) { border-color: var(--color-accent); }
+.skin-option.active { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent) inset; }
+.skin-option-text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.skin-option-text b { font-size: 0.95rem; }
+/* Mini preview swatch — a little "card on a page" that mimics each skin. */
+.skin-swatch {
+  flex: none; width: 44px; height: 34px; border-radius: 7px; padding: 6px;
+  background: var(--color-bg); border: 1px solid var(--color-border); display: block;
+}
+.skin-swatch-card { display: block; width: 100%; height: 100%; background: var(--color-surface); }
+.skin-swatch-classic .skin-swatch-card { border: 1px solid var(--color-border); border-radius: 4px; }
+.skin-swatch-soft .skin-swatch-card { border: 1px solid transparent; border-radius: 7px; box-shadow: 0 3px 7px -2px color-mix(in srgb, #000 65%, transparent); }
+.skin-swatch-sharp .skin-swatch-card { border: 1px solid color-mix(in srgb, var(--color-border) 72%, var(--color-text)); border-radius: 0; }
+.skin-swatch-glass .skin-swatch-card { border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--color-surface) 55%, transparent); box-shadow: 0 4px 9px -3px color-mix(in srgb, #000 60%, transparent); }

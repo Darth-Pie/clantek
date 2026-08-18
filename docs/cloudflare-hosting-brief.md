@@ -1,8 +1,10 @@
 # mustr on Cloudflare — Cost & Terms-of-Service Brief
 
-*Prepared 2026-08-08. Figures verified against Cloudflare's official pricing and
-terms pages on that date (sources at the end). This is an analysis of Cloudflare's
-published terms, **not legal advice** — see the disclaimer at the end.*
+*Prepared 2026-08-08; re-verified 2026-08-17 — every free-tier figure, the $5/mo
+Workers Paid pricing, and the Section 2.8 / CDN-content analysis were re-checked
+against Cloudflare's official pricing and terms pages and are unchanged. Sources at
+the end. This is an analysis of Cloudflare's published terms, **not legal advice** —
+see the disclaimer at the end.*
 
 ---
 

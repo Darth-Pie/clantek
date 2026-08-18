@@ -9,6 +9,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api } from './api';
+import { DEFAULT_SKIN, SKIN_KEYS } from './skins';
 
 export type ThemeTokens = Record<string, string>;
 
@@ -25,6 +26,8 @@ export const DEFAULT_THEME: ThemeTokens = {
   '--radius': '8px',
   // Header menu alignment: flex-start (left) | center | flex-end (right).
   '--nav-justify': 'flex-start',
+  // Surface style ("skin") — mapped to a data-skin attribute below. See lib/skins.ts.
+  '--skin': DEFAULT_SKIN,
 };
 
 interface ThemeValue {
@@ -43,6 +46,11 @@ function apply(tokens: ThemeTokens) {
     // Only set custom properties; a stray key can't inject arbitrary CSS.
     if (key.startsWith('--')) root.style.setProperty(key, value);
   }
+  // Translate the surface-style token into a data-skin attribute the CSS keys
+  // off. Only a known skin is honoured; classic (the default) sets nothing.
+  const skin = (tokens['--skin'] ?? '').trim();
+  if (skin && skin !== DEFAULT_SKIN && SKIN_KEYS.includes(skin)) root.setAttribute('data-skin', skin);
+  else root.removeAttribute('data-skin');
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

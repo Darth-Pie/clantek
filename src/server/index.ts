@@ -75,6 +75,7 @@ import { loadSeo, renderHead } from './seo';
 import tokensRoutes from './routes/tokens';
 import orgChartRoutes from './routes/orgchart';
 import tournamentsRoutes from './routes/tournaments';
+import allianceRoutes from './routes/alliance';
 import { escapeHtml, renderLayoutBody } from './pages/render';
 
 const app = new Hono<AppContext>();
@@ -468,6 +469,7 @@ app.route('/api/gallery', galleryRoutes);
 app.route('/api/sc', scVerifyRoutes);
 app.route('/api/orgchart', orgChartRoutes);
 app.route('/api/auth/tokens', tokensRoutes);
+app.route('/api/alliance', allianceRoutes);
 app.route('/api/setup', setupRoutes);
 app.route('/api/snapshots', snapshotsRoutes);
 app.route('/api/attendance', attendanceRoutes);

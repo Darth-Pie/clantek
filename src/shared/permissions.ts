@@ -50,6 +50,8 @@ export const PERMISSIONS = {
   'pages.manage': 'Arrange page layouts and modules',
   'settings.manage': 'Edit site settings',
 
+  'alliance.manage': 'Link allied orgs and manage cross-org broadcasts',
+
   'hangar.view': 'View other members’ Star Citizen hangars (when they’ve shared them)',
   'hangar.value': 'See the monetary value of members’ hangars (hidden from others)',
 

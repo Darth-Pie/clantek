@@ -7689,3 +7689,18 @@ a.button.primary { background: var(--color-accent); color: var(--color-accent-te
 .skin-swatch-glass .skin-swatch-card { border: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--color-surface) 55%, transparent); box-shadow: 0 4px 9px -3px color-mix(in srgb, #000 60%, transparent); }
 .skin-swatch-neon .skin-swatch-card { border: 1px solid color-mix(in srgb, var(--color-accent) 60%, transparent); border-radius: 5px; box-shadow: 0 0 6px color-mix(in srgb, var(--color-accent) 55%, transparent); }
 .skin-swatch-flat .skin-swatch-card { border: 1px solid transparent; border-radius: 4px; background: color-mix(in srgb, var(--color-surface) 88%, var(--color-text)); }
+
+/* --- Alliance admin --- */
+.alliance-add { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.4rem 0 0.5rem; }
+.alliance-add input { flex: 1 1 12rem; min-width: 0; }
+.alliance-list { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.alliance-row { border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0.8rem 0.9rem; background: color-mix(in srgb, var(--color-bg) 55%, transparent); }
+.alliance-row-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.alliance-row-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-top: 0.55rem; }
+.alliance-row-controls .inline-field { display: flex; align-items: center; gap: 0.4rem; }
+.alliance-row-actions { display: flex; gap: 0.35rem; margin-left: auto; }
+.alliance-flag { font-size: 0.8rem; color: var(--color-muted); }
+.alliance-flag.ok { color: var(--color-accent); }
+.alliance-settoken { margin-top: 0.5rem; }
+.alliance-settoken-row { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
+.alliance-settoken-row input { flex: 1; min-width: 0; }

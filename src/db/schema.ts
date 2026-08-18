@@ -315,6 +315,39 @@ export const apiTokens = sqliteTable(
 );
 
 /* ------------------------------------------------------------------ *
+ * Alliance links — cross-org federation. Each row is a trust link to ONE allied
+ * org's independent mustr instance. `outboundToken` is the secret THEY issued us
+ * (we send it as Bearer when we POST to their /api/alliance/inbound);
+ * `inboundTokenHash` is the SHA-256 of the token WE issued them (we match it to
+ * authenticate their inbound calls). Their broadcasts post to our local
+ * `channelId` via our own bot. Bot tokens are never shared — only these scoped
+ * alliance tokens. See src/shared/alliance.ts for the wire contract + sanitizer.
+ * ------------------------------------------------------------------ */
+
+export const allianceLinks = sqliteTable(
+  'alliance_links',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    // The ally instance origin (https://…), used for our outbound POSTs.
+    baseUrl: text('base_url').notNull(),
+    // Secret the ally issued US — presented as Bearer when we call their inbound.
+    // Stored as-is (we must send the plaintext), like the Discord bot token.
+    outboundToken: text('outbound_token'),
+    // SHA-256 (base64url) of the token WE issued them; matched to auth their inbound.
+    inboundTokenHash: text('inbound_token_hash').unique(),
+    inboundTokenPrefix: text('inbound_token_prefix'),
+    // Local Discord channel their broadcasts get posted to (via our own bot).
+    channelId: text('channel_id'),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    lastInboundAt: integer('last_inbound_at'),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at').notNull().default(now),
+  },
+  (t) => [index('alliance_links_enabled_idx').on(t.enabled)],
+);
+
+/* ------------------------------------------------------------------ *
  * Content
  * ------------------------------------------------------------------ */
 

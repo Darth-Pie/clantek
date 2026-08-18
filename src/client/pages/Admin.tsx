@@ -36,6 +36,7 @@ import {
   History,
   Activity,
   Trophy,
+  Handshake,
 } from 'lucide';
 import { useSession } from '../lib/session';
 import { api } from '../lib/api';
@@ -68,6 +69,7 @@ import NavAdmin from './NavAdmin';
 import OrgChartDesigner from './OrgChartDesigner';
 import AttendanceAdmin from './AttendanceAdmin';
 import TournamentsAdmin from './TournamentsAdmin';
+import AllianceAdmin from './AllianceAdmin';
 import ApplicantsAdmin from './ApplicantsAdmin';
 import BansAdmin from './BansAdmin';
 import TrainingAdmin from './TrainingAdmin';
@@ -97,6 +99,7 @@ const ITEM_ICONS: Record<string, typeof FileText> = {
   tournaments: Trophy,
   discord: Bot,
   analytics: Gauge,
+  alliance: Handshake,
   appearance: Palette,
   notifications: Bell,
   logs: ScrollText,
@@ -126,6 +129,7 @@ const TAB_RENDERERS: Record<string, () => ReactNode> = {
   identity: () => <IdentityAdmin />,
   analytics: () => <AnalyticsAdmin />,
   modules: () => <ModulesAdmin />,
+  alliance: () => <AllianceAdmin />,
   theme: () => <Theme />,
   branding: () => <BrandingAdmin />,
   brandmark: () => <BrandmarkAdmin />,

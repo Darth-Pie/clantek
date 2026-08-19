@@ -117,7 +117,7 @@ export default function AccountSettings() {
       </header>
 
       <h3 className="account-subhead">Accessibility</h3>
-      <p className="muted">Personal to you and saved on this device — they don’t change what anyone else sees.</p>
+      <p className="muted">Personal to you and saved on this device; they don’t change what anyone else sees.</p>
       <div className="a11y-settings">
         <div className="a11y-row">
           <label htmlFor="a11y-font" className="a11y-label">Text size</label>
@@ -151,7 +151,7 @@ export default function AccountSettings() {
       </div>
 
       <h3 className="account-subhead">Appearance</h3>
-      <p className="muted">Pick a surface style just for you — it only changes how the site looks on this device.</p>
+      <p className="muted">Pick a surface style just for you; it only changes how the site looks on this device.</p>
       <div className="skin-picker">
         <button
           type="button"
@@ -196,7 +196,7 @@ export default function AccountSettings() {
 
       {fresh && (
         <div className="token-reveal">
-          <strong>Copy your new token now — it won’t be shown again.</strong>
+          <strong>Copy your new token now. It won’t be shown again.</strong>
           <div className="token-reveal-row">
             <code className="token-value">{fresh.token}</code>
             <button type="button" className="primary" onClick={copyFresh}>

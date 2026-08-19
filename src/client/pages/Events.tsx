@@ -121,7 +121,7 @@ export default function Events() {
     run(async () => {
       await api.post('/events', payload);
       setCreating(false);
-      return 'Event created — posting to Discord.';
+      return 'Event created. Posting to Discord.';
     });
 
   const saveEdit = (id: number, payload: EventPayload) =>
@@ -153,7 +153,7 @@ export default function Events() {
   const checkin = (eventId: number) =>
     run(async () => {
       await api.post(`/attendance/event/${eventId}/checkin`);
-      return 'Checked in — thanks for coming!';
+      return 'Checked in. Thanks for coming!';
     });
 
   const uncheckin = (eventId: number) =>
@@ -638,7 +638,7 @@ function EventForm({
 
       {can('alliance.manage') && (
         <label className="toggle-row">
-          <span>Share with alliance <span className="muted small">— posts to allied orgs’ Discords</span></span>
+          <span>Share with alliance <span className="muted small">(posts to allied orgs’ Discords)</span></span>
           <Switch checked={shareAlliance} onChange={setShareAlliance} label="Share with alliance" />
         </label>
       )}

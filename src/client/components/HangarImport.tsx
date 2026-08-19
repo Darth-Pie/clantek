@@ -56,7 +56,7 @@ export default function HangarImport({ userId, onImported }: { userId: number; o
     try {
       parsed = JSON.parse(json);
     } catch {
-      setMsg({ text: 'That doesn’t look like the copied data — re-run the bookmarklet and paste again.', ok: false });
+      setMsg({ text: 'That doesn’t look like the copied data. Re-run the bookmarklet and paste again.', ok: false });
       setBusy(false);
       return;
     }

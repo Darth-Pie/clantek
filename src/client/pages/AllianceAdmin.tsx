@@ -84,7 +84,7 @@ export default function AllianceAdmin() {
     run(async () => {
       const r = await api.post<{ inboundToken: string }>(`/alliance/links/${l.id}/rotate`);
       setFresh({ name: l.name, token: r.inboundToken });
-      return 'New token minted — send it to them. The old one no longer works.';
+      return 'New token minted. Send it to them; the old one no longer works.';
     });
 
   const sendTest = () =>
@@ -114,7 +114,7 @@ export default function AllianceAdmin() {
 
       {fresh && (
         <div className="token-reveal">
-          <strong>Send this token to {fresh.name} — it’s shown only once.</strong>
+          <strong>Send this token to {fresh.name}. It’s shown only once.</strong>
           <p className="muted small">They paste it into their own Alliance panel (as the token to call <em>you</em>).</p>
           <div className="token-reveal-row">
             <code className="token-value">{fresh.token}</code>
